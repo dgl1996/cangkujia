@@ -1,0 +1,231 @@
+[
+  {
+    "id": "pallet-wooden-1200",
+    "name": "木质托盘 1200×1000",
+    "category": "containers",
+    "description": "标准欧标木质托盘，四面进叉",
+    "tags": [
+      "木质",
+      "标准",
+      "欧标"
+    ],
+    "parameters": {
+      "length": {
+        "type": "number",
+        "min": 800,
+        "max": 1400,
+        "default": 1200,
+        "unit": "mm"
+      },
+      "width": {
+        "type": "number",
+        "min": 800,
+        "max": 1200,
+        "default": 1000,
+        "unit": "mm"
+      },
+      "height": {
+        "type": "number",
+        "min": 120,
+        "max": 200,
+        "default": 150,
+        "unit": "mm"
+      }
+    },
+    "filename": "pallet-wooden-1200.glb"
+  },
+  {
+    "id": "pallet-plastic-1200",
+    "name": "塑料托盘 1200×1000",
+    "category": "containers",
+    "description": "HDPE塑料托盘，防潮防腐蚀",
+    "tags": [
+      "塑料",
+      "防潮",
+      "耐用"
+    ],
+    "parameters": {
+      "length": {
+        "type": "number",
+        "min": 800,
+        "max": 1400,
+        "default": 1200,
+        "unit": "mm"
+      },
+      "width": {
+        "type": "number",
+        "min": 800,
+        "max": 1200,
+        "default": 1000,
+        "unit": "mm"
+      },
+      "height": {
+        "type": "number",
+        "min": 120,
+        "max": 200,
+        "default": 150,
+        "unit": "mm"
+      }
+    },
+    "filename": "pallet-plastic-1200.glb"
+  },
+  {
+    "id": "container-foldable",
+    "name": "可折叠周转箱",
+    "category": "containers",
+    "description": "可折叠设计，节省回程运输空间",
+    "tags": [
+      "可折叠",
+      "周转箱",
+      "省空间"
+    ],
+    "parameters": {
+      "length": {
+        "type": "number",
+        "min": 300,
+        "max": 800,
+        "default": 600,
+        "unit": "mm"
+      },
+      "width": {
+        "type": "number",
+        "min": 200,
+        "max": 600,
+        "default": 400,
+        "unit": "mm"
+      },
+      "height": {
+        "type": "number",
+        "min": 200,
+        "max": 500,
+        "default": 300,
+        "unit": "mm"
+      }
+    },
+    "filename": "container-foldable.glb"
+  },
+  {
+    "id": "shelf-beam-heavy",
+    "name": "重型横梁式货架",
+    "category": "storage",
+    "description": "适用于重型货物存储，单层承重2000kg",
+    "tags": [
+      "重型",
+      "横梁式",
+      "可调节"
+    ],
+    "parameters": {
+      "length": {
+        "type": "number",
+        "min": 1500,
+        "max": 4000,
+        "default": 2700,
+        "unit": "mm"
+      },
+      "width": {
+        "type": "number",
+        "min": 600,
+        "max": 1200,
+        "default": 1000,
+        "unit": "mm"
+      },
+      "height": {
+        "type": "number",
+        "min": 2000,
+        "max": 12000,
+        "default": 4500,
+        "unit": "mm"
+      },
+      "levels": {
+        "type": "number",
+        "min": 2,
+        "max": 8,
+        "default": 4
+      }
+    },
+    "filename": "shelf-beam-heavy.glb"
+  },
+  {
+    "id": "shelf-beam-medium",
+    "name": "中型横梁式货架",
+    "category": "storage",
+    "description": "适用于中型货物存储，单层承重500kg",
+    "tags": [
+      "中型",
+      "横梁式",
+      "标准"
+    ],
+    "parameters": {
+      "length": {
+        "type": "number",
+        "min": 1500,
+        "max": 4000,
+        "default": 2000,
+        "unit": "mm"
+      },
+      "width": {
+        "type": "number",
+        "min": 600,
+        "max": 1200,
+        "default": 800,
+        "unit": "mm"
+      },
+      "height": {
+        "type": "number",
+        "min": 2000,
+        "max": 12000,
+        "default": 3500,
+        "unit": "mm"
+      },
+      "levels": {
+        "type": "number",
+        "min": 2,
+        "max": 8,
+        "default": 4
+      }
+    },
+    "filename": "shelf-beam-medium.glb"
+  },
+  {
+    "id": "shelf-drive-in",
+    "name": "驶入式货架",
+    "category": "storage",
+    "description": "高密度存储，适合大批量同类型货物",
+    "tags": [
+      "高密度",
+      "驶入式",
+      "冷链"
+    ],
+    "parameters": {
+      "length": {
+        "type": "number",
+        "min": 2000,
+        "max": 6000,
+        "default": 3600,
+        "unit": "mm"
+      },
+      "width": {
+        "type": "number",
+        "min": 1200,
+        "max": 1800,
+        "default": 1500,
+        "unit": "mm"
+      },
+      "height": {
+        "type": "number",
+        "min": 3000,
+        "max": 12000,
+        "default": 6000,
+        "unit": "mm"
+      },
+      "depth": {
+        "type": "number",
+        "min": 2,
+        "max": 10,
+        "default": 5,
+        "unit": "托盘位"
+      }
+    },
+    "filename": "shelf-drive-in.glb"
+  }
+]

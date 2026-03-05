@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import HomePage from '../views/HomePage.vue';
 import CoreFunction from '../views/CoreFunction.vue';
+import ModelLibrary from '../views/ModelLibrary.vue';
 
 const routes = [
   {
@@ -12,6 +13,11 @@ const routes = [
     path: '/editor',
     name: 'CoreFunction',
     component: CoreFunction
+  },
+  {
+    path: '/models',
+    name: 'ModelLibrary',
+    component: ModelLibrary
   }
 ];
 
