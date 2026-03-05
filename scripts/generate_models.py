@@ -568,8 +568,8 @@ def generate_light_shelf_v2(length=1200, width=400, height=2000, levels=4):
         set_mesh_color(diag_right, COLOR_BLUE)
         meshes.append(diag_right)
     
-    # 合并所有部件
-    shelf = trimesh.util.concatenate(meshes)
+    # 使用Scene来保留每个mesh的材质，而不是合并
+    scene = trimesh.Scene()
     
     # 修复坐标系：Trimesh使用Z轴向上，Three.js使用Y轴向上
     # 需要旋转模型，使Z轴朝上变为Y轴朝上
@@ -578,9 +578,13 @@ def generate_light_shelf_v2(length=1200, width=400, height=2000, levels=4):
         direction=[1, 0, 0],  # 绕X轴旋转
         point=[0, 0, 0]
     )
-    shelf.apply_transform(rotation_matrix)
     
-    return shelf, {
+    # 添加每个mesh到scene，并应用旋转
+    for i, mesh in enumerate(meshes):
+        mesh.apply_transform(rotation_matrix)
+        scene.add_geometry(mesh, node_name=f'part_{i}')
+    
+    return scene, {
         "id": "shelf-light-v2",
         "name": "轻型货架 V2",
         "category": "storage",

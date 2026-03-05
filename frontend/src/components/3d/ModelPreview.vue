@@ -111,11 +111,21 @@ const loadModel = () => {
       model.position.y = -box.min.y; // 放在地面上
       model.position.z = -center.z;
 
-      // 启用阴影
+      // 启用阴影并确保材质正确显示
       model.traverse((child) => {
         if (child.isMesh) {
           child.castShadow = true;
           child.receiveShadow = true;
+          
+          // 确保材质颜色正确显示
+          if (child.material) {
+            // 如果材质没有颜色，设置为白色
+            if (!child.material.color) {
+              child.material.color = new THREE.Color(0xffffff);
+            }
+            // 确保材质更新
+            child.material.needsUpdate = true;
+          }
         }
       });
 
