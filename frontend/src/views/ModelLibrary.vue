@@ -206,6 +206,20 @@ const models = ref([
     },
     modelUrl: '/assets/models/shelf-drive-in.glb',
   },
+  {
+    id: 'shelf-light-v2',
+    name: '轻型货架 V2',
+    category: 'storage',
+    description: '基于参考图片改进的轻型货架，蓝色立柱配橙色横梁',
+    tags: ['轻型', '横梁式', '蓝色立柱', '橙色横梁'],
+    parameters: {
+      length: { type: 'number', min: 800, max: 2000, default: 1200, unit: 'mm' },
+      width: { type: 'number', min: 300, max: 600, default: 400, unit: 'mm' },
+      height: { type: 'number', min: 1500, max: 3000, default: 2000, unit: 'mm' },
+      levels: { type: 'number', min: 2, max: 6, default: 4 },
+    },
+    modelUrl: '/assets/models/shelf-light-v2.glb',
+  },
   // 载具容器
   {
     id: 'pallet-wooden-1200',
