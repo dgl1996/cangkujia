@@ -8,7 +8,7 @@
         </div>
         <div class="nav-title">3D物流对象库</div>
         <div class="nav-actions">
-          <button class="btn-secondary" @click="goEditor">返回编辑器</button>
+          <button class="btn-secondary" @click="goUsage">返回主页</button>
         </div>
       </div>
     </nav>
@@ -139,8 +139,8 @@
           </div>
         </div>
         <div class="preview-footer">
-          <button class="btn-primary" @click="addToScene(selectedModel)">
-            添加到场景
+          <button class="btn-secondary" @click="closePreview">
+            关闭
           </button>
         </div>
       </div>
@@ -375,6 +375,10 @@ const goHome = () => {
 
 const goEditor = () => {
   router.push('/editor');
+};
+
+const goUsage = () => {
+  router.push('/usage');
 };
 </script>
 
