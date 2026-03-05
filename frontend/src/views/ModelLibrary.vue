@@ -66,9 +66,19 @@
             class="model-card"
             @click="selectModel(model)"
           >
-            <div class="model-preview">
+            <div class="model-preview" @click.stop="previewModel(model)">
               <div class="preview-placeholder">
-                <span class="preview-icon">{{ getCategoryIcon(model.category) }}</span>
+                <!-- 如果有缩略图则显示，否则显示图标 -->
+                <img 
+                  v-if="model.thumbnail" 
+                  :src="model.thumbnail" 
+                  :alt="model.name"
+                  class="model-thumbnail"
+                />
+                <span v-else class="preview-icon">{{ getCategoryIcon(model.category) }}</span>
+                <div class="preview-overlay">
+                  <span class="preview-text">点击预览</span>
+                </div>
               </div>
             </div>
             <div class="model-info">
@@ -79,14 +89,6 @@
                   {{ tag }}
                 </span>
               </div>
-            </div>
-            <div class="model-actions">
-              <button class="btn-preview" @click.stop="previewModel(model)">
-                预览
-              </button>
-              <button class="btn-add" @click.stop="addToScene(model)">
-                添加到场景
-              </button>
             </div>
           </div>
         </div>
@@ -592,14 +594,57 @@ const goEditor = () => {
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
 }
 
 .preview-placeholder {
   text-align: center;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
 }
 
 .preview-icon {
   font-size: 3rem;
+}
+
+.model-thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 1rem;
+}
+
+.preview-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.model-preview:hover .preview-overlay {
+  opacity: 1;
+}
+
+.preview-text {
+  color: white;
+  font-size: 1rem;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  background: rgba(67, 97, 238, 0.9);
+  border-radius: 20px;
 }
 
 .model-info {

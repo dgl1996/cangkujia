@@ -10,6 +10,10 @@
         <button @click="deleteProject">删除项目</button>
         <button @click="exportImage">导出效果图</button>
       </div>
+      <div class="toolbar-group">
+        <span class="group-title">添加</span>
+        <button @click="openModelLibrary" class="btn-primary">添加模型</button>
+      </div>
     </div>
     
     <div class="main-layout">
@@ -301,6 +305,12 @@ function toggleCategory(category) {
 // 项目操作
 function importProject() {
   alert('导入项目功能开发中...');
+}
+
+// 打开模型库
+function openModelLibrary() {
+  // 在新标签页打开模型库
+  window.open('/models', '_blank');
 }
 
 function saveProject() {

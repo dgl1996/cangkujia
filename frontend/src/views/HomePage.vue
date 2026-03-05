@@ -276,7 +276,7 @@ onUnmounted(() => {
 
 // 进入应用
 const enterApp = () => {
-  router.push('/editor');
+  router.push('/usage');
 };
 
 // 返回首页
