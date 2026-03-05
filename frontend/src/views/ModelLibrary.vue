@@ -103,9 +103,10 @@
         <div class="preview-body">
           <div class="preview-3d">
             <!-- 3D预览区域 -->
-            <div class="preview-canvas">
-              <p>3D预览加载中...</p>
-            </div>
+            <ModelPreview 
+              :modelUrl="selectedModel?.modelUrl" 
+              :autoRotate="true"
+            />
           </div>
           <div class="preview-params">
             <h4>参数配置</h4>
@@ -144,6 +145,7 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import ModelPreview from '../components/3d/ModelPreview.vue';
 
 const router = useRouter();
 
