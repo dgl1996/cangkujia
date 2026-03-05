@@ -664,13 +664,6 @@ def generate_heavy_shelf_industrial(length=2300, width=1000, height=4500, levels
         )
         upright.apply_translation([x, y, height/2])
         
-        # 添加菱形孔效果（简化表示）
-        hole_spacing = 75
-        for h in range(200, int(height - 200), hole_spacing):
-            # 正面菱形孔
-            hole = trimesh.creation.box(extents=[20, 5, 12])
-            hole.apply_translation([x, y - upright_depth/2 - 1, h])
-            
         set_mesh_color(upright, COLOR_UPRIGHT)
         meshes.append(upright)
     
