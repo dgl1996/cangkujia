@@ -551,6 +551,15 @@ def generate_light_shelf_v2(length=1200, width=400, height=2000, levels=4):
     # 合并所有部件
     shelf = trimesh.util.concatenate(meshes)
     
+    # 修复坐标系：Trimesh使用Z轴向上，Three.js使用Y轴向上
+    # 需要旋转模型，使Z轴朝上变为Y轴朝上
+    rotation_matrix = trimesh.transformations.rotation_matrix(
+        angle=np.pi / 2,  # 90度
+        direction=[1, 0, 0],  # 绕X轴旋转
+        point=[0, 0, 0]
+    )
+    shelf.apply_transform(rotation_matrix)
+    
     return shelf, {
         "id": "shelf-light-v2",
         "name": "轻型货架 V2",

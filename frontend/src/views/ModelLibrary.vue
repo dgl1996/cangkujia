@@ -115,7 +115,10 @@
               :key="key"
               class="param-item"
             >
-              <label>{{ key }}:</label>
+              <div class="param-header">
+                <label>{{ getParamLabel(key) }}:</label>
+                <span class="param-value">{{ param.default }}{{ param.unit || '' }}</span>
+              </div>
               <input
                 v-if="param.type === 'number'"
                 type="range"
@@ -123,6 +126,7 @@
                 :max="param.max"
                 :value="param.default"
                 class="param-slider"
+                @input="updateParam(key, $event.target.value)"
               />
               <select v-else-if="param.type === 'select'" class="param-select">
                 <option v-for="opt in param.options" :key="opt" :value="opt">
@@ -312,6 +316,23 @@ const getModelCount = (categoryId) => {
 const getCategoryIcon = (categoryId) => {
   const category = categories.find(c => c.id === categoryId);
   return category?.icon || '📦';
+};
+
+const getParamLabel = (key) => {
+  const labels = {
+    length: '长度',
+    width: '宽度',
+    height: '高度',
+    levels: '层数',
+    depth: '深度'
+  };
+  return labels[key] || key;
+};
+
+const updateParam = (key, value) => {
+  if (selectedModel.value && selectedModel.value.parameters[key]) {
+    selectedModel.value.parameters[key].default = parseInt(value);
+  }
 };
 
 const toggleTag = (tag) => {
@@ -748,11 +769,22 @@ const goEditor = () => {
   margin-bottom: 1rem;
 }
 
-.param-item label {
-  display: block;
+.param-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.param-header label {
   font-size: 0.85rem;
   color: #4a4a68;
-  margin-bottom: 0.5rem;
+}
+
+.param-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #4361ee;
 }
 
 .param-slider {
