@@ -438,7 +438,7 @@ def generate_light_shelf_v2(length=1200, width=400, height=2000, levels=4):
     meshes = []
     
     # 颜色定义 (参考图片) - 使用RGB 0-1范围
-    COLOR_BLUE = [0.12, 0.31, 0.63]      # 立柱蓝色 #1E50A2
+    COLOR_BLUE = [0.25, 0.45, 0.85]      # 立柱蓝色 - 调淡 #4075D9
     COLOR_ORANGE = [0.91, 0.36, 0.02]    # 横梁橙色 #E85D04
     COLOR_WHITE = [0.96, 0.96, 0.96]     # 层板白色 #F5F5F5
     COLOR_GREY = [0.39, 0.39, 0.39]      # 脚垫灰色
@@ -573,8 +573,9 @@ def generate_light_shelf_v2(length=1200, width=400, height=2000, levels=4):
     
     # 修复坐标系：Trimesh使用Z轴向上，Three.js使用Y轴向上
     # 需要旋转模型，使Z轴朝上变为Y轴朝上
+    # 绕X轴旋转-90度（逆时针），这样Z向上变成Y向上
     rotation_matrix = trimesh.transformations.rotation_matrix(
-        angle=np.pi / 2,  # 90度
+        angle=-np.pi / 2,  # -90度
         direction=[1, 0, 0],  # 绕X轴旋转
         point=[0, 0, 0]
     )
