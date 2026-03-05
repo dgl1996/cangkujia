@@ -600,6 +600,151 @@ def generate_light_shelf_v2(length=1200, width=400, height=2000, levels=4):
     }
 
 
+def generate_heavy_shelf_industrial(length=2300, width=1000, height=4500, levels=4, 
+                                     layer_heights=None, upright_profile="90x80", 
+                                     beam_profile="120x50", name_suffix=""):
+    """
+    生成行业标准重型货架（基于参考图片）
+    
+    参考图片特征：
+    - 深蓝色立柱（带菱形孔）
+    - 橙色横梁
+    - 金属网格层板（橙色边框）
+    - X型斜拉支撑
+    - 黄色防撞护栏
+    
+    Args:
+        length: 货架长度 (mm)，2300或2700
+        width: 货架深度 (mm)，标准1000
+        height: 货架高度 (mm)
+        levels: 层数 (3/4/5)
+        layer_heights: 各层层高列表，默认均匀分布
+        upright_profile: 立柱规格
+        beam_profile: 横梁规格
+        name_suffix: 名称后缀
+    """
+    meshes = []
+    
+    # 颜色定义（基于参考图片）
+    COLOR_UPRIGHT = [0.18, 0.25, 0.45]      # 深蓝色立柱 #2D3F73
+    COLOR_BEAM = [0.85, 0.45, 0.15]         # 橙色横梁 #D97326
+    COLOR_DECK_FRAME = [0.85, 0.45, 0.15]   # 层板边框橙色
+    COLOR_DECK_MESH = [0.75, 0.75, 0.75]    # 层板网格灰色
+    COLOR_GUARD = [0.95, 0.85, 0.15]        # 黄色防撞护栏 #F2D826
+    
+    # 尺寸参数
+    upright_width = 90
+    upright_depth = 80
+    beam_height = 120
+    beam_width = 50
+    deck_thickness = 30
+    guard_height = 400
+    guard_depth = 300
+    
+    # 计算各层高度
+    if layer_heights is None:
+        # 默认均匀分布，底层留出叉车操作空间
+        base_height = 200  # 底部离地高度
+        available_height = height - base_height - 200  # 顶部预留
+        avg_height = available_height / levels
+        layer_heights = [avg_height] * levels
+    
+    # 立柱位置（4根）
+    upright_positions = [
+        [-length/2 + upright_width/2, -width/2 + upright_depth/2],
+        [length/2 - upright_width/2, -width/2 + upright_depth/2],
+        [-length/2 + upright_width/2, width/2 - upright_depth/2],
+        [length/2 - upright_width/2, width/2 - upright_depth/2]
+    ]
+    
+    # 生成立柱
+    for x, y in upright_positions:
+        upright = trimesh.creation.box(
+            extents=[upright_width, upright_depth, height]
+        )
+        upright.apply_translation([x, y, height/2])
+        
+        # 添加菱形孔效果（简化表示）
+        hole_spacing = 75
+        for h in range(200, int(height - 200), hole_spacing):
+            # 正面菱形孔
+            hole = trimesh.creation.box(extents=[20, 5, 12])
+            hole.apply_translation([x, y - upright_depth/2 - 1, h])
+            
+        set_mesh_color(upright, COLOR_UPRIGHT)
+        meshes.append(upright)
+    
+    # 生成横梁和层板
+    current_z = 200  # 从底部200mm开始
+    for level in range(levels):
+        layer_height = layer_heights[level]
+        current_z += layer_height
+        
+        # 前后横梁（橙色）
+        for y_offset in [-width/2 + upright_depth/2, width/2 - upright_depth/2]:
+            beam = trimesh.creation.box(
+                extents=[length - 2*upright_width, beam_width, beam_height]
+            )
+            beam.apply_translation([0, y_offset, current_z - beam_height/2])
+            set_mesh_color(beam, COLOR_BEAM)
+            meshes.append(beam)
+        
+        # 层板（金属网格效果 - 用橙色边框+灰色网格表示）
+        # 层板边框
+        deck_frame = trimesh.creation.box(
+            extents=[length - 2*upright_width - 20, width - 2*upright_depth - 20, deck_thickness]
+        )
+        deck_frame.apply_translation([0, 0, current_z])
+        set_mesh_color(deck_frame, COLOR_DECK_FRAME)
+        meshes.append(deck_frame)
+        
+        # 层板网格（简化用细条表示）
+        grid_spacing = 100
+        for i in range(int((length - 2*upright_width - 40) / grid_spacing)):
+            x_pos = -(length - 2*upright_width - 40)/2 + i * grid_spacing + grid_spacing/2
+            grid_bar = trimesh.creation.box(extents=[5, width - 2*upright_depth - 30, 5])
+            grid_bar.apply_translation([x_pos, 0, current_z + 5])
+            set_mesh_color(grid_bar, COLOR_DECK_MESH)
+            meshes.append(grid_bar)
+    
+    # X型斜拉支撑（前后各一组）
+    for y_offset in [-width/2 + upright_depth/2, width/2 - upright_depth/2]:
+        # 左侧X支撑
+        diag1 = trimesh.creation.box(extents=[5, 5, height * 0.6])
+        diag1.apply_translation([-length/2 + upright_width + 100, y_offset, height/2])
+        set_mesh_color(diag1, COLOR_UPRIGHT)
+        meshes.append(diag1)
+        
+        # 右侧X支撑
+        diag2 = trimesh.creation.box(extents=[5, 5, height * 0.6])
+        diag2.apply_translation([length/2 - upright_width - 100, y_offset, height/2])
+        set_mesh_color(diag2, COLOR_UPRIGHT)
+        meshes.append(diag2)
+    
+    # 黄色防撞护栏（底部两侧）
+    for y_offset in [-width/2 - guard_depth/2, width/2 + guard_depth/2]:
+        guard = trimesh.creation.box(
+            extents=[length + 200, 40, guard_height]
+        )
+        guard.apply_translation([0, y_offset, guard_height/2])
+        set_mesh_color(guard, COLOR_GUARD)
+        meshes.append(guard)
+    
+    # 使用Scene并应用坐标转换
+    scene = trimesh.Scene()
+    rotation_matrix = trimesh.transformations.rotation_matrix(
+        angle=-np.pi / 2,
+        direction=[1, 0, 0],
+        point=[0, 0, 0]
+    )
+    
+    for i, mesh in enumerate(meshes):
+        mesh.apply_transform(rotation_matrix)
+        scene.add_geometry(mesh, node_name=f'part_{i}')
+    
+    return scene
+
+
 def main():
     """主函数：生成所有模型"""
     print("=" * 50)
@@ -638,6 +783,87 @@ def main():
     print("\n🏗️ 生成轻型货架 V2 (基于参考图片)...")
     shelf_light_v2, meta = generate_light_shelf_v2()
     metadata_list.append(save_model(shelf_light_v2, "shelf-light-v2.glb", meta))
+    
+    # 生成3种行业标准重型货架
+    print("\n🏗️ 生成行业标准重型货架...")
+    
+    # 规格1：重型3层中高位货架（适配净空5.5m仓库）
+    print("  - 重型3层中高位货架...")
+    shelf_3level = generate_heavy_shelf_industrial(
+        length=2300, 
+        width=1000, 
+        height=4500, 
+        levels=3,
+        layer_heights=[1400, 1400, 1400],
+        upright_profile="90x70",
+        beam_profile="120x50"
+    )
+    meta_3level = {
+        "id": "shelf-beam-heavy-3level-5m",
+        "name": "重型横梁式货架-3层中高位",
+        "category": "storage",
+        "description": "适配净空5.5m仓库，单层高承重2吨，适合重货存储",
+        "tags": ["重型", "3层", "中高位", "2吨承重"],
+        "parameters": {
+            "length": {"type": "number", "min": 2000, "max": 3000, "default": 2300, "unit": "mm"},
+            "width": {"type": "number", "min": 800, "max": 1200, "default": 1000, "unit": "mm"},
+            "height": {"type": "number", "min": 3500, "max": 5500, "default": 4500, "unit": "mm"},
+            "levels": {"type": "number", "min": 2, "max": 5, "default": 3}
+        }
+    }
+    metadata_list.append(save_model(shelf_3level, "shelf-beam-heavy-3level.glb", meta_3level))
+    
+    # 规格2：重型4层标准货架（适配净空7m仓库，最常用）
+    print("  - 重型4层标准货架...")
+    shelf_4level = generate_heavy_shelf_industrial(
+        length=2300, 
+        width=1000, 
+        height=6500, 
+        levels=4,
+        layer_heights=[1600, 1600, 1600, 1300],
+        upright_profile="90x80",
+        beam_profile="120x50"
+    )
+    meta_4level = {
+        "id": "shelf-beam-heavy-4level-6m",
+        "name": "重型横梁式货架-4层标准库",
+        "category": "storage",
+        "description": "适配净空7m仓库，电商仓最常用规格，平衡型设计",
+        "tags": ["重型", "4层", "标准", "电商仓常用"],
+        "parameters": {
+            "length": {"type": "number", "min": 2000, "max": 3000, "default": 2300, "unit": "mm"},
+            "width": {"type": "number", "min": 800, "max": 1200, "default": 1000, "unit": "mm"},
+            "height": {"type": "number", "min": 5000, "max": 7500, "default": 6500, "unit": "mm"},
+            "levels": {"type": "number", "min": 2, "max": 6, "default": 4}
+        }
+    }
+    metadata_list.append(save_model(shelf_4level, "shelf-beam-heavy-4level.glb", meta_4level))
+    
+    # 规格3：重型5层高位货架（适配净空9m仓库）
+    print("  - 重型5层高位货架...")
+    shelf_5level = generate_heavy_shelf_industrial(
+        length=2700, 
+        width=1000, 
+        height=8200, 
+        levels=5,
+        layer_heights=[1700, 1700, 1700, 1700, 1400],
+        upright_profile="90x90",
+        beam_profile="140x50"
+    )
+    meta_5level = {
+        "id": "shelf-beam-heavy-5level-8m",
+        "name": "重型横梁式货架-5层高位立体库",
+        "category": "storage",
+        "description": "适配净空9m仓库，高位立体库专用，需要前移式叉车",
+        "tags": ["重型", "5层", "高位", "立体库"],
+        "parameters": {
+            "length": {"type": "number", "min": 2300, "max": 3500, "default": 2700, "unit": "mm"},
+            "width": {"type": "number", "min": 800, "max": 1200, "default": 1000, "unit": "mm"},
+            "height": {"type": "number", "min": 7000, "max": 10000, "default": 8200, "unit": "mm"},
+            "levels": {"type": "number", "min": 3, "max": 8, "default": 5}
+        }
+    }
+    metadata_list.append(save_model(shelf_5level, "shelf-beam-heavy-5level.glb", meta_5level))
     
     # 保存元数据
     print("\n📝 保存元数据...")
