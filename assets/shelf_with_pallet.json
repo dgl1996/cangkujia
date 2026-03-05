@@ -1,0 +1,19 @@
+{
+  "name": "横梁式重型货架",
+  "type": "shelf_beam_heavy",
+  "dimensions": {
+    "length_mm": 2500,
+    "depth_mm": 1000,
+    "height_mm": 4500
+  },
+  "layers": 4,
+  "layer_height_mm": 1200,
+  "pallet": {
+    "length_mm": 1200,
+    "width_mm": 1000,
+    "height_mm": 150,
+    "count_per_layer": 2
+  },
+  "model_file": "assets\\shelf_with_pallet.glb",
+  "format": "glb"
+}
