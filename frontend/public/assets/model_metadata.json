@@ -1285,5 +1285,41 @@
       }
     },
     "filename": "cart-cage-logistics-2tier.glb"
+  },
+  {
+    "id": "guard-rack-heavy-redyellow",
+    "name": "高位货架防撞护栏-红黄警示",
+    "category": "others",
+    "description": "红黄间隔反光警示色，安装于重型货架端头或转角，防止叉车碰撞",
+    "tags": [
+      "防撞护栏",
+      "红黄警示",
+      "货架防护",
+      "安全设施"
+    ],
+    "parameters": {
+      "length": {
+        "type": "number",
+        "min": 1200,
+        "max": 2000,
+        "default": 1500,
+        "unit": "mm"
+      },
+      "width": {
+        "type": "number",
+        "min": 100,
+        "max": 200,
+        "default": 150,
+        "unit": "mm"
+      },
+      "height": {
+        "type": "number",
+        "min": 300,
+        "max": 500,
+        "default": 400,
+        "unit": "mm"
+      }
+    },
+    "filename": "guard-rack-heavy-redyellow.glb"
   }
 ]

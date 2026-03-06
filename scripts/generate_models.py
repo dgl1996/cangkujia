@@ -3257,6 +3257,123 @@ def generate_cage_cart(length=800, width=600, height=1700):
     return scene
 
 
+def generate_rack_guard(length=1500, width=150, height=400):
+    """
+    生成高位货架防撞护栏（Rack End Protector）
+    红黄间隔反光警示色，安装于重型货架端头或转角，防止叉车碰撞
+    
+    Args:
+        length: 护栏长度
+        width: 护栏宽度（占地）
+        height: 护栏高度
+    """
+    meshes = []
+    
+    # 颜色定义 - 红黄警示
+    COLOR_ORANGE = [0.98, 0.45, 0.09]     # 橙红 #F97316
+    COLOR_YELLOW = [0.98, 0.8, 0.08]      # 黄色 #FACC15
+    COLOR_BASE = [0.7, 0.7, 0.7]          # 底座银灰
+    
+    # 尺寸参数
+    post_diameter = 48                      # 立柱直径
+    rail_diameter = 32                      # 横杆直径
+    post_height = height
+    rail_positions = [150, 350]             # 上下横杆高度
+    stripe_width = 150                      # 条纹宽度
+    
+    # 1. 两根立柱（红黄条纹）
+    post_positions = [-length/2 + 75, length/2 - 75]
+    
+    for i, x_pos in enumerate(post_positions):
+        # 立柱主体
+        post = trimesh.creation.cylinder(radius=post_diameter/2, height=post_height)
+        post.apply_translation([x_pos, 0, post_height/2])
+        
+        # 为立柱添加红黄条纹（分段着色）
+        # 底部橙色段
+        post_bottom = trimesh.creation.cylinder(radius=post_diameter/2 + 1, height=stripe_width)
+        post_bottom.apply_translation([x_pos, 0, stripe_width/2])
+        set_mesh_color(post_bottom, COLOR_ORANGE)
+        meshes.append((f'post_{i}_bottom', post_bottom))
+        
+        # 中间黄色段
+        post_middle = trimesh.creation.cylinder(radius=post_diameter/2 + 1, height=stripe_width)
+        post_middle.apply_translation([x_pos, 0, stripe_width + stripe_width/2])
+        set_mesh_color(post_middle, COLOR_YELLOW)
+        meshes.append((f'post_{i}_middle', post_middle))
+        
+        # 顶部橙色段
+        post_top = trimesh.creation.cylinder(radius=post_diameter/2 + 1, height=post_height - 2*stripe_width)
+        post_top.apply_translation([x_pos, 0, 2*stripe_width + (post_height - 2*stripe_width)/2])
+        set_mesh_color(post_top, COLOR_ORANGE)
+        meshes.append((f'post_{i}_top', post_top))
+        
+        # 2. 底座法兰（200×200mm）
+        base_plate = trimesh.creation.box(extents=[200, 200, 10])
+        base_plate.apply_translation([x_pos, 0, 5])
+        set_mesh_color(base_plate, COLOR_BASE)
+        meshes.append((f'base_plate_{i}', base_plate))
+        
+        # 底座加强筋
+        for angle in [0, np.pi/2]:
+            rib = trimesh.creation.box(extents=[80, 10, 40])
+            rib.apply_transform(trimesh.transformations.rotation_matrix(
+                angle=angle, direction=[0, 0, 1], point=[0, 0, 0]
+            ))
+            rib.apply_translation([x_pos, 0, 25])
+            set_mesh_color(rib, COLOR_BASE)
+            meshes.append((f'base_rib_{i}_{angle}', rib))
+        
+        # 膨胀螺栓（4颗）
+        for dx, dy in [(-60, -60), (60, -60), (-60, 60), (60, 60)]:
+            bolt = trimesh.creation.cylinder(radius=6, height=15)
+            bolt.apply_translation([x_pos + dx, dy, 7])
+            set_mesh_color(bolt, [0.4, 0.4, 0.4])
+            meshes.append((f'bolt_{i}_{dx}_{dy}', bolt))
+    
+    # 3. 上下横杆（红黄条纹）
+    for rail_z in rail_positions:
+        # 计算横杆需要多少段条纹
+        num_stripes = int(length / stripe_width)
+        
+        for j in range(num_stripes):
+            x_start = -length/2 + j * stripe_width
+            x_center = x_start + stripe_width/2
+            
+            # 交替颜色
+            color = COLOR_ORANGE if j % 2 == 0 else COLOR_YELLOW
+            
+            # 横杆段
+            rail_segment = trimesh.creation.cylinder(radius=rail_diameter/2, height=stripe_width - 5)
+            rail_segment.apply_transform(trimesh.transformations.rotation_matrix(
+                angle=np.pi/2, direction=[0, 0, 1], point=[0, 0, 0]
+            ))
+            rail_segment.apply_translation([x_center, 0, rail_z])
+            set_mesh_color(rail_segment, color)
+            meshes.append((f'rail_{rail_z}_segment_{j}', rail_segment))
+    
+    # 4. 立柱顶部盖帽
+    for i, x_pos in enumerate(post_positions):
+        cap = trimesh.creation.cylinder(radius=post_diameter/2 + 3, height=10)
+        cap.apply_translation([x_pos, 0, post_height + 5])
+        set_mesh_color(cap, COLOR_ORANGE)
+        meshes.append((f'post_cap_{i}', cap))
+    
+    # 使用Scene并应用坐标转换
+    scene = trimesh.Scene()
+    rotation_matrix = trimesh.transformations.rotation_matrix(
+        angle=-np.pi / 2,
+        direction=[1, 0, 0],
+        point=[0, 0, 0]
+    )
+    
+    for name, mesh in meshes:
+        mesh.apply_transform(rotation_matrix)
+        scene.add_geometry(mesh, node_name=name)
+    
+    return scene
+
+
 def main():
     """主函数：生成所有模型"""
     print("=" * 50)
@@ -3802,6 +3919,24 @@ def main():
         }
     }
     metadata_list.append(save_model(cage_cart, "cart-cage-logistics-2tier.glb", meta_cage_cart))
+    
+    # 生成高位货架防撞护栏
+    print("\n🛡️ 生成高位货架防撞护栏...")
+    print("  - 红黄警示防撞护栏...")
+    rack_guard = generate_rack_guard()
+    meta_rack_guard = {
+        "id": "guard-rack-heavy-redyellow",
+        "name": "高位货架防撞护栏-红黄警示",
+        "category": "others",
+        "description": "红黄间隔反光警示色，安装于重型货架端头或转角，防止叉车碰撞",
+        "tags": ["防撞护栏", "红黄警示", "货架防护", "安全设施"],
+        "parameters": {
+            "length": {"type": "number", "min": 1200, "max": 2000, "default": 1500, "unit": "mm"},
+            "width": {"type": "number", "min": 100, "max": 200, "default": 150, "unit": "mm"},
+            "height": {"type": "number", "min": 300, "max": 500, "default": 400, "unit": "mm"}
+        }
+    }
+    metadata_list.append(save_model(rack_guard, "guard-rack-heavy-redyellow.glb", meta_rack_guard))
     
     # 保存元数据
     print("\n📝 保存元数据...")
