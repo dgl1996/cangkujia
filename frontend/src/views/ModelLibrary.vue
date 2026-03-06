@@ -868,16 +868,6 @@ const loadCustomShelves = () => {
 
 // 为模型分配短ID（用户识别ID）
 const assignShortIds = () => {
-  const categoryCounters = {
-    'storage': 101,    // A - 货架系统
-    'handling': 101,   // B - 搬运设备
-    'containers': 101, // C - 载具容器
-    'conveying': 101,  // D - 输送设备
-    'picking': 101,    // E - 拣选设备
-    'others': 101,     // F - 其他
-    'personnel': 101,  // G - 人员
-  };
-
   const categoryLetters = {
     'storage': 'A',
     'handling': 'B',
@@ -888,10 +878,26 @@ const assignShortIds = () => {
     'personnel': 'G',
   };
 
+  // 计算每个类别当前的最新短ID编号
+  const categoryCounters = {};
+  
+  models.value.forEach((model) => {
+    if (model.shortId) {
+      const letter = model.shortId.charAt(0);
+      const num = parseInt(model.shortId.slice(1));
+      if (!categoryCounters[letter] || categoryCounters[letter] < num) {
+        categoryCounters[letter] = num;
+      }
+    }
+  });
+
   models.value.forEach((model) => {
     if (!model.shortId) {
       const letter = categoryLetters[model.category] || 'H';
-      const counter = categoryCounters[model.category]++;
+      // 从当前最大编号+1开始，或从101开始
+      const currentMax = categoryCounters[letter] || 100;
+      const counter = currentMax + 1;
+      categoryCounters[letter] = counter;
       model.shortId = `${letter}${counter}`;
     }
   });
@@ -993,6 +999,9 @@ const saveCustomShelf = () => {
   
   // 添加到模型列表
   models.value.push(newShelf);
+  
+  // 分配短ID
+  assignShortIds();
   
   // 保存到localStorage
   const customShelves = models.value.filter(m => m.isCustom);
