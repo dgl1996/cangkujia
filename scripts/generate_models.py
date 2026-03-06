@@ -419,6 +419,14 @@ def generate_drive_in_shelf(length=3600, width=1500, height=6000, depth=5):
     shelf = trimesh.util.concatenate(meshes)
     shelf.visual.vertex_colors = [70, 70, 70, 255]  # 深灰色
     
+    # 应用坐标转换（Y轴向上）
+    rotation_matrix = trimesh.transformations.rotation_matrix(
+        angle=-np.pi / 2,
+        direction=[1, 0, 0],
+        point=[0, 0, 0]
+    )
+    shelf.apply_transform(rotation_matrix)
+    
     return shelf, {
         "id": "shelf-drive-in",
         "name": "驶入式货架",
