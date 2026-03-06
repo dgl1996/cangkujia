@@ -416,35 +416,22 @@ def set_mesh_color(mesh, color_rgb):
 def generate_light_shelf_v2(length=1200, width=400, height=2000, levels=4):
     """
     生成轻型货架 V2 - 基于参考图片改进版
-    
-    参考图片特征:
-    - 蓝色立柱带菱形孔
-    - 橙色阶梯状横梁
-    - 白色层板
-    - 立柱间斜拉支撑
-    - 底部塑料脚垫
-    
-    Args:
-        length: 货架长度 (mm), 默认1200
-        width: 货架深度 (mm), 默认400
-        height: 货架高度 (mm), 默认2000
-        levels: 层数, 默认4层
     """
     meshes = []
     
     # 颜色定义 (参考图片) - 使用RGB 0-1范围
-    COLOR_BLUE = [0.25, 0.45, 0.85]      # 立柱蓝色 - 调淡 #4075D9
-    COLOR_ORANGE = [0.91, 0.36, 0.02]    # 横梁橙色 #E85D04
-    COLOR_WHITE = [0.96, 0.96, 0.96]     # 层板白色 #F5F5F5
+    COLOR_BLUE = [0.25, 0.45, 0.85]      # 立柱蓝色
+    COLOR_ORANGE = [0.91, 0.36, 0.02]    # 横梁橙色
+    COLOR_WHITE = [0.96, 0.96, 0.96]     # 层板白色
     COLOR_GREY = [0.39, 0.39, 0.39]      # 脚垫灰色
     
     # 尺寸参数
-    upright_width = 40       # 立柱宽度
-    upright_depth = 30       # 立柱深度
-    beam_height = 35         # 横梁高度
-    beam_width = 30          # 横梁宽度
-    deck_thickness = 20      # 层板厚度
-    foot_height = 30         # 脚垫高度
+    upright_width = 40
+    upright_depth = 30
+    beam_height = 35
+    beam_width = 30
+    deck_thickness = 20
+    foot_height = 30
     
     # 立柱位置 (4根)
     upright_positions = [
@@ -454,41 +441,15 @@ def generate_light_shelf_v2(length=1200, width=400, height=2000, levels=4):
         [length/2 - upright_width/2, width/2 - upright_depth/2]
     ]
     
-    # 生成立柱
-    for i, (x, y) in enumerate(upright_positions):
+    # 生成立柱和脚垫
+    for x, y in upright_positions:
         # 主立柱
         upright = trimesh.creation.box(
             extents=[upright_width, upright_depth, height - foot_height]
         )
         upright.apply_translation([x, y, (height - foot_height)/2 + foot_height])
-        
-        # 给立柱添加菱形孔效果 (用纹理或简化表示)
-        # 这里用多个小方块模拟孔洞效果
-        hole_spacing = 50  # 孔间距
-        hole_start = 200   # 起始高度
-        for h in range(hole_start, int(height - foot_height - 100), hole_spacing):
-            # 正面孔
-            hole_front = trimesh.creation.box(
-                extents=[15, 5, 25]
-            )
-            hole_front.apply_translation([x, y - upright_depth/2 - 2, h])
-            
-            # 侧面孔
-            hole_side = trimesh.creation.box(
-                extents=[5, 15, 25]
-            )
-            hole_side.apply_translation([x - upright_width/2 - 2, y, h])
-            
-            # 用布尔运算减去孔洞 (简化版：这里直接添加深色小块表示)
-            hole_marker_front = trimesh.creation.box(
-                extents=[12, 2, 20]
-            )
-            hole_marker_front.apply_translation([x, y - upright_depth/2 + 1, h])
-            
-            hole_marker_side = trimesh.creation.box(
-                extents=[2, 12, 20]
-            )
-            hole_marker_side.apply_translation([x - upright_width/2 + 1, y, h])
+        set_mesh_color(upright, COLOR_BLUE)
+        meshes.append(upright)
         
         # 脚垫
         foot = trimesh.creation.box(
@@ -497,9 +458,6 @@ def generate_light_shelf_v2(length=1200, width=400, height=2000, levels=4):
         foot.apply_translation([x, y, foot_height/2])
         set_mesh_color(foot, COLOR_GREY)
         meshes.append(foot)
-        
-        set_mesh_color(upright, COLOR_BLUE)
-        meshes.append(upright)
     
     # 计算层板高度
     level_spacing = (height - 300) / (levels + 1)
@@ -511,13 +469,11 @@ def generate_light_shelf_v2(length=1200, width=400, height=2000, levels=4):
         # 横梁 (前后各一根)
         for y_offset in [-width/2 + upright_depth/2, width/2 - upright_depth/2]:
             # 主横梁 (阶梯状，用两个长方体组合)
-            # 上部
             beam_top = trimesh.creation.box(
                 extents=[length - 2*upright_width - 10, beam_width, beam_height/2]
             )
             beam_top.apply_translation([0, y_offset, z + beam_height/4])
             
-            # 下部 (稍微宽一点，形成阶梯效果)
             beam_bottom = trimesh.creation.box(
                 extents=[length - 2*upright_width, beam_width + 5, beam_height/2]
             )
@@ -536,46 +492,26 @@ def generate_light_shelf_v2(length=1200, width=400, height=2000, levels=4):
         set_mesh_color(deck, COLOR_WHITE)
         meshes.append(deck)
     
-    # 斜拉支撑 (增加稳定性，参考图片特征)
-    # 前后各一组X型支撑
+    # 斜拉支撑
     for y_offset in [-width/2 + upright_depth/2, width/2 - upright_depth/2]:
-        # 左侧斜撑
-        diag_left = trimesh.creation.box(
-            extents=[3, 3, height * 0.7]
-        )
-        diag_left.apply_translation([
-            -length/2 + upright_width + 20,
-            y_offset,
-            height/2
-        ])
+        diag_left = trimesh.creation.box(extents=[3, 3, height * 0.7])
+        diag_left.apply_translation([-length/2 + upright_width + 20, y_offset, height/2])
         set_mesh_color(diag_left, COLOR_BLUE)
         meshes.append(diag_left)
         
-        # 右侧斜撑
-        diag_right = trimesh.creation.box(
-            extents=[3, 3, height * 0.7]
-        )
-        diag_right.apply_translation([
-            length/2 - upright_width - 20,
-            y_offset,
-            height/2
-        ])
+        diag_right = trimesh.creation.box(extents=[3, 3, height * 0.7])
+        diag_right.apply_translation([length/2 - upright_width - 20, y_offset, height/2])
         set_mesh_color(diag_right, COLOR_BLUE)
         meshes.append(diag_right)
     
-    # 使用Scene来保留每个mesh的材质，而不是合并
+    # 使用Scene并应用坐标转换
     scene = trimesh.Scene()
-    
-    # 修复坐标系：Trimesh使用Z轴向上，Three.js使用Y轴向上
-    # 需要旋转模型，使Z轴朝上变为Y轴朝上
-    # 绕X轴旋转-90度（逆时针），这样Z向上变成Y向上
     rotation_matrix = trimesh.transformations.rotation_matrix(
-        angle=-np.pi / 2,  # -90度
-        direction=[1, 0, 0],  # 绕X轴旋转
+        angle=-np.pi / 2,
+        direction=[1, 0, 0],
         point=[0, 0, 0]
     )
     
-    # 添加每个mesh到scene，并应用旋转
     for i, mesh in enumerate(meshes):
         mesh.apply_transform(rotation_matrix)
         scene.add_geometry(mesh, node_name=f'part_{i}')
@@ -599,14 +535,13 @@ def generate_heavy_shelf_simple(length=2300, width=1000, height=4500, levels=4,
                                  layer_heights=None):
     """
     简化版重型货架生成 - 完全复制V2的成功模式
-    只使用3个颜色：立柱(蓝)、横梁(橙)、层板(灰白)
     """
     meshes = []
     
     # 颜色定义 - 使用RGB 0-1范围
-    COLOR_BLUE = [0.25, 0.45, 0.85]      # 立柱蓝色
-    COLOR_ORANGE = [0.91, 0.36, 0.02]    # 横梁橙色
-    COLOR_DECK = [0.85, 0.85, 0.85]      # 层板浅灰
+    COLOR_BLUE = [0.18, 0.25, 0.45]      # 立柱深蓝色
+    COLOR_ORANGE = [0.85, 0.45, 0.15]    # 横梁橙色
+    COLOR_DECK = [0.75, 0.75, 0.75]      # 层板灰色
     
     # 尺寸参数
     upright_width = 90
@@ -614,6 +549,7 @@ def generate_heavy_shelf_simple(length=2300, width=1000, height=4500, levels=4,
     beam_height = 100
     beam_width = 50
     deck_thickness = 30
+    foot_height = 50
     
     # 计算各层高度
     if layer_heights is None:
@@ -630,14 +566,23 @@ def generate_heavy_shelf_simple(length=2300, width=1000, height=4500, levels=4,
         [length/2 - upright_width/2, width/2 - upright_depth/2]
     ]
     
-    # 生成立柱
+    # 生成立柱和脚垫
     for x, y in upright_positions:
+        # 主立柱
         upright = trimesh.creation.box(
-            extents=[upright_width, upright_depth, height]
+            extents=[upright_width, upright_depth, height - foot_height]
         )
-        upright.apply_translation([x, y, height/2])
+        upright.apply_translation([x, y, (height - foot_height)/2 + foot_height])
         set_mesh_color(upright, COLOR_BLUE)
         meshes.append(upright)
+        
+        # 脚垫
+        foot = trimesh.creation.box(
+            extents=[upright_width + 20, upright_depth + 20, foot_height]
+        )
+        foot.apply_translation([x, y, foot_height/2])
+        set_mesh_color(foot, COLOR_ORANGE)
+        meshes.append(foot)
     
     # 生成横梁和层板
     current_z = 200
@@ -645,22 +590,43 @@ def generate_heavy_shelf_simple(length=2300, width=1000, height=4500, levels=4,
         layer_height = layer_heights[level]
         current_z += layer_height
         
-        # 横梁 (前后各一根) - 简化，只用一根
+        # 横梁 (前后各一根)
         for y_offset in [-width/2 + upright_depth/2, width/2 - upright_depth/2]:
-            beam = trimesh.creation.box(
-                extents=[length - 2*upright_width, beam_width, beam_height]
+            # 主横梁 (阶梯状，用两个长方体组合)
+            beam_top = trimesh.creation.box(
+                extents=[length - 2*upright_width - 10, beam_width, beam_height/2]
             )
-            beam.apply_translation([0, y_offset, current_z])
-            set_mesh_color(beam, COLOR_ORANGE)
-            meshes.append(beam)
+            beam_top.apply_translation([0, y_offset, current_z + beam_height/4])
+            
+            beam_bottom = trimesh.creation.box(
+                extents=[length - 2*upright_width, beam_width + 5, beam_height/2]
+            )
+            beam_bottom.apply_translation([0, y_offset, current_z - beam_height/4])
+            
+            set_mesh_color(beam_top, COLOR_ORANGE)
+            set_mesh_color(beam_bottom, COLOR_ORANGE)
+            meshes.append(beam_top)
+            meshes.append(beam_bottom)
         
-        # 层板 - 简化为一个方块
+        # 层板
         deck = trimesh.creation.box(
             extents=[length - 2*upright_width - 20, width - 2*upright_depth - 10, deck_thickness]
         )
         deck.apply_translation([0, 0, current_z])
         set_mesh_color(deck, COLOR_DECK)
         meshes.append(deck)
+    
+    # 斜拉支撑
+    for y_offset in [-width/2 + upright_depth/2, width/2 - upright_depth/2]:
+        diag_left = trimesh.creation.box(extents=[5, 5, height * 0.7])
+        diag_left.apply_translation([-length/2 + upright_width + 100, y_offset, height/2])
+        set_mesh_color(diag_left, COLOR_BLUE)
+        meshes.append(diag_left)
+        
+        diag_right = trimesh.creation.box(extents=[5, 5, height * 0.7])
+        diag_right.apply_translation([length/2 - upright_width - 100, y_offset, height/2])
+        set_mesh_color(diag_right, COLOR_BLUE)
+        meshes.append(diag_right)
     
     # 使用Scene并应用坐标转换 - 完全复制V2
     scene = trimesh.Scene()
