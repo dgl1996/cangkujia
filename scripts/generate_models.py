@@ -1952,6 +1952,174 @@ def generate_picking_cart(length=900, width=450, height=1200, tiers=3):
     return scene
 
 
+def generate_cargo_lift(cabin_length=1400, cabin_width=1200, total_height=6000):
+    """
+    生成液压货物提升机（Cargo Lift）
+    3层阁楼库专用，货物垂直转运
+    
+    Args:
+        cabin_length: 轿厢长度
+        cabin_width: 轿厢宽度
+        total_height: 总高度
+    """
+    meshes = []
+    
+    # 颜色定义
+    COLOR_GREY = [0.22, 0.25, 0.32]       # 工业灰 #374151
+    COLOR_DARK = [0.15, 0.15, 0.15]        # 深色部件
+    COLOR_PLATFORM = [0.35, 0.35, 0.35]    # 平台花纹钢
+    COLOR_DOOR = [0.5, 0.5, 0.5]           # 门
+    COLOR_CYLINDER = [0.6, 0.6, 0.6]       # 液压油缸银色
+    
+    # 尺寸参数
+    cabin_height = 2000                     # 轿厢高度
+    floor_heights = [0, 2700, 5400]         # 三层楼层高度
+    guide_width = 100                       # 导轨宽度
+    
+    # 1. 四根导轨立柱（贯穿全程）
+    guide_positions = [
+        [-cabin_width/2 - guide_width/2 - 50, -cabin_length/2 - guide_width/2 - 50],
+        [cabin_width/2 + guide_width/2 + 50, -cabin_length/2 - guide_width/2 - 50],
+        [-cabin_width/2 - guide_width/2 - 50, cabin_length/2 + guide_width/2 + 50],
+        [cabin_width/2 + guide_width/2 + 50, cabin_length/2 + guide_width/2 + 50]
+    ]
+    
+    for i, (x, y) in enumerate(guide_positions):
+        guide = trimesh.creation.box(
+            extents=[guide_width, guide_width, total_height]
+        )
+        guide.apply_translation([x, y, total_height/2])
+        set_mesh_color(guide, COLOR_GREY)
+        meshes.append((f'guide_{i}', guide))
+    
+    # 2. 轿厢主体（位于中间楼层位置 - 第2层）
+    cabin_z = floor_heights[1] + cabin_height/2  # 轿厢中心在2.7m + 1m = 3.7m
+    
+    # 轿厢底板（花纹钢板）
+    cabin_floor = trimesh.creation.box(
+        extents=[cabin_width, cabin_length, 50]
+    )
+    cabin_floor.apply_translation([0, 0, floor_heights[1] + 25])
+    set_mesh_color(cabin_floor, COLOR_PLATFORM)
+    meshes.append(('cabin_floor', cabin_floor))
+    
+    # 轿厢顶板
+    cabin_roof = trimesh.creation.box(
+        extents=[cabin_width, cabin_length, 30]
+    )
+    cabin_roof.apply_translation([0, 0, floor_heights[1] + cabin_height - 15])
+    set_mesh_color(cabin_roof, COLOR_GREY)
+    meshes.append(('cabin_roof', cabin_roof))
+    
+    # 轿厢四壁（框架）
+    wall_thickness = 30
+    # 前壁
+    front_wall = trimesh.creation.box(
+        extents=[cabin_width, wall_thickness, cabin_height - 80]
+    )
+    front_wall.apply_translation([0, -cabin_length/2 + wall_thickness/2, floor_heights[1] + cabin_height/2])
+    set_mesh_color(front_wall, COLOR_GREY)
+    meshes.append(('cabin_front_wall', front_wall))
+    
+    # 后壁
+    back_wall = trimesh.creation.box(
+        extents=[cabin_width, wall_thickness, cabin_height - 80]
+    )
+    back_wall.apply_translation([0, cabin_length/2 - wall_thickness/2, floor_heights[1] + cabin_height/2])
+    set_mesh_color(back_wall, COLOR_GREY)
+    meshes.append(('cabin_back_wall', back_wall))
+    
+    # 左壁
+    left_wall = trimesh.creation.box(
+        extents=[wall_thickness, cabin_length - 2*wall_thickness, cabin_height - 80]
+    )
+    left_wall.apply_translation([-cabin_width/2 + wall_thickness/2, 0, floor_heights[1] + cabin_height/2])
+    set_mesh_color(left_wall, COLOR_GREY)
+    meshes.append(('cabin_left_wall', left_wall))
+    
+    # 右壁
+    right_wall = trimesh.creation.box(
+        extents=[wall_thickness, cabin_length - 2*wall_thickness, cabin_height - 80]
+    )
+    right_wall.apply_translation([cabin_width/2 - wall_thickness/2, 0, floor_heights[1] + cabin_height/2])
+    set_mesh_color(right_wall, COLOR_GREY)
+    meshes.append(('cabin_right_wall', right_wall))
+    
+    # 3. 对开门（前侧）
+    door_width = cabin_width / 2 - 20
+    door_height = cabin_height - 100
+    # 左门
+    left_door = trimesh.creation.box(
+        extents=[door_width, 20, door_height]
+    )
+    left_door.apply_translation([-door_width/2 - 10, -cabin_length/2 + 10, floor_heights[1] + door_height/2 + 50])
+    set_mesh_color(left_door, COLOR_DOOR)
+    meshes.append(('door_left', left_door))
+    
+    # 右门
+    right_door = trimesh.creation.box(
+        extents=[door_width, 20, door_height]
+    )
+    right_door.apply_translation([door_width/2 + 10, -cabin_length/2 + 10, floor_heights[1] + door_height/2 + 50])
+    set_mesh_color(right_door, COLOR_DOOR)
+    meshes.append(('door_right', right_door))
+    
+    # 4. 液压油缸（两侧）
+    cylinder_radius = 60
+    for i, x_offset in enumerate([-cabin_width/2 - 150, cabin_width/2 + 150]):
+        cylinder = trimesh.creation.cylinder(radius=cylinder_radius, height=4000)
+        cylinder.apply_translation([x_offset, 0, 2000])
+        set_mesh_color(cylinder, COLOR_CYLINDER)
+        meshes.append((f'hydraulic_cylinder_{i}', cylinder))
+    
+    # 5. 顶部液压泵站（小房子状）
+    pump_house = trimesh.creation.box(
+        extents=[600, 400, 400]
+    )
+    pump_house.apply_translation([0, 0, total_height + 200])
+    set_mesh_color(pump_house, COLOR_GREY)
+    meshes.append(('pump_house', pump_house))
+    
+    # 6. 各层平台（3层）
+    platform_length = cabin_length + 400
+    platform_width = cabin_width + 400
+    for i, floor_z in enumerate(floor_heights):
+        # 平台
+        platform = trimesh.creation.box(
+            extents=[platform_width, platform_length, 50]
+        )
+        platform.apply_translation([0, 0, floor_z])
+        set_mesh_color(platform, COLOR_PLATFORM)
+        meshes.append((f'platform_{i}', platform))
+        
+        # 楼层标识（小方块）
+        sign = trimesh.creation.box(extents=[100, 20, 50])
+        sign.apply_translation([0, cabin_length/2 + 100, floor_z + 25])
+        set_mesh_color(sign, [0.9, 0.9, 0.2])  # 黄色标识
+        meshes.append((f'floor_sign_{i}', sign))
+    
+    # 7. 控制按钮盒（每层侧面）
+    for i, floor_z in enumerate(floor_heights):
+        control_box = trimesh.creation.box(extents=[80, 40, 120])
+        control_box.apply_translation([cabin_width/2 + 100, -cabin_length/2 - 100, floor_z + 60])
+        set_mesh_color(control_box, COLOR_DARK)
+        meshes.append((f'control_box_{i}', control_box))
+    
+    # 使用Scene并应用坐标转换
+    scene = trimesh.Scene()
+    rotation_matrix = trimesh.transformations.rotation_matrix(
+        angle=-np.pi / 2,
+        direction=[1, 0, 0],
+        point=[0, 0, 0]
+    )
+    
+    for name, mesh in meshes:
+        mesh.apply_transform(rotation_matrix)
+        scene.add_geometry(mesh, node_name=name)
+    
+    return scene
+
+
 def main():
     """主函数：生成所有模型"""
     print("=" * 50)
@@ -2367,6 +2535,25 @@ def main():
         }
     }
     metadata_list.append(save_model(picking_cart, "cart-picking-3tier.glb", meta_picking_cart))
+    
+    # 生成液压货物提升机
+    print("\n🛗 生成液压货物提升机...")
+    print("  - 3层阁楼库专用提升机...")
+    cargo_lift = generate_cargo_lift()
+    meta_cargo_lift = {
+        "id": "lift-cargo-hydraulic-3floor",
+        "name": "液压货物提升机-3层阁楼",
+        "category": "conveying",
+        "description": "3层阁楼库专用，货物垂直转运，严禁载人",
+        "tags": ["提升机", "液压", "3层", "阁楼库", "垂直转运"],
+        "parameters": {
+            "cabinLength": {"type": "number", "min": 1200, "max": 1600, "default": 1400, "unit": "mm"},
+            "cabinWidth": {"type": "number", "min": 1000, "max": 1400, "default": 1200, "unit": "mm"},
+            "totalHeight": {"type": "number", "min": 5000, "max": 7000, "default": 6000, "unit": "mm"},
+            "loadCapacity": {"type": "number", "min": 500, "max": 2000, "default": 1000, "unit": "kg"}
+        }
+    }
+    metadata_list.append(save_model(cargo_lift, "lift-cargo-hydraulic-3floor.glb", meta_cargo_lift))
     
     # 保存元数据
     print("\n📝 保存元数据...")

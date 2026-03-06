@@ -1003,5 +1003,49 @@
       }
     },
     "filename": "cart-picking-3tier.glb"
+  },
+  {
+    "id": "lift-cargo-hydraulic-3floor",
+    "name": "液压货物提升机-3层阁楼",
+    "category": "conveying",
+    "description": "3层阁楼库专用，货物垂直转运，严禁载人",
+    "tags": [
+      "提升机",
+      "液压",
+      "3层",
+      "阁楼库",
+      "垂直转运"
+    ],
+    "parameters": {
+      "cabinLength": {
+        "type": "number",
+        "min": 1200,
+        "max": 1600,
+        "default": 1400,
+        "unit": "mm"
+      },
+      "cabinWidth": {
+        "type": "number",
+        "min": 1000,
+        "max": 1400,
+        "default": 1200,
+        "unit": "mm"
+      },
+      "totalHeight": {
+        "type": "number",
+        "min": 5000,
+        "max": 7000,
+        "default": 6000,
+        "unit": "mm"
+      },
+      "loadCapacity": {
+        "type": "number",
+        "min": 500,
+        "max": 2000,
+        "default": 1000,
+        "unit": "kg"
+      }
+    },
+    "filename": "lift-cargo-hydraulic-3floor.glb"
   }
 ]

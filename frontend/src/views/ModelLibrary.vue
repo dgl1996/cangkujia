@@ -696,6 +696,21 @@ const models = ref([
     },
     modelUrl: '/assets/models/cart-picking-3tier.glb',
   },
+  // 输送设备 (D101-D199)
+  {
+    id: 'lift-cargo-hydraulic-3floor',
+    name: '液压货物提升机-3层阁楼',
+    category: 'conveying',
+    description: '3层阁楼库专用，货物垂直转运，严禁载人',
+    tags: ['提升机', '液压', '3层', '阁楼库', '垂直转运'],
+    parameters: {
+      cabinLength: { type: 'number', min: 1200, max: 1600, default: 1400, unit: 'mm' },
+      cabinWidth: { type: 'number', min: 1000, max: 1400, default: 1200, unit: 'mm' },
+      totalHeight: { type: 'number', min: 5000, max: 7000, default: 6000, unit: 'mm' },
+      loadCapacity: { type: 'number', min: 500, max: 2000, default: 1000, unit: 'kg' },
+    },
+    modelUrl: '/assets/models/lift-cargo-hydraulic-3floor.glb',
+  },
 ]);
 
 // 状态
@@ -734,17 +749,19 @@ const assignShortIds = () => {
     'storage': 101,    // A - 货架系统
     'handling': 101,   // B - 搬运设备
     'containers': 101, // C - 载具容器
+    'conveying': 101,  // D - 输送设备
   };
-  
+
   const categoryLetters = {
     'storage': 'A',
     'handling': 'B',
     'containers': 'C',
+    'conveying': 'D',
   };
-  
+
   models.value.forEach((model) => {
     if (!model.shortId) {
-      const letter = categoryLetters[model.category] || 'D';
+      const letter = categoryLetters[model.category] || 'E';
       const counter = categoryCounters[model.category]++;
       model.shortId = `${letter}${counter}`;
     }
