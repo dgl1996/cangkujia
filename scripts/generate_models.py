@@ -595,52 +595,30 @@ def generate_light_shelf_v2(length=1200, width=400, height=2000, levels=4):
     }
 
 
-def generate_heavy_shelf_industrial(length=2300, width=1000, height=4500, levels=4, 
-                                     layer_heights=None, upright_profile="90x80", 
-                                     beam_profile="120x50", name_suffix=""):
+def generate_heavy_shelf_simple(length=2300, width=1000, height=4500, levels=4, 
+                                 layer_heights=None):
     """
-    生成行业标准重型货架（基于参考图片）
-    
-    参考图片特征：
-    - 深蓝色立柱（带菱形孔）
-    - 橙色横梁
-    - 金属网格层板（橙色边框）
-    - X型斜拉支撑
-    - 黄色防撞护栏
-    
-    Args:
-        length: 货架长度 (mm)，2300或2700
-        width: 货架深度 (mm)，标准1000
-        height: 货架高度 (mm)
-        levels: 层数 (3/4/5)
-        layer_heights: 各层层高列表，默认均匀分布
-        upright_profile: 立柱规格
-        beam_profile: 横梁规格
-        name_suffix: 名称后缀
+    简化版重型货架生成 - 完全复制V2的成功模式
+    只使用3个颜色：立柱(蓝)、横梁(橙)、层板(灰白)
     """
     meshes = []
     
-    # 颜色定义（基于参考图片）
-    COLOR_UPRIGHT = [0.18, 0.25, 0.45]      # 深蓝色立柱 #2D3F73
-    COLOR_BEAM = [0.85, 0.45, 0.15]         # 橙色横梁 #D97326
-    COLOR_DECK_FRAME = [0.85, 0.45, 0.15]   # 层板边框橙色
-    COLOR_DECK_MESH = [0.75, 0.75, 0.75]    # 层板网格灰色
-    COLOR_GUARD = [0.95, 0.85, 0.15]        # 黄色防撞护栏 #F2D826
+    # 颜色定义 - 使用RGB 0-1范围
+    COLOR_BLUE = [0.25, 0.45, 0.85]      # 立柱蓝色
+    COLOR_ORANGE = [0.91, 0.36, 0.02]    # 横梁橙色
+    COLOR_DECK = [0.85, 0.85, 0.85]      # 层板浅灰
     
     # 尺寸参数
     upright_width = 90
     upright_depth = 80
-    beam_height = 120
+    beam_height = 100
     beam_width = 50
     deck_thickness = 30
-    guard_height = 400
-    guard_depth = 300
     
     # 计算各层高度
     if layer_heights is None:
-        # 默认均匀分布，底层留出叉车操作空间
-        base_height = 200  # 底部离地高度
-        available_height = height - base_height - 200  # 顶部预留
+        base_height = 200
+        available_height = height - base_height - 200
         avg_height = available_height / levels
         layer_heights = [avg_height] * levels
     
@@ -658,67 +636,33 @@ def generate_heavy_shelf_industrial(length=2300, width=1000, height=4500, levels
             extents=[upright_width, upright_depth, height]
         )
         upright.apply_translation([x, y, height/2])
-        
-        set_mesh_color(upright, COLOR_UPRIGHT)
+        set_mesh_color(upright, COLOR_BLUE)
         meshes.append(upright)
     
     # 生成横梁和层板
-    current_z = 200  # 从底部200mm开始
+    current_z = 200
     for level in range(levels):
         layer_height = layer_heights[level]
         current_z += layer_height
         
-        # 前后横梁（橙色）
+        # 横梁 (前后各一根) - 简化，只用一根
         for y_offset in [-width/2 + upright_depth/2, width/2 - upright_depth/2]:
             beam = trimesh.creation.box(
                 extents=[length - 2*upright_width, beam_width, beam_height]
             )
-            beam.apply_translation([0, y_offset, current_z - beam_height/2])
-            set_mesh_color(beam, COLOR_BEAM)
+            beam.apply_translation([0, y_offset, current_z])
+            set_mesh_color(beam, COLOR_ORANGE)
             meshes.append(beam)
         
-        # 层板（金属网格效果 - 用橙色边框+灰色网格表示）
-        # 层板边框
-        deck_frame = trimesh.creation.box(
-            extents=[length - 2*upright_width - 20, width - 2*upright_depth - 20, deck_thickness]
+        # 层板 - 简化为一个方块
+        deck = trimesh.creation.box(
+            extents=[length - 2*upright_width - 20, width - 2*upright_depth - 10, deck_thickness]
         )
-        deck_frame.apply_translation([0, 0, current_z])
-        set_mesh_color(deck_frame, COLOR_DECK_FRAME)
-        meshes.append(deck_frame)
-        
-        # 层板网格（简化用细条表示）
-        grid_spacing = 100
-        for i in range(int((length - 2*upright_width - 40) / grid_spacing)):
-            x_pos = -(length - 2*upright_width - 40)/2 + i * grid_spacing + grid_spacing/2
-            grid_bar = trimesh.creation.box(extents=[5, width - 2*upright_depth - 30, 5])
-            grid_bar.apply_translation([x_pos, 0, current_z + 5])
-            set_mesh_color(grid_bar, COLOR_DECK_MESH)
-            meshes.append(grid_bar)
+        deck.apply_translation([0, 0, current_z])
+        set_mesh_color(deck, COLOR_DECK)
+        meshes.append(deck)
     
-    # X型斜拉支撑（前后各一组）
-    for y_offset in [-width/2 + upright_depth/2, width/2 - upright_depth/2]:
-        # 左侧X支撑
-        diag1 = trimesh.creation.box(extents=[5, 5, height * 0.6])
-        diag1.apply_translation([-length/2 + upright_width + 100, y_offset, height/2])
-        set_mesh_color(diag1, COLOR_UPRIGHT)
-        meshes.append(diag1)
-        
-        # 右侧X支撑
-        diag2 = trimesh.creation.box(extents=[5, 5, height * 0.6])
-        diag2.apply_translation([length/2 - upright_width - 100, y_offset, height/2])
-        set_mesh_color(diag2, COLOR_UPRIGHT)
-        meshes.append(diag2)
-    
-    # 黄色防撞护栏（底部两侧）
-    for y_offset in [-width/2 - guard_depth/2, width/2 + guard_depth/2]:
-        guard = trimesh.creation.box(
-            extents=[length + 200, 40, guard_height]
-        )
-        guard.apply_translation([0, y_offset, guard_height/2])
-        set_mesh_color(guard, COLOR_GUARD)
-        meshes.append(guard)
-    
-    # 使用Scene并应用坐标转换
+    # 使用Scene并应用坐标转换 - 完全复制V2
     scene = trimesh.Scene()
     rotation_matrix = trimesh.transformations.rotation_matrix(
         angle=-np.pi / 2,
@@ -772,19 +716,17 @@ def main():
     shelf_light_v2, meta = generate_light_shelf_v2()
     metadata_list.append(save_model(shelf_light_v2, "shelf-light-v2.glb", meta))
     
-    # 生成3种行业标准重型货架
-    print("\n🏗️ 生成行业标准重型货架...")
+    # 生成3种行业标准重型货架（使用简化版函数）
+    print("\n🏗️ 生成行业标准重型货架（简化版）...")
     
     # 规格1：重型3层中高位货架（适配净空5.5m仓库）
     print("  - 重型3层中高位货架...")
-    shelf_3level = generate_heavy_shelf_industrial(
+    shelf_3level = generate_heavy_shelf_simple(
         length=2300, 
         width=1000, 
         height=4500, 
         levels=3,
-        layer_heights=[1400, 1400, 1400],
-        upright_profile="90x70",
-        beam_profile="120x50"
+        layer_heights=[1400, 1400, 1400]
     )
     meta_3level = {
         "id": "shelf-beam-heavy-3level-5m",
@@ -803,14 +745,12 @@ def main():
     
     # 规格2：重型4层标准货架（适配净空7m仓库，最常用）
     print("  - 重型4层标准货架...")
-    shelf_4level = generate_heavy_shelf_industrial(
+    shelf_4level = generate_heavy_shelf_simple(
         length=2300, 
         width=1000, 
         height=6500, 
         levels=4,
-        layer_heights=[1600, 1600, 1600, 1300],
-        upright_profile="90x80",
-        beam_profile="120x50"
+        layer_heights=[1600, 1600, 1600, 1300]
     )
     meta_4level = {
         "id": "shelf-beam-heavy-4level-6m",
@@ -829,14 +769,12 @@ def main():
     
     # 规格3：重型5层高位货架（适配净空9m仓库）
     print("  - 重型5层高位货架...")
-    shelf_5level = generate_heavy_shelf_industrial(
+    shelf_5level = generate_heavy_shelf_simple(
         length=2700, 
         width=1000, 
         height=8200, 
         levels=5,
-        layer_heights=[1700, 1700, 1700, 1700, 1400],
-        upright_profile="90x90",
-        beam_profile="140x50"
+        layer_heights=[1700, 1700, 1700, 1700, 1400]
     )
     meta_5level = {
         "id": "shelf-beam-heavy-5level-8m",
