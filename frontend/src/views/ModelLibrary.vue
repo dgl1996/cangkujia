@@ -668,6 +668,20 @@ const models = ref([
     },
     modelUrl: '/assets/models/forklift-pallet-truck-electric.glb',
   },
+  {
+    id: 'forklift-pallet-jack-manual-2.5t',
+    name: '手动液压搬运车-2.5吨',
+    category: 'handling',
+    description: '最基础搬运设备，纯机械操作，适合小仓库或预算有限场景',
+    tags: ['手动搬运车', '液压', '基础款', '2.5吨', '搬运设备'],
+    parameters: {
+      length: { type: 'number', min: 1400, max: 1700, default: 1550, unit: 'mm' },
+      width: { type: 'number', min: 500, max: 600, default: 550, unit: 'mm' },
+      height: { type: 'number', min: 1100, max: 1300, default: 1200, unit: 'mm' },
+      liftHeight: { type: 'number', min: 150, max: 250, default: 200, unit: 'mm' },
+    },
+    modelUrl: '/assets/models/forklift-pallet-jack-manual.glb',
+  },
 ]);
 
 // 状态

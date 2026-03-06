@@ -1680,6 +1680,117 @@ def generate_electric_pallet_truck(length=1850, width=680, height=1350):
     return scene
 
 
+def generate_manual_pallet_jack(length=1550, width=550, height=1200):
+    """
+    生成手动液压托盘搬运车（Manual Pallet Jack）
+    最基础搬运设备，纯机械操作，适合小仓库或预算有限场景
+    
+    Args:
+        length: 总长（含货叉）
+        width: 货叉外宽
+        height: 手柄高度
+    """
+    meshes = []
+    
+    # 颜色定义
+    COLOR_ORANGE = [0.98, 0.45, 0.09]     # 标准橙 #F97316
+    COLOR_BLACK = [0.15, 0.15, 0.15]       # 黑色部件
+    COLOR_SILVER = [0.75, 0.75, 0.75]      # 银色货叉
+    COLOR_NYLON = [0.3, 0.3, 0.3]          # 尼龙轮灰色
+    
+    # 尺寸参数
+    pump_length = 400       # 液压泵体长度
+    pump_width = 180        # 泵体宽度
+    pump_height = 200       # 泵体高度
+    fork_length = 1150      # 货叉长度
+    fork_width = 70         # 单根货叉宽度
+    fork_thickness = 45     # 货叉厚度
+    fork_spacing = 540      # 货叉间距（外宽550 - 货叉宽70 = 480，取540使货叉有间隙）
+    
+    # 1. 液压泵体（橙色，三角形状）
+    pump_body = trimesh.creation.box(
+        extents=[pump_length, pump_width, pump_height]
+    )
+    pump_body.apply_translation([fork_length + pump_length/2 - 50, 0, pump_height/2 + 50])
+    set_mesh_color(pump_body, COLOR_ORANGE)
+    meshes.append(('pump_body', pump_body))
+    
+    # 2. 液压油缸（银色圆柱）
+    cylinder = trimesh.creation.cylinder(radius=40, height=150)
+    cylinder.apply_translation([fork_length + pump_length/2 - 50, 0, pump_height + 50 + 75])
+    set_mesh_color(cylinder, COLOR_SILVER)
+    meshes.append(('hydraulic_cylinder', cylinder))
+    
+    # 3. 手柄杆（黑色，长杆）
+    handle_stem = trimesh.creation.cylinder(radius=20, height=700)
+    handle_stem.apply_translation([fork_length + pump_length - 100, 0, pump_height + 50 + 350])
+    set_mesh_color(handle_stem, COLOR_BLACK)
+    meshes.append(('handle_stem', handle_stem))
+    
+    # 4. 手柄头（黑色，带握把）
+    handle_head = trimesh.creation.cylinder(radius=25, height=300)
+    handle_head.apply_transform(trimesh.transformations.rotation_matrix(
+        angle=np.pi/2, direction=[0, 0, 1], point=[0, 0, 0]
+    ))
+    handle_head.apply_translation([fork_length + pump_length - 100, 0, pump_height + 50 + 700 + 25])
+    set_mesh_color(handle_head, COLOR_BLACK)
+    meshes.append(('handle_head', handle_head))
+    
+    # 5. 货叉（2根，银色）
+    for i, y_offset in enumerate([-fork_spacing/2, fork_spacing/2]):
+        fork = trimesh.creation.box(
+            extents=[fork_length, fork_width, fork_thickness]
+        )
+        fork.apply_translation([fork_length/2, y_offset, fork_thickness/2 + 85])
+        set_mesh_color(fork, COLOR_SILVER)
+        meshes.append((f'fork_{i}', fork))
+    
+    # 6. 前轮（小尼龙轮，每个货叉1个）
+    front_wheel_radius = 35
+    for i, y_offset in enumerate([-fork_spacing/2, fork_spacing/2]):
+        wheel = trimesh.creation.cylinder(radius=front_wheel_radius, height=20)
+        wheel.apply_transform(trimesh.transformations.rotation_matrix(
+            angle=np.pi/2, direction=[1, 0, 0], point=[0, 0, 0]
+        ))
+        wheel.apply_translation([fork_length - 100, y_offset, front_wheel_radius])
+        set_mesh_color(wheel, COLOR_NYLON)
+        meshes.append((f'front_wheel_{i}', wheel))
+    
+    # 7. 后轮（大尼龙轮，泵体下方两侧）
+    rear_wheel_radius = 80
+    for i, y_offset in enumerate([-100, 100]):
+        wheel = trimesh.creation.cylinder(radius=rear_wheel_radius, height=50)
+        wheel.apply_transform(trimesh.transformations.rotation_matrix(
+            angle=np.pi/2, direction=[1, 0, 0], point=[0, 0, 0]
+        ))
+        wheel.apply_translation([fork_length + pump_length/2 - 50, y_offset, rear_wheel_radius])
+        set_mesh_color(wheel, COLOR_NYLON)
+        meshes.append((f'rear_wheel_{i}', wheel))
+    
+    # 8. 连接轴（货叉与泵体连接处）
+    connector = trimesh.creation.cylinder(radius=30, height=fork_spacing + 100)
+    connector.apply_transform(trimesh.transformations.rotation_matrix(
+        angle=np.pi/2, direction=[0, 1, 0], point=[0, 0, 0]
+    ))
+    connector.apply_translation([fork_length, 0, 100])
+    set_mesh_color(connector, COLOR_SILVER)
+    meshes.append(('connector', connector))
+    
+    # 使用Scene并应用坐标转换
+    scene = trimesh.Scene()
+    rotation_matrix = trimesh.transformations.rotation_matrix(
+        angle=-np.pi / 2,
+        direction=[1, 0, 0],
+        point=[0, 0, 0]
+    )
+    
+    for name, mesh in meshes:
+        mesh.apply_transform(rotation_matrix)
+        scene.add_geometry(mesh, node_name=name)
+    
+    return scene
+
+
 def main():
     """主函数：生成所有模型"""
     print("=" * 50)
@@ -2057,6 +2168,25 @@ def main():
         }
     }
     metadata_list.append(save_model(pallet_truck, "forklift-pallet-truck-electric.glb", meta_pallet_truck))
+    
+    # 生成手动液压搬运车
+    print("\n🚛 生成手动液压搬运车...")
+    print("  - 手动液压搬运车 2.5吨...")
+    pallet_jack = generate_manual_pallet_jack()
+    meta_pallet_jack = {
+        "id": "forklift-pallet-jack-manual-2.5t",
+        "name": "手动液压搬运车-2.5吨",
+        "category": "handling",
+        "description": "最基础搬运设备，纯机械操作，适合小仓库或预算有限场景",
+        "tags": ["手动搬运车", "液压", "基础款", "2.5吨"],
+        "parameters": {
+            "length": {"type": "number", "min": 1400, "max": 1700, "default": 1550, "unit": "mm"},
+            "width": {"type": "number", "min": 500, "max": 600, "default": 550, "unit": "mm"},
+            "height": {"type": "number", "min": 1100, "max": 1300, "default": 1200, "unit": "mm"},
+            "liftHeight": {"type": "number", "min": 150, "max": 250, "default": 200, "unit": "mm"}
+        }
+    }
+    metadata_list.append(save_model(pallet_jack, "forklift-pallet-jack-manual.glb", meta_pallet_jack))
     
     # 保存元数据
     print("\n📝 保存元数据...")
