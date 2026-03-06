@@ -273,6 +273,35 @@ const models = ref([
     },
     modelUrl: '/assets/models/shelf-beam-heavy-5level.glb',
   },
+  // 中型货架（人工拣选）
+  {
+    id: 'shelf-beam-medium-4level-2m',
+    name: '中型横梁式货架-4层人工拣选',
+    category: 'storage',
+    description: '人工存取极限（配合2步登高梯），适配层高2.5m仓库',
+    tags: ['中型', '4层', '人工拣选', '登高梯'],
+    parameters: {
+      length: { type: 'number', min: 1500, max: 2500, default: 2000, unit: 'mm' },
+      width: { type: 'number', min: 400, max: 800, default: 600, unit: 'mm' },
+      height: { type: 'number', min: 2000, max: 3000, default: 2500, unit: 'mm' },
+      levels: { type: 'number', min: 2, max: 5, default: 4 },
+    },
+    modelUrl: '/assets/models/shelf-beam-medium-4level-2m.glb',
+  },
+  {
+    id: 'shelf-beam-medium-5level-2m',
+    name: '中型横梁式货架-5层高密度拣选',
+    category: 'storage',
+    description: '高密度人工仓，层高2.5m极限，适合小件拣选',
+    tags: ['中型', '5层', '高密度', '人工仓'],
+    parameters: {
+      length: { type: 'number', min: 1200, max: 2000, default: 1500, unit: 'mm' },
+      width: { type: 'number', min: 400, max: 800, default: 600, unit: 'mm' },
+      height: { type: 'number', min: 2000, max: 3000, default: 2500, unit: 'mm' },
+      levels: { type: 'number', min: 3, max: 6, default: 5 },
+    },
+    modelUrl: '/assets/models/shelf-beam-medium-5level-2m.glb',
+  },
   // 载具容器
   {
     id: 'pallet-wooden-1200',
