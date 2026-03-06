@@ -617,12 +617,31 @@ const closeCustomShelfModal = () => {
 // 保存自定义货架
 const saveCustomShelf = () => {
   const params = customShelfParams.value;
+  
+  // 根据货架类型确定颜色
+  const shelfType = getShelfTypeLabel.value;
+  let uprightColor, beamColor, deckColor, colorDesc;
+  
+  if (shelfType === '重型货架') {
+    // 重型货架：立柱-红色，横梁-橙红，层板-白色
+    uprightColor = '红色';
+    beamColor = '橙红';
+    deckColor = '白色';
+    colorDesc = '立柱红色/横梁橙红/层板白色';
+  } else {
+    // 中型/轻型货架：立柱-淡蓝色，横梁-橙红，层板-白色
+    uprightColor = '淡蓝色';
+    beamColor = '橙红';
+    deckColor = '白色';
+    colorDesc = '立柱淡蓝/横梁橙红/层板白色';
+  }
+  
   const newShelf = {
     id: `custom-shelf-${Date.now()}`,
     name: params.name || `自定义货架-${params.length}×${params.width}×${params.height}`,
     category: 'storage',
-    description: `自定义横梁式货架：立柱${params.uprightWidth}×${params.uprightDepth}mm，横梁${params.beamHeight}×${params.beamWidth}mm`,
-    tags: ['自定义', getShelfTypeLabel.value],
+    description: `自定义${shelfType}：${colorDesc}，立柱${params.uprightWidth}×${params.uprightDepth}mm，横梁${params.beamHeight}×${params.beamWidth}mm`,
+    tags: ['自定义', shelfType],
     parameters: {
       length: { type: 'number', min: 800, max: 5000, default: params.length, unit: 'mm' },
       width: { type: 'number', min: 300, max: 1500, default: params.width, unit: 'mm' },
@@ -636,6 +655,12 @@ const saveCustomShelf = () => {
     modelUrl: '/assets/models/shelf-beam-medium.glb', // 使用中型货架作为基础模型
     isCustom: true,
     customParams: { ...params },
+    customColors: {
+      upright: uprightColor,
+      beam: beamColor,
+      deck: deckColor,
+      type: shelfType
+    }
   };
   
   // 添加到模型列表
