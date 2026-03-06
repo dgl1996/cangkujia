@@ -97,11 +97,18 @@ const loadModel = () => {
       }
 
       model = gltf.scene;
+      
+      // 调试信息
+      console.log('模型加载成功:', props.modelUrl);
+      console.log('模型类型:', model.type);
+      console.log('子对象数量:', model.children.length);
 
       // 计算模型边界
       const box = new THREE.Box3().setFromObject(model);
       const center = box.getCenter(new THREE.Vector3());
       const size = box.getSize(new THREE.Vector3());
+      
+      console.log('模型尺寸:', size.x, size.y, size.z);
 
       // 居中模型
       model.position.x = -center.x;
@@ -109,13 +116,18 @@ const loadModel = () => {
       model.position.z = -center.z;
 
       // 处理材质 - 使用顶点颜色
+      let meshCount = 0;
       model.traverse((child) => {
         if (child.isMesh) {
+          meshCount++;
           child.castShadow = false;
           child.receiveShadow = false;
           
           // 检查是否有顶点颜色
-          if (child.geometry && child.geometry.attributes.color) {
+          const hasVertexColors = child.geometry && child.geometry.attributes.color;
+          console.log(`Mesh ${meshCount}:`, child.name, '有顶点颜色:', !!hasVertexColors);
+          
+          if (hasVertexColors) {
             // 有顶点颜色，使用MeshBasicMaterial显示
             const basicMaterial = new THREE.MeshBasicMaterial({
               vertexColors: true
@@ -129,6 +141,7 @@ const loadModel = () => {
           }
         }
       });
+      console.log('总共处理了', meshCount, '个Mesh');
 
       scene.add(model);
 
