@@ -407,13 +407,8 @@ def set_mesh_color(mesh, color_rgb):
     if hasattr(mesh.visual, 'vertex_colors'):
         mesh.visual.vertex_colors = color_255
     
-    # 同时创建材质（PBR材质）
-    material = trimesh.visual.material.PBRMaterial(
-        metallicFactor=0.3,
-        roughnessFactor=0.7,
-        baseColorFactor=color_255
-    )
-    mesh.visual.material = material
+    # 使用简单的材质，避免PBR材质纹理问题
+    # 不设置material，让Three.js使用默认材质并读取顶点颜色
     
     return mesh
 

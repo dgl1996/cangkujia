@@ -108,39 +108,24 @@ const loadModel = () => {
       model.position.y = -box.min.y; // 放在地面上
       model.position.z = -center.z;
 
-      // 处理材质 - 禁用阴影并确保PBR材质正确显示
+      // 处理材质 - 使用顶点颜色
       model.traverse((child) => {
         if (child.isMesh) {
           child.castShadow = false;
           child.receiveShadow = false;
           
-          // 处理PBR材质
-          if (child.material) {
-            // 确保材质颜色正确显示
-            if (child.material.color) {
-              child.material.color.setHex(child.material.color.getHex());
-            }
-            
-            // 禁用可能导致问题的纹理
-            if (child.material.map) {
-              child.material.map = null;
-            }
-            if (child.material.normalMap) {
-              child.material.normalMap = null;
-            }
-            if (child.material.roughnessMap) {
-              child.material.roughnessMap = null;
-            }
-            if (child.material.metalnessMap) {
-              child.material.metalnessMap = null;
-            }
-            
-            // 设置默认的粗糙度和金属度
-            child.material.roughness = 0.7;
-            child.material.metalness = 0.3;
-            
-            // 确保材质更新
-            child.material.needsUpdate = true;
+          // 检查是否有顶点颜色
+          if (child.geometry && child.geometry.attributes.color) {
+            // 有顶点颜色，使用MeshBasicMaterial显示
+            const basicMaterial = new THREE.MeshBasicMaterial({
+              vertexColors: true
+            });
+            child.material = basicMaterial;
+          } else if (child.material) {
+            // 没有顶点颜色，使用默认材质
+            child.material = new THREE.MeshBasicMaterial({
+              color: 0x888888
+            });
           }
         }
       });
