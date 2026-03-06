@@ -89,6 +89,15 @@ def generate_wooden_pallet(length=1200, width=1000, height=150):
     # 设置颜色 (木质)
     pallet.visual.vertex_colors = [139, 90, 43, 255]  # 棕色
     
+    # 坐标转换：Trimesh(Z轴向上) -> Three.js(Y轴向上)
+    # 使托盘平躺（高度方向变为Y轴）
+    rotation_matrix = trimesh.transformations.rotation_matrix(
+        angle=-np.pi / 2,
+        direction=[1, 0, 0],
+        point=[0, 0, 0]
+    )
+    pallet.apply_transform(rotation_matrix)
+    
     return pallet, {
         "id": "pallet-wooden-1200",
         "name": "木质托盘 1200×1000",
@@ -147,6 +156,15 @@ def generate_plastic_pallet(length=1200, width=1000, height=150):
     
     # 设置颜色 (蓝色塑料)
     pallet.visual.vertex_colors = [30, 100, 180, 255]
+    
+    # 坐标转换：Trimesh(Z轴向上) -> Three.js(Y轴向上)
+    # 使托盘平躺（高度方向变为Y轴）
+    rotation_matrix = trimesh.transformations.rotation_matrix(
+        angle=-np.pi / 2,
+        direction=[1, 0, 0],
+        point=[0, 0, 0]
+    )
+    pallet.apply_transform(rotation_matrix)
     
     return pallet, {
         "id": "pallet-plastic-1200",
