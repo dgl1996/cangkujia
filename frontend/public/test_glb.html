@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GLB Test</title>
+    <style>
+        body { margin: 0; }
+        canvas { display: block; }
+        #info { position: absolute; top: 10px; left: 10px; color: white; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div id="info">Loading...</div>
+    <script type="module">
+        import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+        import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
+        import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js';
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf0f0f0);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
+        camera.position.set(0, 2000, 5000);
+
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(1, 1, 1);
+        scene.add(light);
+        scene.add(new THREE.AmbientLight(0x404040));
+
+        // 加载模型
+        const loader = new GLTFLoader();
+        const modelUrl = '/assets/models/shelf-beam-heavy-3level.glb';
+        
+        loader.load(modelUrl, (gltf) => {
+            document.getElementById('info').textContent = 'Model loaded successfully!';
+            
+            const model = gltf.scene;
+            
+            // 遍历并打印信息
+            let meshCount = 0;
+            model.traverse((child) => {
+                if (child.isMesh) {
+                    meshCount++;
+                    console.log(`Mesh ${meshCount}:`, child.name);
+                    console.log('  Geometry:', child.geometry.type);
+                    console.log('  Has colors:', !!child.geometry.attributes.color);
+                    console.log('  Material:', child.material.type);
+                }
+            });
+            
+            document.getElementById('info').textContent += ` (${meshCount} meshes)`;
+            
+            // 计算边界
+            const box = new THREE.Box3().setFromObject(model);
+            const size = box.getSize(new THREE.Vector3());
+            const center = box.getCenter(new THREE.Vector3());
+            
+            console.log('Model size:', size);
+            console.log('Model center:', center);
+            
+            // 调整模型位置
+            model.position.x = -center.x;
+            model.position.y = -center.y;
+            model.position.z = -center.z;
+            
+            scene.add(model);
+            
+            // 调整相机
+            const maxDim = Math.max(size.x, size.y, size.z);
+            camera.position.set(maxDim, maxDim * 0.8, maxDim);
+            camera.lookAt(0, 0, 0);
+            
+        }, (progress) => {
+            console.log('Loading:', (progress.loaded / progress.total * 100) + '%');
+        }, (error) => {
+            document.getElementById('info').textContent = 'Error: ' + error.message;
+            console.error('Error loading model:', error);
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+</html>

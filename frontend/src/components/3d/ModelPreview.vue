@@ -147,7 +147,20 @@ const loadModel = () => {
 
       // 调整相机位置以适应模型
       const maxDim = Math.max(size.x, size.y, size.z);
-      const distance = maxDim * 2;
+      console.log('Max dimension:', maxDim);
+      
+      // 根据模型大小调整相机距离
+      let distance;
+      if (maxDim < 3000) {
+        distance = maxDim * 3;  // 小模型
+      } else if (maxDim < 8000) {
+        distance = maxDim * 2;  // 中型模型
+      } else {
+        distance = maxDim * 1.5;  // 大模型
+      }
+      
+      console.log('Camera distance:', distance);
+      
       camera.position.set(distance, distance * 0.8, distance);
       camera.lookAt(0, size.y / 2, 0);
       controls.target.set(0, size.y / 2, 0);
