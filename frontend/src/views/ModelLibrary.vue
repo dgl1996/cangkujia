@@ -380,6 +380,7 @@ const models = ref([
   },
   {
     id: 'shelf-drive-in',
+    shortId: 'A103',
     name: '驶入式货架-重型（L3600*D1500*H6000）',
     category: 'storage',
     description: '高密度存储，适合大批量同类型货物',
@@ -394,6 +395,7 @@ const models = ref([
   },
   {
     id: 'shelf-flow-4level-1m8',
+    shortId: 'A104',
     name: '流利式货架-4层拣选（L900*D450*H1800）',
     category: 'storage',
     description: '先进先出(FIFO)拣选作业，配送中心产线旁供料，带5度倾斜流利条',
@@ -408,6 +410,7 @@ const models = ref([
   },
   {
     id: 'shelf-light-v2',
+    shortId: 'A105',
     name: '横梁式货架-轻型4层（L1200*D400*H2000）',
     category: 'storage',
     description: '基于参考图片改进的轻型货架，蓝色立柱配橙色横梁',
@@ -423,6 +426,7 @@ const models = ref([
   // 行业标准重型货架
   {
     id: 'shelf-beam-heavy-3level-5m',
+    shortId: 'A106',
     name: '横梁式货架-重型3层（L2300*D1000*H4500）',
     category: 'storage',
     description: '适配净空5.5m仓库，单层高承重2吨，适合重货存储',
@@ -437,6 +441,7 @@ const models = ref([
   },
   {
     id: 'shelf-beam-heavy-4level-6m',
+    shortId: 'A107',
     name: '横梁式货架-重型4层（L2300*D1000*H6500）',
     category: 'storage',
     description: '适配净空7m仓库，电商仓最常用规格，平衡型设计',
@@ -451,6 +456,7 @@ const models = ref([
   },
   {
     id: 'shelf-beam-heavy-5level-8m',
+    shortId: 'A108',
     name: '横梁式货架-重型5层（L2700*D1000*H8200）',
     category: 'storage',
     description: '适配净空9m仓库，高位立体库专用，需要前移式叉车',
@@ -466,6 +472,7 @@ const models = ref([
   // 中型货架（人工拣选）
   {
     id: 'shelf-beam-medium-4level-2m',
+    shortId: 'A109',
     name: '横梁式货架-中型4层（L2000*D600*H2500）',
     category: 'storage',
     description: '人工存取极限（配合2步登高梯），适配层高2.5m仓库',
@@ -480,6 +487,7 @@ const models = ref([
   },
   {
     id: 'shelf-beam-medium-5level-2m',
+    shortId: 'A110',
     name: '横梁式货架-中型5层（L1500*D600*H2500）',
     category: 'storage',
     description: '高密度人工仓，层高2.5m极限，适合小件拣选',
@@ -495,6 +503,7 @@ const models = ref([
   // 轻型货架
   {
     id: 'shelf-beam-light-4level-2m',
+    shortId: 'A111',
     name: '横梁式货架-轻型4层（L1200*D400*H2000）',
     category: 'storage',
     description: '便利店后仓、办公室文件、轻型商品存储',
@@ -509,6 +518,7 @@ const models = ref([
   },
   {
     id: 'shelf-beam-light-5level-2m',
+    shortId: 'A112',
     name: '横梁式货架-轻型5层（L1200*D500*H2000）',
     category: 'storage',
     description: '电商小件仓、配件仓、图书档案、多SKU轻货',
@@ -521,9 +531,10 @@ const models = ref([
     },
     modelUrl: '/assets/models/shelf-beam-light-5level.glb',
   },
-  // 载具容器
+  // 载具容器 (C101-C199)
   {
     id: 'pallet-wooden-1200',
+    shortId: 'C101',
     name: '木质托盘 1200×1000',
     category: 'containers',
     description: '标准欧标木质托盘，四面进叉',
@@ -537,6 +548,7 @@ const models = ref([
   },
   {
     id: 'pallet-plastic-1200',
+    shortId: 'C102',
     name: '塑料托盘 1200×1000',
     category: 'containers',
     description: 'HDPE塑料托盘，防潮防腐蚀',
@@ -550,6 +562,7 @@ const models = ref([
   },
   {
     id: 'pallet-wood-1200x1000',
+    shortId: 'C103',
     name: '木质托盘-标准双向（L1200*W1000*H144）',
     category: 'containers',
     description: '标准欧标木质托盘，双向进叉，5块面板+3根纵梁结构，适配重型货架',
@@ -563,6 +576,7 @@ const models = ref([
   },
   {
     id: 'pallet-plastic-1200x1000',
+    shortId: 'C104',
     name: '塑料托盘-网格双面（L1200*W1000*H150）',
     category: 'containers',
     description: 'HDPE塑料托盘，双面网格结构，四向进叉，防潮防腐蚀，适配立体库',
@@ -576,6 +590,7 @@ const models = ref([
   },
   {
     id: 'container-foldable',
+    shortId: 'C105',
     name: '可折叠周转箱',
     category: 'containers',
     description: '可折叠设计，节省回程运输空间',
@@ -590,6 +605,7 @@ const models = ref([
   // EU标准周转箱
   {
     id: 'container-tote-600x400x300',
+    shortId: 'C106',
     name: '可堆叠周转箱-600×400×300',
     category: 'containers',
     description: 'EU标准周转箱，适配中型货架，可堆叠4层，蓝色',
@@ -603,6 +619,7 @@ const models = ref([
   },
   {
     id: 'container-tote-600x400x220',
+    shortId: 'C107',
     name: '可堆叠周转箱-600×400×220',
     category: 'containers',
     description: 'EU标准矮型周转箱，适配流利式货架，可堆叠5层，蓝色',
@@ -616,6 +633,7 @@ const models = ref([
   },
   {
     id: 'container-tote-400x300x150',
+    shortId: 'C108',
     name: '可堆叠周转箱-400×300×150',
     category: 'containers',
     description: '小型零件周转箱，适配轻型货架，可堆叠6层，橙色',
@@ -627,9 +645,10 @@ const models = ref([
     },
     modelUrl: '/assets/models/container-tote-400x300.glb',
   },
-  // 搬运设备
+  // 搬运设备 (B101-B199)
   {
     id: 'forklift-reach-2t-9m',
+    shortId: 'B101',
     name: '前移式叉车-2吨9米',
     category: 'handling',
     description: '前移式叉车，窄通道高位存取，适配重型5层立体库，举升高度9米，通道宽度2.8米',
@@ -644,6 +663,7 @@ const models = ref([
   },
   {
     id: 'forklift-counterbalance-2.5t-4m',
+    shortId: 'B102',
     name: '平衡重叉车-2.5吨4米',
     category: 'handling',
     description: '平衡重叉车，通用型搬运设备，适合室内外作业，适配重型3-4层货架，通道宽度3.5米',
@@ -658,6 +678,7 @@ const models = ref([
   },
   {
     id: 'forklift-pallet-truck-electric-2t',
+    shortId: 'B103',
     name: '电动搬运车-2吨步行式',
     category: 'handling',
     description: '平库及重型货架底层搬运专用，步行式操作，适合短距离水平搬运，通道宽度2.2米',
@@ -672,6 +693,7 @@ const models = ref([
   },
   {
     id: 'forklift-pallet-jack-manual-2.5t',
+    shortId: 'B104',
     name: '手动液压搬运车-2.5吨',
     category: 'handling',
     description: '最基础搬运设备，纯机械操作，适合小仓库或预算有限场景',
@@ -686,6 +708,7 @@ const models = ref([
   },
   {
     id: 'cart-picking-3tier-900',
+    shortId: 'B105',
     name: '三层拣货车-标准型',
     category: 'handling',
     description: '人工拣选作业专用，配合中型/轻型货架使用，适用于电商仓、零售仓的订单拣选',
@@ -698,9 +721,24 @@ const models = ref([
     },
     modelUrl: '/assets/models/cart-picking-3tier.glb',
   },
+  {
+    id: 'cart-cage-logistics-2tier',
+    shortId: 'B106',
+    name: '物流笼车-2层标准款',
+    category: 'handling',
+    description: '带围栏多层结构，适用于电商仓、配送中心货物转运及超市配送',
+    tags: ['笼车', '物流笼车', '2层', '可折叠', '配送'],
+    parameters: {
+      length: { type: 'number', min: 700, max: 900, default: 800, unit: 'mm' },
+      width: { type: 'number', min: 500, max: 700, default: 600, unit: 'mm' },
+      height: { type: 'number', min: 1500, max: 1900, default: 1700, unit: 'mm' },
+    },
+    modelUrl: '/assets/models/cart-cage-logistics-2tier.glb',
+  },
   // 输送设备 (D101-D199)
   {
     id: 'lift-cargo-hydraulic-3floor',
+    shortId: 'D101',
     name: '液压货物提升机-3层阁楼',
     category: 'conveying',
     description: '3层阁楼库专用，货物垂直转运，严禁载人',
@@ -715,6 +753,7 @@ const models = ref([
   },
   {
     id: 'conveyor-curve-90degree-600',
+    shortId: 'D102',
     name: '90度皮带转弯机-带宽600mm',
     category: 'conveying',
     description: '用于输送线在水平面内90度转向，连接直段输送线形成闭环或改变输送方向',
@@ -729,6 +768,7 @@ const models = ref([
   },
   {
     id: 'conveyor-roller-straight-600-red',
+    shortId: 'D103',
     name: '动力滚筒输送机-直线段（红框银筒）',
     category: 'conveying',
     description: '红框银筒配色，与90度转弯机配套使用，视觉对比强烈',
@@ -743,6 +783,7 @@ const models = ref([
   // 拣选设备 (E101-E199)
   {
     id: 'putwall-standard-16cell',
+    shortId: 'E101',
     name: '电子标签播种墙-16格口',
     category: 'picking',
     description: '电商仓订单分拣核心设备，用于货到人后的订单播种作业',
@@ -758,6 +799,7 @@ const models = ref([
   },
   {
     id: 'station-packcheck-integrated-red',
+    shortId: 'E102',
     name: '复核打包一体作业台-红白配色',
     category: 'picking',
     description: '红白配色与红色输送线配套，视觉冲击力强，适用于电商仓订单处理末端',
@@ -771,6 +813,7 @@ const models = ref([
   },
   {
     id: 'weigher-automatic-check-600-red',
+    shortId: 'E103',
     name: '自动称重机-动态检重（红白配色）',
     category: 'picking',
     description: '三段式皮带结构，用于包裹自动称重与异常剔除，与红色输送线配套',
@@ -782,22 +825,10 @@ const models = ref([
     },
     modelUrl: '/assets/models/weigher-automatic-check-600-red.glb',
   },
-  {
-    id: 'cart-cage-logistics-2tier',
-    name: '物流笼车-2层标准款',
-    category: 'handling',
-    description: '带围栏多层结构，适用于电商仓、配送中心货物转运及超市配送',
-    tags: ['笼车', '物流笼车', '2层', '可折叠', '配送'],
-    parameters: {
-      length: { type: 'number', min: 700, max: 900, default: 800, unit: 'mm' },
-      width: { type: 'number', min: 500, max: 700, default: 600, unit: 'mm' },
-      height: { type: 'number', min: 1500, max: 1900, default: 1700, unit: 'mm' },
-    },
-    modelUrl: '/assets/models/cart-cage-logistics-2tier.glb',
-  },
-  // 其他 (F101-F199)
+  // 其他设备 (F101-F199)
   {
     id: 'guard-rack-heavy-redyellow',
+    shortId: 'F101',
     name: '高位货架防撞护栏-红黄警示',
     category: 'others',
     description: '红黄间隔反光警示色，安装于重型货架端头或转角，防止叉车碰撞',
@@ -811,6 +842,7 @@ const models = ref([
   },
   {
     id: 'guard-column-protector-redyellow',
+    shortId: 'F102',
     name: '货架立柱防撞护角-红黄U型',
     category: 'others',
     description: '红黄间隔反光警示色，紧密安装于重型货架立柱底部，防止叉车叉臂直接撞击立柱',
@@ -825,6 +857,7 @@ const models = ref([
   // 人员 (G101-G199)
   {
     id: 'person-warehouse-admin-red',
+    shortId: 'G101',
     name: '仓库管理员-红帽黄马甲',
     category: 'personnel',
     description: '佩戴红色安全帽、红黄反光马甲，用于场景人员密度规划、作业流程演示及安全规范展示',
