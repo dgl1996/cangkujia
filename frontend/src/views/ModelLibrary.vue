@@ -89,7 +89,7 @@
             </div>
             <div class="model-info">
               <h3 class="model-name">
-                <span class="model-id">[{{ model.id }}]</span>
+                <span class="model-id">[{{ model.shortId }}]</span>
                 {{ model.name }}
               </h3>
               <p class="model-desc">{{ model.description }}</p>
@@ -346,9 +346,10 @@ const categories = [
 
 // 模型数据（初始数据，后续从后端或JSON文件加载）
 const models = ref([
-  // 货架系统
+  // 货架系统 (A101-A199)
   {
     id: 'shelf-beam-heavy',
+    shortId: 'A101',
     name: '重型横梁式货架',
     category: 'storage',
     description: '适用于重型货物存储，单层承重2000kg',
@@ -684,6 +685,32 @@ const loadCustomShelves = () => {
     models.value = [...models.value, ...customShelves];
   }
 };
+
+// 为模型分配短ID（用户识别ID）
+const assignShortIds = () => {
+  const categoryCounters = {
+    'storage': 101,    // A - 货架系统
+    'handling': 101,   // B - 搬运设备
+    'containers': 101, // C - 载具容器
+  };
+  
+  const categoryLetters = {
+    'storage': 'A',
+    'handling': 'B',
+    'containers': 'C',
+  };
+  
+  models.value.forEach((model) => {
+    if (!model.shortId) {
+      const letter = categoryLetters[model.category] || 'D';
+      const counter = categoryCounters[model.category]++;
+      model.shortId = `${letter}${counter}`;
+    }
+  });
+};
+
+// 在初始化时分配短ID
+assignShortIds();
 
 // 计算货架类型标签
 const getShelfTypeLabel = computed(() => {
