@@ -1365,6 +1365,187 @@ def generate_reach_truck(length=2900, width=1100, height=2500, lift_height=9000)
     return scene
 
 
+def generate_counterbalance_forklift(length=3200, width=1200, height=2200, lift_height=4000):
+    """
+    生成平衡重叉车（Counterbalance Forklift）
+    通用型搬运设备，适合室内外作业，适配重型3-4层货架
+    
+    Args:
+        length: 车身总长（含货叉）
+        width: 车身宽度
+        height: 门架收起时高度
+        lift_height: 最大举升高度
+    """
+    meshes = []
+    
+    # 颜色定义
+    COLOR_YELLOW = [0.98, 0.80, 0.08]     # 柠檬黄 #FACC15
+    COLOR_BLACK = [0.15, 0.15, 0.15]       # 黑色部件
+    COLOR_GREY = [0.4, 0.4, 0.4]           # 灰色金属
+    COLOR_SILVER = [0.75, 0.75, 0.75]      # 银色货叉
+    COLOR_TIRE = [0.2, 0.2, 0.2]           # 轮胎黑色
+    
+    # 尺寸参数
+    body_length = 2000      # 车身长度（不含货叉和后悬）
+    body_width = width
+    body_height = 1600      # 车身高度
+    mast_height = height - 400  # 门架高度
+    fork_length = 1220      # 货叉长度
+    fork_width = 120        # 货叉宽度
+    fork_thickness = 45     # 货叉厚度
+    rear_overhang = 550     # 后悬长度（配重块）
+    
+    # 1. 车身主体（柠檬黄）
+    body = trimesh.creation.box(
+        extents=[body_length, body_width, body_height]
+    )
+    body.apply_translation([fork_length + body_length/2 - 200, 0, body_height/2 + 300])
+    set_mesh_color(body, COLOR_YELLOW)
+    meshes.append(('body', body))
+    
+    # 2. 配重块（后部黑色，视觉特征明显）
+    counterweight = trimesh.creation.box(
+        extents=[rear_overhang, body_width - 50, 1000]
+    )
+    counterweight.apply_translation([fork_length + body_length + rear_overhang/2 - 200, 0, 800])
+    set_mesh_color(counterweight, COLOR_BLACK)
+    meshes.append(('counterweight', counterweight))
+    
+    # 3. 驾驶室顶棚
+    roof = trimesh.creation.box(
+        extents=[600, body_width - 50, 50]
+    )
+    roof.apply_translation([fork_length + 400, 0, height - 50])
+    set_mesh_color(roof, COLOR_BLACK)
+    meshes.append(('roof', roof))
+    
+    # 4. 驾驶室立柱（4根）
+    pillar_positions = [
+        [fork_length + 100, -body_width/2 + 50],
+        [fork_length + 100, body_width/2 - 50],
+        [fork_length + 600, -body_width/2 + 50],
+        [fork_length + 600, body_width/2 - 50]
+    ]
+    for i, (x, y) in enumerate(pillar_positions):
+        pillar = trimesh.creation.box(
+            extents=[50, 50, height - body_height - 200]
+        )
+        pillar.apply_translation([x, y, body_height + 200 + (height - body_height - 200)/2])
+        set_mesh_color(pillar, COLOR_BLACK)
+        meshes.append((f'pillar_{i}', pillar))
+    
+    # 5. 座椅
+    seat = trimesh.creation.box(
+        extents=[300, 250, 400]
+    )
+    seat.apply_translation([fork_length + 400, 0, 600])
+    set_mesh_color(seat, [0.3, 0.3, 0.4])  # 深灰色座椅
+    meshes.append(('seat', seat))
+    
+    # 6. 门架（黑色，2级结构）
+    mast_width = 400
+    mast_depth = 180
+    
+    # 外门架
+    mast_outer = trimesh.creation.box(
+        extents=[mast_depth, mast_width, mast_height]
+    )
+    mast_outer.apply_translation([0, 0, mast_height/2 + 300])
+    set_mesh_color(mast_outer, COLOR_BLACK)
+    meshes.append(('mast_outer', mast_outer))
+    
+    # 内门架（稍短）
+    mast_inner = trimesh.creation.box(
+        extents=[mast_depth - 30, mast_width - 30, mast_height * 0.8]
+    )
+    mast_inner.apply_translation([0, 0, mast_height * 0.8/2 + 400])
+    set_mesh_color(mast_inner, COLOR_GREY)
+    meshes.append(('mast_inner', mast_inner))
+    
+    # 7. 货叉架
+    carriage = trimesh.creation.box(
+        extents=[120, mast_width + 60, 250]
+    )
+    carriage.apply_translation([0, 0, 700])
+    set_mesh_color(carriage, COLOR_GREY)
+    meshes.append(('carriage', carriage))
+    
+    # 8. 货叉（2根，银色）
+    fork_spacing = 360
+    for i, y_offset in enumerate([-fork_spacing/2, fork_spacing/2]):
+        fork = trimesh.creation.box(
+            extents=[fork_length, fork_width, fork_thickness]
+        )
+        fork.apply_translation([-fork_length/2, y_offset, 650])
+        set_mesh_color(fork, COLOR_SILVER)
+        meshes.append((f'fork_{i}', fork))
+    
+    # 9. 前轮（2个，大轮胎）
+    front_wheel_radius = 200
+    front_wheel_width = 150
+    for i, y_offset in enumerate([-body_width/2 + 100, body_width/2 - 100]):
+        wheel = trimesh.creation.cylinder(
+            radius=front_wheel_radius,
+            height=front_wheel_width
+        )
+        wheel.apply_transform(trimesh.transformations.rotation_matrix(
+            angle=np.pi/2, direction=[1, 0, 0], point=[0, 0, 0]
+        ))
+        wheel.apply_translation([fork_length + 300, y_offset, front_wheel_radius])
+        set_mesh_color(wheel, COLOR_TIRE)
+        meshes.append((f'front_wheel_{i}', wheel))
+    
+    # 10. 后轮（2个，转向轮，稍小）
+    rear_wheel_radius = 180
+    rear_wheel_width = 120
+    for i, y_offset in enumerate([-body_width/2 + 80, body_width/2 - 80]):
+        wheel = trimesh.creation.cylinder(
+            radius=rear_wheel_radius,
+            height=rear_wheel_width
+        )
+        wheel.apply_transform(trimesh.transformations.rotation_matrix(
+            angle=np.pi/2, direction=[1, 0, 0], point=[0, 0, 0]
+        ))
+        wheel.apply_translation([fork_length + body_length - 200, y_offset, rear_wheel_radius])
+        set_mesh_color(wheel, COLOR_TIRE)
+        meshes.append((f'rear_wheel_{i}', wheel))
+    
+    # 11. 警示灯（顶部）
+    light = trimesh.creation.cylinder(radius=40, height=60)
+    light.apply_translation([fork_length + 400, 0, height + 30])
+    set_mesh_color(light, [1.0, 0.0, 0.0])  # 红色警示灯
+    meshes.append(('warning_light', light))
+    
+    # 12. 后视镜（2个）
+    for i, y_offset in enumerate([-body_width/2 - 50, body_width/2 + 50]):
+        mirror_stem = trimesh.creation.cylinder(radius=8, height=150)
+        mirror_stem.apply_transform(trimesh.transformations.rotation_matrix(
+            angle=np.pi/2, direction=[0, 1, 0], point=[0, 0, 0]
+        ))
+        mirror_stem.apply_translation([fork_length + 150, y_offset, 1400])
+        set_mesh_color(mirror_stem, COLOR_BLACK)
+        meshes.append((f'mirror_stem_{i}', mirror_stem))
+        
+        mirror = trimesh.creation.box(extents=[80, 10, 60])
+        mirror.apply_translation([fork_length + 100, y_offset * 1.3, 1400])
+        set_mesh_color(mirror, COLOR_BLACK)
+        meshes.append((f'mirror_{i}', mirror))
+    
+    # 使用Scene并应用坐标转换
+    scene = trimesh.Scene()
+    rotation_matrix = trimesh.transformations.rotation_matrix(
+        angle=-np.pi / 2,
+        direction=[1, 0, 0],
+        point=[0, 0, 0]
+    )
+    
+    for name, mesh in meshes:
+        mesh.apply_transform(rotation_matrix)
+        scene.add_geometry(mesh, node_name=name)
+    
+    return scene
+
+
 def main():
     """主函数：生成所有模型"""
     print("=" * 50)
@@ -1704,6 +1885,25 @@ def main():
         }
     }
     metadata_list.append(save_model(forklift_reach, "forklift-reach-2t.glb", meta_forklift))
+    
+    # 生成平衡重叉车
+    print("\n🚛 生成平衡重叉车...")
+    print("  - 平衡重叉车 2.5吨4米...")
+    forklift_counterbalance = generate_counterbalance_forklift()
+    meta_counterbalance = {
+        "id": "forklift-counterbalance-2.5t-4m",
+        "name": "平衡重叉车-2.5吨4米",
+        "category": "handling",
+        "description": "平衡重叉车，通用型搬运设备，适合室内外作业，适配重型3-4层货架",
+        "tags": ["平衡重叉车", "通用型", "室内外", "2.5吨", "4米"],
+        "parameters": {
+            "length": {"type": "number", "min": 2800, "max": 3600, "default": 3200, "unit": "mm"},
+            "width": {"type": "number", "min": 1100, "max": 1300, "default": 1200, "unit": "mm"},
+            "height": {"type": "number", "min": 2000, "max": 2400, "default": 2200, "unit": "mm"},
+            "liftHeight": {"type": "number", "min": 3000, "max": 6000, "default": 4000, "unit": "mm"}
+        }
+    }
+    metadata_list.append(save_model(forklift_counterbalance, "forklift-counterbalance-2.5t.glb", meta_counterbalance))
     
     # 保存元数据
     print("\n📝 保存元数据...")

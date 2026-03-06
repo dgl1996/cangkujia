@@ -831,5 +831,49 @@
       }
     },
     "filename": "forklift-reach-2t.glb"
+  },
+  {
+    "id": "forklift-counterbalance-2.5t-4m",
+    "name": "平衡重叉车-2.5吨4米",
+    "category": "handling",
+    "description": "平衡重叉车，通用型搬运设备，适合室内外作业，适配重型3-4层货架",
+    "tags": [
+      "平衡重叉车",
+      "通用型",
+      "室内外",
+      "2.5吨",
+      "4米"
+    ],
+    "parameters": {
+      "length": {
+        "type": "number",
+        "min": 2800,
+        "max": 3600,
+        "default": 3200,
+        "unit": "mm"
+      },
+      "width": {
+        "type": "number",
+        "min": 1100,
+        "max": 1300,
+        "default": 1200,
+        "unit": "mm"
+      },
+      "height": {
+        "type": "number",
+        "min": 2000,
+        "max": 2400,
+        "default": 2200,
+        "unit": "mm"
+      },
+      "liftHeight": {
+        "type": "number",
+        "min": 3000,
+        "max": 6000,
+        "default": 4000,
+        "unit": "mm"
+      }
+    },
+    "filename": "forklift-counterbalance-2.5t.glb"
   }
 ]
