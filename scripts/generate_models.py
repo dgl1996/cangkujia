@@ -808,6 +808,57 @@ def main():
     }
     metadata_list.append(save_model(shelf_medium_5level, "shelf-beam-medium-5level-2m.glb", meta_medium_5level))
     
+    # 生成2种轻型货架
+    print("\n🏗️ 生成轻型货架...")
+    
+    # 规格1：轻型4层货架（L1200*D400*H2000）
+    print("  - 轻型4层货架...")
+    shelf_light_4level = generate_heavy_shelf_simple(
+        length=1200, 
+        width=400, 
+        height=2000, 
+        levels=4,
+        layer_heights=[450, 450, 450, 450]
+    )
+    meta_light_4level = {
+        "id": "shelf-beam-light-4level-2m",
+        "name": "轻型横梁式货架-4层标准",
+        "category": "storage",
+        "description": "便利店后仓、办公室文件、轻型商品存储",
+        "tags": ["轻型", "4层", "标准", "人工存取"],
+        "parameters": {
+            "length": {"type": "number", "min": 800, "max": 1500, "default": 1200, "unit": "mm"},
+            "width": {"type": "number", "min": 300, "max": 500, "default": 400, "unit": "mm"},
+            "height": {"type": "number", "min": 1500, "max": 2500, "default": 2000, "unit": "mm"},
+            "levels": {"type": "number", "min": 2, "max": 5, "default": 4}
+        }
+    }
+    metadata_list.append(save_model(shelf_light_4level, "shelf-beam-light-4level.glb", meta_light_4level))
+    
+    # 规格2：轻型5层货架（L1200*D500*H2000）
+    print("  - 轻型5层货架...")
+    shelf_light_5level = generate_heavy_shelf_simple(
+        length=1200, 
+        width=500, 
+        height=2000, 
+        levels=5,
+        layer_heights=[360, 360, 360, 360, 360]
+    )
+    meta_light_5level = {
+        "id": "shelf-beam-light-5level-2m",
+        "name": "轻型横梁式货架-5层宽型",
+        "category": "storage",
+        "description": "电商小件仓、配件仓、图书档案、多SKU轻货",
+        "tags": ["轻型", "5层", "宽型", "高密度"],
+        "parameters": {
+            "length": {"type": "number", "min": 800, "max": 1500, "default": 1200, "unit": "mm"},
+            "width": {"type": "number", "min": 400, "max": 600, "default": 500, "unit": "mm"},
+            "height": {"type": "number", "min": 1500, "max": 2500, "default": 2000, "unit": "mm"},
+            "levels": {"type": "number", "min": 3, "max": 6, "default": 5}
+        }
+    }
+    metadata_list.append(save_model(shelf_light_5level, "shelf-beam-light-5level.glb", meta_light_5level))
+    
     # 保存元数据
     print("\n📝 保存元数据...")
     with open(METADATA_FILE, 'w', encoding='utf-8') as f:

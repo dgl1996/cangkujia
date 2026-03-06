@@ -302,6 +302,35 @@ const models = ref([
     },
     modelUrl: '/assets/models/shelf-beam-medium-5level-2m.glb',
   },
+  // 轻型货架
+  {
+    id: 'shelf-beam-light-4level-2m',
+    name: '横梁式货架-轻型4层（L1200*D400*H2000）',
+    category: 'storage',
+    description: '便利店后仓、办公室文件、轻型商品存储',
+    tags: ['轻型', '4层', '标准', '人工存取'],
+    parameters: {
+      length: { type: 'number', min: 800, max: 1500, default: 1200, unit: 'mm' },
+      width: { type: 'number', min: 300, max: 500, default: 400, unit: 'mm' },
+      height: { type: 'number', min: 1500, max: 2500, default: 2000, unit: 'mm' },
+      levels: { type: 'number', min: 2, max: 5, default: 4 },
+    },
+    modelUrl: '/assets/models/shelf-beam-light-4level.glb',
+  },
+  {
+    id: 'shelf-beam-light-5level-2m',
+    name: '横梁式货架-轻型5层（L1200*D500*H2000）',
+    category: 'storage',
+    description: '电商小件仓、配件仓、图书档案、多SKU轻货',
+    tags: ['轻型', '5层', '宽型', '高密度'],
+    parameters: {
+      length: { type: 'number', min: 800, max: 1500, default: 1200, unit: 'mm' },
+      width: { type: 'number', min: 400, max: 600, default: 500, unit: 'mm' },
+      height: { type: 'number', min: 1500, max: 2500, default: 2000, unit: 'mm' },
+      levels: { type: 'number', min: 3, max: 6, default: 5 },
+    },
+    modelUrl: '/assets/models/shelf-beam-light-5level.glb',
+  },
   // 载具容器
   {
     id: 'pallet-wooden-1200',
