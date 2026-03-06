@@ -142,8 +142,11 @@ const loadModel = () => {
           const hasVertexColors = child.geometry && child.geometry.attributes.color;
           console.log(`Mesh ${meshCount}:`, child.name, '有顶点颜色:', !!hasVertexColors, '原材质:', child.material ? child.material.type : 'none');
           
-          // 如果有自定义颜色配置，根据mesh名称应用颜色
-          if (props.customColors) {
+          // 优先使用顶点颜色（模型已设置好颜色）
+          if (hasVertexColors) {
+            child.material = new THREE.MeshBasicMaterial({ vertexColors: true });
+          } else if (props.customColors) {
+            // 如果没有顶点颜色但有自定义颜色配置，根据mesh名称应用颜色
             let meshColor = null;
             const meshName = child.name.toLowerCase();
             
@@ -164,14 +167,9 @@ const loadModel = () => {
             
             if (meshColor) {
               child.material = new THREE.MeshBasicMaterial({ color: meshColor });
-            } else if (hasVertexColors) {
-              child.material = new THREE.MeshBasicMaterial({ vertexColors: true });
             } else {
               child.material = new THREE.MeshBasicMaterial({ color: 0x888888 });
             }
-          } else if (hasVertexColors) {
-            // 没有自定义颜色，使用顶点颜色
-            child.material = new THREE.MeshBasicMaterial({ vertexColors: true });
           } else {
             child.material = new THREE.MeshBasicMaterial({ color: 0x888888 });
           }

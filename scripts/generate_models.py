@@ -227,7 +227,7 @@ def generate_foldable_container(length=600, width=400, height=300):
 
 def generate_beam_shelf(length=2700, width=1000, height=4500, levels=4, load_capacity="heavy"):
     """
-    生成横梁式货架
+    生成横梁式货架 - 使用Scene保留独立mesh以便前端着色
     
     Args:
         length: 货架长度 (mm)
@@ -243,17 +243,23 @@ def generate_beam_shelf(length=2700, width=1000, height=4500, levels=4, load_cap
         upright_size = 90  # 立柱截面
         beam_height = 120
         beam_width = 50
-        color = [80, 80, 80, 255]  # 深灰色
+        upright_color = [0.8, 0.2, 0.2]  # 红色
+        beam_color = [0.9, 0.4, 0.1]     # 橙红
+        deck_color = [0.95, 0.95, 0.95]  # 白色
     elif load_capacity == "medium":
         upright_size = 70
         beam_height = 100
         beam_width = 40
-        color = [100, 100, 100, 255]
+        upright_color = [0.2, 0.5, 0.8]  # 淡蓝色
+        beam_color = [0.9, 0.4, 0.1]     # 橙红
+        deck_color = [0.95, 0.95, 0.95]  # 白色
     else:
         upright_size = 55
         beam_height = 80
         beam_width = 35
-        color = [120, 120, 120, 255]
+        upright_color = [0.2, 0.5, 0.8]  # 淡蓝色
+        beam_color = [0.9, 0.4, 0.1]     # 橙红
+        deck_color = [0.95, 0.95, 0.95]  # 白色
     
     # 立柱 (4根)
     upright_positions = [
@@ -263,12 +269,13 @@ def generate_beam_shelf(length=2700, width=1000, height=4500, levels=4, load_cap
         [length/2 - upright_size/2, width/2 - upright_size/2]
     ]
     
-    for x, y in upright_positions:
+    for i, (x, y) in enumerate(upright_positions):
         upright = trimesh.creation.box(
             extents=[upright_size, upright_size, height]
         )
         upright.apply_translation([x, y, height/2])
-        meshes.append(upright)
+        set_mesh_color(upright, upright_color)
+        meshes.append((f'upright_{i}', upright))
     
     # 横梁 (每层2根)
     level_height = height / (levels + 1)
@@ -280,33 +287,36 @@ def generate_beam_shelf(length=2700, width=1000, height=4500, levels=4, load_cap
             extents=[length - 2*upright_size, beam_width, beam_height]
         )
         front_beam.apply_translation([0, -width/2 + upright_size/2, z])
-        meshes.append(front_beam)
+        set_mesh_color(front_beam, beam_color)
+        meshes.append((f'beam_front_{level}', front_beam))
         
         # 后横梁
         back_beam = trimesh.creation.box(
             extents=[length - 2*upright_size, beam_width, beam_height]
         )
         back_beam.apply_translation([0, width/2 - upright_size/2, z])
-        meshes.append(back_beam)
+        set_mesh_color(back_beam, beam_color)
+        meshes.append((f'beam_back_{level}', back_beam))
         
-        # 层板 (金属网或木板)
+        # 层板
         deck = trimesh.creation.box(
             extents=[length - 2*upright_size, width - 2*upright_size, 30]
         )
         deck.apply_translation([0, 0, z - 15])
-        meshes.append(deck)
+        set_mesh_color(deck, deck_color)
+        meshes.append((f'deck_{level}', deck))
     
-    # 合并
-    shelf = trimesh.util.concatenate(meshes)
-    shelf.visual.vertex_colors = color
-    
-    # 坐标转换：Trimesh(Z轴向上) -> Three.js(Y轴向上)
+    # 使用Scene并应用坐标转换
+    scene = trimesh.Scene()
     rotation_matrix = trimesh.transformations.rotation_matrix(
         angle=-np.pi / 2,
         direction=[1, 0, 0],
         point=[0, 0, 0]
     )
-    shelf.apply_transform(rotation_matrix)
+    
+    for name, mesh in meshes:
+        mesh.apply_transform(rotation_matrix)
+        scene.add_geometry(mesh, node_name=name)
     
     # 元数据
     if load_capacity == "heavy":
@@ -325,7 +335,7 @@ def generate_beam_shelf(length=2700, width=1000, height=4500, levels=4, load_cap
         tags = ["轻型", "横梁式", "经济"]
         model_id = "shelf-beam-light"
     
-    return shelf, {
+    return scene, {
         "id": model_id,
         "name": name,
         "category": "storage",
