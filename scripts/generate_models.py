@@ -910,6 +910,160 @@ def generate_flow_shelf(length=900, width=450, height=1800, levels=4):
     return scene
 
 
+def generate_wooden_pallet_standard(length=1200, width=1000, height=144):
+    """
+    生成木质标准托盘（双向进叉）
+    标准款：5块顶板 + 3根纵梁 + 3块底板
+    """
+    meshes = []
+    
+    # 颜色 - 棕色木质
+    COLOR_WOOD = [0.63, 0.32, 0.18]  # #A0522D
+    
+    # 尺寸参数
+    board_thickness = 22
+    stringer_width = 100
+    stringer_height = height - board_thickness * 2
+    
+    # 顶板 (5块，沿宽度方向排列)
+    top_board_width = width / 5
+    for i in range(5):
+        y_pos = -width/2 + top_board_width/2 + i * top_board_width
+        board = trimesh.creation.box(
+            extents=[length, top_board_width - 5, board_thickness]
+        )
+        board.apply_translation([0, y_pos, height - board_thickness/2])
+        set_mesh_color(board, COLOR_WOOD)
+        meshes.append(board)
+    
+    # 纵梁 (3根，沿长度方向)
+    stringer_positions = [-length/3, 0, length/3]
+    for x_pos in stringer_positions:
+        stringer = trimesh.creation.box(
+            extents=[stringer_width, width, stringer_height]
+        )
+        stringer.apply_translation([x_pos, 0, board_thickness + stringer_height/2])
+        set_mesh_color(stringer, COLOR_WOOD)
+        meshes.append(stringer)
+    
+    # 底板 (3块，双向进叉开口)
+    bottom_board_width = width / 3
+    for i in range(3):
+        y_pos = -width/2 + bottom_board_width/2 + i * bottom_board_width
+        board = trimesh.creation.box(
+            extents=[length, bottom_board_width - 20, board_thickness]
+        )
+        board.apply_translation([0, y_pos, board_thickness/2])
+        set_mesh_color(board, COLOR_WOOD)
+        meshes.append(board)
+    
+    # 合并并旋转
+    pallet = trimesh.util.concatenate(meshes)
+    
+    # 坐标转换
+    rotation_matrix = trimesh.transformations.rotation_matrix(
+        angle=-np.pi / 2,
+        direction=[1, 0, 0],
+        point=[0, 0, 0]
+    )
+    pallet.apply_transform(rotation_matrix)
+    
+    return pallet, {
+        "id": "pallet-wood-1200x1000",
+        "name": "木质托盘-标准双向",
+        "category": "containers",
+        "description": "标准欧标木质托盘，双向进叉，5块面板+3根纵梁结构",
+        "tags": ["木质", "标准", "双向进叉", "GB/T 2934-2007"],
+        "parameters": {
+            "length": {"type": "number", "min": 1000, "max": 1400, "default": 1200, "unit": "mm"},
+            "width": {"type": "number", "min": 800, "max": 1200, "default": 1000, "unit": "mm"},
+            "height": {"type": "number", "min": 120, "max": 160, "default": 144, "unit": "mm"}
+        }
+    }
+
+
+def generate_plastic_pallet_grid(length=1200, width=1000, height=150):
+    """
+    生成塑料网格托盘（四向进叉，双面）
+    HDPE材质，网格结构，四面开口
+    """
+    meshes = []
+    
+    # 颜色 - 蓝色塑料
+    COLOR_PLASTIC = [0.23, 0.51, 0.96]  # #3B82F6
+    
+    # 尺寸参数
+    deck_thickness = 25
+    foot_height = height - deck_thickness * 2
+    
+    # 顶面（网格状 - 用多个小方块模拟）
+    grid_size = 80
+    grid_thickness = 5
+    for i in range(int(length/grid_size)):
+        for j in range(int(width/grid_size)):
+            x_pos = -length/2 + grid_size/2 + i * grid_size
+            y_pos = -width/2 + grid_size/2 + j * grid_size
+            # 网格交叉点
+            grid_cell = trimesh.creation.box(
+                extents=[grid_size-10, grid_size-10, deck_thickness]
+            )
+            grid_cell.apply_translation([x_pos, y_pos, height - deck_thickness/2])
+            set_mesh_color(grid_cell, COLOR_PLASTIC)
+            meshes.append(grid_cell)
+    
+    # 底面（同样网格结构）
+    for i in range(int(length/grid_size)):
+        for j in range(int(width/grid_size)):
+            x_pos = -length/2 + grid_size/2 + i * grid_size
+            y_pos = -width/2 + grid_size/2 + j * grid_size
+            grid_cell = trimesh.creation.box(
+                extents=[grid_size-10, grid_size-10, deck_thickness]
+            )
+            grid_cell.apply_translation([x_pos, y_pos, deck_thickness/2])
+            set_mesh_color(grid_cell, COLOR_PLASTIC)
+            meshes.append(grid_cell)
+    
+    # 支撑脚（9个，四向开口）
+    foot_positions = [
+        [-length/3, -width/3], [0, -width/3], [length/3, -width/3],
+        [-length/3, 0], [0, 0], [length/3, 0],
+        [-length/3, width/3], [0, width/3], [length/3, width/3]
+    ]
+    
+    foot_size = 80
+    for x, y in foot_positions:
+        foot = trimesh.creation.box(
+            extents=[foot_size, foot_size, foot_height]
+        )
+        foot.apply_translation([x, y, deck_thickness + foot_height/2])
+        set_mesh_color(foot, COLOR_PLASTIC)
+        meshes.append(foot)
+    
+    # 合并并旋转
+    pallet = trimesh.util.concatenate(meshes)
+    
+    # 坐标转换
+    rotation_matrix = trimesh.transformations.rotation_matrix(
+        angle=-np.pi / 2,
+        direction=[1, 0, 0],
+        point=[0, 0, 0]
+    )
+    pallet.apply_transform(rotation_matrix)
+    
+    return pallet, {
+        "id": "pallet-plastic-1200x1000",
+        "name": "塑料托盘-网格双面",
+        "category": "containers",
+        "description": "HDPE塑料托盘，双面网格结构，四向进叉，防潮防腐蚀",
+        "tags": ["塑料", "HDPE", "四向进叉", "双面", "网格"],
+        "parameters": {
+            "length": {"type": "number", "min": 1000, "max": 1400, "default": 1200, "unit": "mm"},
+            "width": {"type": "number", "min": 800, "max": 1200, "default": 1000, "unit": "mm"},
+            "height": {"type": "number", "min": 130, "max": 170, "default": 150, "unit": "mm"}
+        }
+    }
+
+
 def main():
     """主函数：生成所有模型"""
     print("=" * 50)
@@ -1163,6 +1317,19 @@ def main():
         }
     }
     metadata_list.append(save_model(shelf_flow, "shelf-flow-4level.glb", meta_flow))
+    
+    # 生成新托盘
+    print("\n📦 生成新托盘...")
+    
+    # 规格1：木质托盘（双向进叉，标准款）
+    print("  - 木质标准托盘...")
+    pallet_wood_std, meta_wood_std = generate_wooden_pallet_standard()
+    metadata_list.append(save_model(pallet_wood_std, "pallet-wood-1200x1000.glb", meta_wood_std))
+    
+    # 规格2：塑料托盘（网格双面，四向进叉）
+    print("  - 塑料网格托盘...")
+    pallet_plastic_grid, meta_plastic_grid = generate_plastic_pallet_grid()
+    metadata_list.append(save_model(pallet_plastic_grid, "pallet-plastic-1200x1000.glb", meta_plastic_grid))
     
     # 保存元数据
     print("\n📝 保存元数据...")

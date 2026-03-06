@@ -543,6 +543,32 @@ const models = ref([
     modelUrl: '/assets/models/pallet-plastic-1200.glb',
   },
   {
+    id: 'pallet-wood-1200x1000',
+    name: '木质托盘-标准双向（L1200*W1000*H144）',
+    category: 'containers',
+    description: '标准欧标木质托盘，双向进叉，5块面板+3根纵梁结构，适配重型货架',
+    tags: ['木质', '标准', '双向进叉', 'GB/T 2934-2007'],
+    parameters: {
+      length: { type: 'number', min: 1000, max: 1400, default: 1200, unit: 'mm' },
+      width: { type: 'number', min: 800, max: 1200, default: 1000, unit: 'mm' },
+      height: { type: 'number', min: 120, max: 160, default: 144, unit: 'mm' },
+    },
+    modelUrl: '/assets/models/pallet-wood-1200x1000.glb',
+  },
+  {
+    id: 'pallet-plastic-1200x1000',
+    name: '塑料托盘-网格双面（L1200*W1000*H150）',
+    category: 'containers',
+    description: 'HDPE塑料托盘，双面网格结构，四向进叉，防潮防腐蚀，适配立体库',
+    tags: ['塑料', 'HDPE', '四向进叉', '双面', '网格'],
+    parameters: {
+      length: { type: 'number', min: 1000, max: 1400, default: 1200, unit: 'mm' },
+      width: { type: 'number', min: 800, max: 1200, default: 1000, unit: 'mm' },
+      height: { type: 'number', min: 130, max: 170, default: 150, unit: 'mm' },
+    },
+    modelUrl: '/assets/models/pallet-plastic-1200x1000.glb',
+  },
+  {
     id: 'container-foldable',
     name: '可折叠周转箱',
     category: 'containers',
