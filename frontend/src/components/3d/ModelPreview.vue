@@ -25,6 +25,10 @@ const props = defineProps({
   autoRotate: {
     type: Boolean,
     default: true
+  },
+  customColors: {
+    type: Object,
+    default: null
   }
 });
 
@@ -115,7 +119,18 @@ const loadModel = () => {
       model.position.y = -box.min.y; // 放在地面上
       model.position.z = -center.z;
 
-      // 处理材质 - 使用顶点颜色（与测试页面相同）
+      // 颜色名称到RGB的映射
+      const colorMap = {
+        '红色': 0xDC2626,      // 红色
+        '橙红': 0xEA580C,      // 橙红色
+        '淡蓝色': 0x60A5FA,    // 淡蓝色
+        '白色': 0xFFFFFF,      // 白色
+        '蓝色': 0x3B82F6,      // 蓝色
+        '橙色': 0xF97316,      // 橙色
+        '灰色': 0x9CA3AF       // 灰色
+      };
+      
+      // 处理材质 - 使用顶点颜色或自定义颜色
       let meshCount = 0;
       model.traverse((child) => {
         if (child.isMesh) {
@@ -127,8 +142,35 @@ const loadModel = () => {
           const hasVertexColors = child.geometry && child.geometry.attributes.color;
           console.log(`Mesh ${meshCount}:`, child.name, '有顶点颜色:', !!hasVertexColors, '原材质:', child.material ? child.material.type : 'none');
           
-          // 强制替换为MeshBasicMaterial以正确显示顶点颜色
-          if (hasVertexColors) {
+          // 如果有自定义颜色配置，根据mesh名称应用颜色
+          if (props.customColors) {
+            let meshColor = null;
+            const meshName = child.name.toLowerCase();
+            
+            // 根据mesh名称判断部件类型
+            if (meshName.includes('upright') || meshName.includes('part_0') || meshName.includes('part_1') || meshName.includes('part_2') || meshName.includes('part_3') || meshName.includes('diag')) {
+              // 立柱和斜拉支撑
+              meshColor = colorMap[props.customColors.upright] || colorMap['蓝色'];
+            } else if (meshName.includes('beam') || meshName.includes('part_4') || meshName.includes('part_5') || meshName.includes('part_6') || meshName.includes('part_7')) {
+              // 横梁
+              meshColor = colorMap[props.customColors.beam] || colorMap['橙色'];
+            } else if (meshName.includes('deck') || meshName.includes('part_8') || meshName.includes('part_9') || meshName.includes('part_10')) {
+              // 层板
+              meshColor = colorMap[props.customColors.deck] || colorMap['白色'];
+            } else if (meshName.includes('foot')) {
+              // 脚垫使用横梁颜色
+              meshColor = colorMap[props.customColors.beam] || colorMap['橙色'];
+            }
+            
+            if (meshColor) {
+              child.material = new THREE.MeshBasicMaterial({ color: meshColor });
+            } else if (hasVertexColors) {
+              child.material = new THREE.MeshBasicMaterial({ vertexColors: true });
+            } else {
+              child.material = new THREE.MeshBasicMaterial({ color: 0x888888 });
+            }
+          } else if (hasVertexColors) {
+            // 没有自定义颜色，使用顶点颜色
             child.material = new THREE.MeshBasicMaterial({ vertexColors: true });
           } else {
             child.material = new THREE.MeshBasicMaterial({ color: 0x888888 });

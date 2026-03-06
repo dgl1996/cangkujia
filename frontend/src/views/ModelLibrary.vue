@@ -114,6 +114,7 @@
             <ModelPreview 
               :modelUrl="selectedModel?.modelUrl" 
               :autoRotate="true"
+              :customColors="selectedModel?.customColors"
             />
             <div class="preview-hint">
               <span class="hint-icon">🖱️</span>
