@@ -1791,6 +1791,167 @@ def generate_manual_pallet_jack(length=1550, width=550, height=1200):
     return scene
 
 
+def generate_picking_cart(length=900, width=450, height=1200, tiers=3):
+    """
+    生成多层拣货车（Order Picking Cart）
+    人工拣选作业专用，配合中型/轻型货架使用
+    
+    Args:
+        length: 车身长度
+        width: 车身宽度
+        height: 总高度
+        tiers: 层数
+    """
+    meshes = []
+    
+    # 颜色定义 - 镀铬银
+    COLOR_CHROME = [0.75, 0.75, 0.75]    # 银色 #C0C0C0
+    COLOR_DARK = [0.5, 0.5, 0.5]          # 深灰色连接件
+    COLOR_WHEEL = [0.25, 0.25, 0.25]      # 轮子灰色
+    
+    # 尺寸参数
+    tube_radius = 12        # 立柱管径
+    tier_spacing = 350      # 层间距
+    tier_thickness = 20     # 层板厚度
+    wheel_radius = 50       # 轮子半径
+    
+    # 1. 四根立柱
+    corner_positions = [
+        [-length/2 + tube_radius, -width/2 + tube_radius],
+        [length/2 - tube_radius, -width/2 + tube_radius],
+        [-length/2 + tube_radius, width/2 - tube_radius],
+        [length/2 - tube_radius, width/2 - tube_radius]
+    ]
+    
+    for i, (x, y) in enumerate(corner_positions):
+        post = trimesh.creation.cylinder(radius=tube_radius, height=height - 100)
+        post.apply_translation([x, y, (height - 100)/2 + 100])
+        set_mesh_color(post, COLOR_CHROME)
+        meshes.append((f'post_{i}', post))
+    
+    # 2. 三层网格层板
+    for tier in range(tiers):
+        z_pos = 150 + tier * tier_spacing
+        
+        # 层板框架
+        frame_thickness = 25
+        
+        # 前边
+        front_bar = trimesh.creation.box(extents=[length, frame_thickness, tier_thickness])
+        front_bar.apply_translation([0, -width/2 + frame_thickness/2, z_pos])
+        set_mesh_color(front_bar, COLOR_CHROME)
+        meshes.append((f'tier_{tier}_front', front_bar))
+        
+        # 后边
+        back_bar = trimesh.creation.box(extents=[length, frame_thickness, tier_thickness])
+        back_bar.apply_translation([0, width/2 - frame_thickness/2, z_pos])
+        set_mesh_color(back_bar, COLOR_CHROME)
+        meshes.append((f'tier_{tier}_back', back_bar))
+        
+        # 左边
+        left_bar = trimesh.creation.box(extents=[frame_thickness, width - 2*frame_thickness, tier_thickness])
+        left_bar.apply_translation([-length/2 + frame_thickness/2, 0, z_pos])
+        set_mesh_color(left_bar, COLOR_CHROME)
+        meshes.append((f'tier_{tier}_left', left_bar))
+        
+        # 右边
+        right_bar = trimesh.creation.box(extents=[frame_thickness, width - 2*frame_thickness, tier_thickness])
+        right_bar.apply_translation([length/2 - frame_thickness/2, 0, z_pos])
+        set_mesh_color(right_bar, COLOR_CHROME)
+        meshes.append((f'tier_{tier}_right', right_bar))
+        
+        # 网格（用多个细条模拟）
+        grid_spacing = 50
+        for i in range(int((length - 100) / grid_spacing)):
+            x_pos = -length/2 + 50 + i * grid_spacing + grid_spacing/2
+            grid_bar = trimesh.creation.box(extents=[8, width - 60, 5])
+            grid_bar.apply_translation([x_pos, 0, z_pos + 5])
+            set_mesh_color(grid_bar, COLOR_CHROME)
+            meshes.append((f'tier_{tier}_grid_{i}', grid_bar))
+    
+    # 3. U型扶手（后侧）
+    handle_height = 1100
+    handle_radius = 15
+    
+    # 左侧扶手杆
+    left_handle = trimesh.creation.cylinder(radius=handle_radius, height=handle_height)
+    left_handle.apply_translation([-length/2 + 50, -width/2 + 50, handle_height/2 + 100])
+    set_mesh_color(left_handle, COLOR_CHROME)
+    meshes.append(('handle_left', left_handle))
+    
+    # 右侧扶手杆
+    right_handle = trimesh.creation.cylinder(radius=handle_radius, height=handle_height)
+    right_handle.apply_translation([-length/2 + 50, width/2 - 50, handle_height/2 + 100])
+    set_mesh_color(right_handle, COLOR_CHROME)
+    meshes.append(('handle_right', right_handle))
+    
+    # 扶手横梁
+    handle_bar = trimesh.creation.cylinder(radius=handle_radius, height=width - 100)
+    handle_bar.apply_transform(trimesh.transformations.rotation_matrix(
+        angle=np.pi/2, direction=[0, 0, 1], point=[0, 0, 0]
+    ))
+    handle_bar.apply_translation([-length/2 + 50, 0, handle_height + 100])
+    set_mesh_color(handle_bar, COLOR_CHROME)
+    meshes.append(('handle_bar', handle_bar))
+    
+    # 4. 底部横梁（连接立柱）
+    # 前横梁
+    front_beam = trimesh.creation.cylinder(radius=tube_radius, height=width - 2*tube_radius)
+    front_beam.apply_transform(trimesh.transformations.rotation_matrix(
+        angle=np.pi/2, direction=[0, 0, 1], point=[0, 0, 0]
+    ))
+    front_beam.apply_translation([0, 0, 100])
+    set_mesh_color(front_beam, COLOR_CHROME)
+    meshes.append(('front_beam', front_beam))
+    
+    # 后横梁
+    back_beam = trimesh.creation.cylinder(radius=tube_radius, height=width - 2*tube_radius)
+    back_beam.apply_transform(trimesh.transformations.rotation_matrix(
+        angle=np.pi/2, direction=[0, 0, 1], point=[0, 0, 0]
+    ))
+    back_beam.apply_translation([0, 0, 100])
+    set_mesh_color(back_beam, COLOR_CHROME)
+    meshes.append(('back_beam', back_beam))
+    
+    # 5. 万向轮（4个，带刹车）
+    wheel_positions = [
+        [-length/2 + 60, -width/2 + 60],
+        [length/2 - 60, -width/2 + 60],
+        [-length/2 + 60, width/2 - 60],
+        [length/2 - 60, width/2 - 60]
+    ]
+    
+    for i, (x, y) in enumerate(wheel_positions):
+        # 轮支架
+        bracket = trimesh.creation.box(extents=[40, 40, 60])
+        bracket.apply_translation([x, y, 70])
+        set_mesh_color(bracket, COLOR_DARK)
+        meshes.append((f'wheel_bracket_{i}', bracket))
+        
+        # 轮子
+        wheel = trimesh.creation.cylinder(radius=wheel_radius, height=30)
+        wheel.apply_transform(trimesh.transformations.rotation_matrix(
+            angle=np.pi/2, direction=[1, 0, 0], point=[0, 0, 0]
+        ))
+        wheel.apply_translation([x, y, wheel_radius])
+        set_mesh_color(wheel, COLOR_WHEEL)
+        meshes.append((f'wheel_{i}', wheel))
+    
+    # 使用Scene并应用坐标转换
+    scene = trimesh.Scene()
+    rotation_matrix = trimesh.transformations.rotation_matrix(
+        angle=-np.pi / 2,
+        direction=[1, 0, 0],
+        point=[0, 0, 0]
+    )
+    
+    for name, mesh in meshes:
+        mesh.apply_transform(rotation_matrix)
+        scene.add_geometry(mesh, node_name=name)
+    
+    return scene
+
+
 def main():
     """主函数：生成所有模型"""
     print("=" * 50)
@@ -2187,6 +2348,25 @@ def main():
         }
     }
     metadata_list.append(save_model(pallet_jack, "forklift-pallet-jack-manual.glb", meta_pallet_jack))
+    
+    # 生成拣货车
+    print("\n🛒 生成拣货车...")
+    print("  - 三层拣货车...")
+    picking_cart = generate_picking_cart()
+    meta_picking_cart = {
+        "id": "cart-picking-3tier-900",
+        "name": "三层拣货车-标准型",
+        "category": "handling",
+        "description": "人工拣选作业专用，配合中型/轻型货架使用，适用于电商仓、零售仓的订单拣选",
+        "tags": ["拣货车", "三层", "人工拣选", "电商仓"],
+        "parameters": {
+            "length": {"type": "number", "min": 700, "max": 1100, "default": 900, "unit": "mm"},
+            "width": {"type": "number", "min": 350, "max": 550, "default": 450, "unit": "mm"},
+            "height": {"type": "number", "min": 1000, "max": 1400, "default": 1200, "unit": "mm"},
+            "tiers": {"type": "number", "min": 2, "max": 4, "default": 3}
+        }
+    }
+    metadata_list.append(save_model(picking_cart, "cart-picking-3tier.glb", meta_picking_cart))
     
     # 保存元数据
     print("\n📝 保存元数据...")

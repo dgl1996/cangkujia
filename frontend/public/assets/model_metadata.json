@@ -961,5 +961,47 @@
       }
     },
     "filename": "forklift-pallet-jack-manual.glb"
+  },
+  {
+    "id": "cart-picking-3tier-900",
+    "name": "三层拣货车-标准型",
+    "category": "handling",
+    "description": "人工拣选作业专用，配合中型/轻型货架使用，适用于电商仓、零售仓的订单拣选",
+    "tags": [
+      "拣货车",
+      "三层",
+      "人工拣选",
+      "电商仓"
+    ],
+    "parameters": {
+      "length": {
+        "type": "number",
+        "min": 700,
+        "max": 1100,
+        "default": 900,
+        "unit": "mm"
+      },
+      "width": {
+        "type": "number",
+        "min": 350,
+        "max": 550,
+        "default": 450,
+        "unit": "mm"
+      },
+      "height": {
+        "type": "number",
+        "min": 1000,
+        "max": 1400,
+        "default": 1200,
+        "unit": "mm"
+      },
+      "tiers": {
+        "type": "number",
+        "min": 2,
+        "max": 4,
+        "default": 3
+      }
+    },
+    "filename": "cart-picking-3tier.glb"
   }
 ]
