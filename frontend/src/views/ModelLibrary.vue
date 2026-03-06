@@ -365,6 +365,7 @@ const models = ref([
   },
   {
     id: 'shelf-beam-medium',
+    shortId: 'A102',
     name: '横梁式货架-中型4层（L2000*D800*H3500）',
     category: 'storage',
     description: '适用于中型货物存储，单层承重500kg',
@@ -906,6 +907,11 @@ const assignShortIds = () => {
 // 在初始化时分配短ID
 assignShortIds();
 
+// 通过短ID查找模型（用于人机交互）
+const findModelByShortId = (shortId) => {
+  return models.value.find(model => model.shortId === shortId);
+};
+
 // 计算货架类型标签
 const getShelfTypeLabel = computed(() => {
   const { uprightWidth, beamHeight } = customShelfParams.value;
@@ -1016,6 +1022,9 @@ const saveCustomShelf = () => {
 
 // 初始化时加载自定义货架
 loadCustomShelves();
+
+// 加载自定义货架后，再次分配短ID
+assignShortIds();
 
 // 计算属性
 const currentTags = computed(() => {
