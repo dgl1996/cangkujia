@@ -754,6 +754,19 @@ const models = ref([
     },
     modelUrl: '/assets/models/putwall-standard-16cell.glb',
   },
+  {
+    id: 'station-packcheck-integrated-red',
+    name: '复核打包一体作业台-红白配色',
+    category: 'picking',
+    description: '红白配色与红色输送线配套，视觉冲击力强，适用于电商仓订单处理末端',
+    tags: ['作业台', '复核打包', '红白配色', '电商仓'],
+    parameters: {
+      length: { type: 'number', min: 1500, max: 2200, default: 1800, unit: 'mm' },
+      width: { type: 'number', min: 700, max: 1100, default: 900, unit: 'mm' },
+      height: { type: 'number', min: 1800, max: 2200, default: 2000, unit: 'mm' },
+    },
+    modelUrl: '/assets/models/station-packcheck-integrated-red.glb',
+  },
 ]);
 
 // 状态

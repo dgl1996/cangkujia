@@ -2585,6 +2585,254 @@ def generate_roller_conveyor(length=2000, width=600, height=800):
     return scene
 
 
+def generate_packing_checking_station(length=1800, width=900, height=2000):
+    """
+    生成复核打包一体作业台（Checking & Packing Integrated Station）
+    红白配色与红色输送线配套，适用于电商仓订单处理末端
+    
+    Args:
+        length: 总长度（含侧延伸）
+        width: 总宽度
+        height: 总高度
+    """
+    meshes = []
+    
+    # 颜色定义 - 红白配色
+    COLOR_FRAME = [0.86, 0.15, 0.15]      # 框架红 #DC2626
+    COLOR_TABLE = [0.98, 0.98, 0.98]      # 台面白 #FFFFFF
+    COLOR_SHELF = [0.95, 0.95, 0.95]      # 层板浅灰白
+    COLOR_BLACK = [0.15, 0.15, 0.15]      # 黑色部件
+    COLOR_SILVER = [0.75, 0.75, 0.75]     # 银色金属
+    
+    # 尺寸参数
+    main_table_length = 1500
+    main_table_width = 750
+    table_height = 850
+    side_ext_length = 600
+    side_ext_width = 400
+    tube_size = 40
+    
+    # 1. 主台面（白色PP板）
+    main_table = trimesh.creation.box(
+        extents=[main_table_length, main_table_width, 25]
+    )
+    main_table.apply_translation([0, 0, table_height])
+    set_mesh_color(main_table, COLOR_TABLE)
+    meshes.append(('main_table', main_table))
+    
+    # 2. 侧延伸台（右侧L型，白色）
+    side_table = trimesh.creation.box(
+        extents=[side_ext_length, side_ext_width, 25]
+    )
+    side_table.apply_translation([main_table_length/2 + side_ext_length/2 - 50, main_table_width/2 - side_ext_width/2, table_height])
+    set_mesh_color(side_table, COLOR_TABLE)
+    meshes.append(('side_table', side_table))
+    
+    # 3. 桌腿（红色方管，4根主腿）
+    leg_positions = [
+        [-main_table_length/2 + 100, -main_table_width/2 + 100],
+        [main_table_length/2 - 100, -main_table_width/2 + 100],
+        [-main_table_length/2 + 100, main_table_width/2 - 100],
+        [main_table_length/2 - 100, main_table_width/2 - 100]
+    ]
+    
+    for i, (x, y) in enumerate(leg_positions):
+        leg = trimesh.creation.box(
+            extents=[tube_size, tube_size, table_height - 12]
+        )
+        leg.apply_translation([x, y, (table_height - 12)/2])
+        set_mesh_color(leg, COLOR_FRAME)
+        meshes.append((f'leg_{i}', leg))
+        
+        # 地脚
+        foot = trimesh.creation.cylinder(radius=25, height=15)
+        foot.apply_translation([x, y, 7])
+        set_mesh_color(foot, COLOR_BLACK)
+        meshes.append((f'foot_{i}', foot))
+    
+    # 4. 侧延伸台支撑腿
+    side_leg_positions = [
+        [main_table_length/2 + side_ext_length - 100, main_table_width/2 - side_ext_width/2],
+        [main_table_length/2 + side_ext_length - 100, main_table_width/2 + side_ext_width/2 - 100]
+    ]
+    
+    for i, (x, y) in enumerate(side_leg_positions):
+        leg = trimesh.creation.box(
+            extents=[tube_size, tube_size, table_height - 12]
+        )
+        leg.apply_translation([x, y, (table_height - 12)/2])
+        set_mesh_color(leg, COLOR_FRAME)
+        meshes.append((f'side_leg_{i}', leg))
+        
+        foot = trimesh.creation.cylinder(radius=25, height=15)
+        foot.apply_translation([x, y, 7])
+        set_mesh_color(foot, COLOR_BLACK)
+        meshes.append((f'side_foot_{i}', foot))
+    
+    # 5. 下层储物架（4格开放式，红色框架）
+    lower_shelf_y = -100
+    lower_shelf_height = 350
+    
+    # 下层框架前横梁
+    lower_front_beam = trimesh.creation.box(
+        extents=[main_table_length - 100, tube_size, tube_size]
+    )
+    lower_front_beam.apply_translation([0, -main_table_width/2 + 50, lower_shelf_height])
+    set_mesh_color(lower_front_beam, COLOR_FRAME)
+    meshes.append(('lower_front_beam', lower_front_beam))
+    
+    # 下层框架后横梁
+    lower_back_beam = trimesh.creation.box(
+        extents=[main_table_length - 100, tube_size, tube_size]
+    )
+    lower_back_beam.apply_translation([0, main_table_width/2 - 50, lower_shelf_height])
+    set_mesh_color(lower_back_beam, COLOR_FRAME)
+    meshes.append(('lower_back_beam', lower_back_beam))
+    
+    # 下层隔板（3块，分隔4格）
+    for i in range(3):
+        x_pos = -main_table_length/2 + 200 + i * (main_table_length - 400)/3
+        divider = trimesh.creation.box(
+            extents=[10, main_table_width - 100, 20]
+        )
+        divider.apply_translation([x_pos, 0, lower_shelf_height + 10])
+        set_mesh_color(divider, COLOR_SHELF)
+        meshes.append((f'lower_divider_{i}', divider))
+    
+    # 下层底板
+    lower_base = trimesh.creation.box(
+        extents=[main_table_length - 100, main_table_width - 100, 15]
+    )
+    lower_base.apply_translation([0, 0, lower_shelf_height - 7])
+    set_mesh_color(lower_base, COLOR_SHELF)
+    meshes.append(('lower_base', lower_base))
+    
+    # 6. 上层格口架（8格，2×4，红色框架+白色层板）
+    upper_shelf_height = 1600
+    cell_width = (main_table_length - 100) / 4
+    cell_height = 180
+    
+    # 上层立柱（4根）
+    upper_post_positions = [
+        [-main_table_length/2 + 50, -main_table_width/2 + 50],
+        [main_table_length/2 - 50, -main_table_width/2 + 50],
+        [-main_table_length/2 + 50, main_table_width/2 - 50],
+        [main_table_length/2 - 50, main_table_width/2 - 50]
+    ]
+    
+    for i, (x, y) in enumerate(upper_post_positions):
+        post = trimesh.creation.box(
+            extents=[tube_size, tube_size, upper_shelf_height - table_height]
+        )
+        post.apply_translation([x, y, table_height + (upper_shelf_height - table_height)/2])
+        set_mesh_color(post, COLOR_FRAME)
+        meshes.append((f'upper_post_{i}', post))
+    
+    # 上层横梁（前后各4根）
+    for row in range(2):
+        z_pos = table_height + 200 + row * cell_height
+        # 前横梁
+        front_beam = trimesh.creation.box(
+            extents=[main_table_length - 100, tube_size, tube_size]
+        )
+        front_beam.apply_translation([0, -main_table_width/2 + 50, z_pos])
+        set_mesh_color(front_beam, COLOR_FRAME)
+        meshes.append((f'upper_front_beam_{row}', front_beam))
+        
+        # 后横梁
+        back_beam = trimesh.creation.box(
+            extents=[main_table_length - 100, tube_size, tube_size]
+        )
+        back_beam.apply_translation([0, main_table_width/2 - 50, z_pos])
+        set_mesh_color(back_beam, COLOR_FRAME)
+        meshes.append((f'upper_back_beam_{row}', back_beam))
+    
+    # 上层层板（白色，分隔8格）
+    for row in range(2):
+        for col in range(4):
+            x_pos = -main_table_length/2 + 50 + cell_width/2 + col * cell_width
+            y_pos = 0
+            z_pos = table_height + 200 + row * cell_height - 10
+            
+            shelf = trimesh.creation.box(
+                extents=[cell_width - 10, main_table_width - 100, 15]
+            )
+            shelf.apply_translation([x_pos, y_pos, z_pos])
+            set_mesh_color(shelf, COLOR_SHELF)
+            meshes.append((f'upper_shelf_{row}_{col}', shelf))
+    
+    # 7. 显示器支架（红色立柱+黑色支架）
+    monitor_height = 1200
+    monitor_x = -main_table_length/2 + 200
+    
+    # 显示器立柱
+    monitor_post = trimesh.creation.box(
+        extents=[tube_size, tube_size, 400]
+    )
+    monitor_post.apply_translation([monitor_x, -main_table_width/2 + 80, monitor_height])
+    set_mesh_color(monitor_post, COLOR_FRAME)
+    meshes.append(('monitor_post', monitor_post))
+    
+    # 显示器安装臂
+    monitor_arm = trimesh.creation.box(extents=[150, 80, 20])
+    monitor_arm.apply_translation([monitor_x, -main_table_width/2 + 80, monitor_height + 100])
+    set_mesh_color(monitor_arm, COLOR_BLACK)
+    meshes.append(('monitor_arm', monitor_arm))
+    
+    # 显示器（简化方块）
+    monitor = trimesh.creation.box(extents=[300, 20, 200])
+    monitor.apply_translation([monitor_x, -main_table_width/2 + 60, monitor_height + 100])
+    set_mesh_color(monitor, COLOR_BLACK)
+    meshes.append(('monitor', monitor))
+    
+    # 8. 键盘托架（白色，抽拉式）
+    keyboard_tray = trimesh.creation.box(extents=[400, 250, 20])
+    keyboard_tray.apply_translation([monitor_x, -main_table_width/2 + 150, table_height - 50])
+    set_mesh_color(keyboard_tray, COLOR_TABLE)
+    meshes.append(('keyboard_tray', keyboard_tray))
+    
+    # 9. LED台灯（银色灯臂+白色灯头）
+    lamp_base = trimesh.creation.cylinder(radius=30, height=20)
+    lamp_base.apply_translation([main_table_length/2 - 200, main_table_width/2 - 100, table_height + 10])
+    set_mesh_color(lamp_base, COLOR_SILVER)
+    meshes.append(('lamp_base', lamp_base))
+    
+    lamp_arm = trimesh.creation.cylinder(radius=8, height=400)
+    lamp_arm.apply_transform(trimesh.transformations.rotation_matrix(
+        angle=np.pi/6, direction=[0, 1, 0], point=[0, 0, 0]
+    ))
+    lamp_arm.apply_translation([main_table_length/2 - 200, main_table_width/2 - 100, table_height + 200])
+    set_mesh_color(lamp_arm, COLOR_SILVER)
+    meshes.append(('lamp_arm', lamp_arm))
+    
+    lamp_head = trimesh.creation.box(extents=[150, 80, 30])
+    lamp_head.apply_translation([main_table_length/2 - 300, main_table_width/2 - 100, table_height + 380])
+    set_mesh_color(lamp_head, COLOR_TABLE)
+    meshes.append(('lamp_head', lamp_head))
+    
+    # 10. 电源插座（侧面4个）
+    for i in range(4):
+        z_pos = table_height + 150 + i * 80
+        socket = trimesh.creation.box(extents=[15, 30, 50])
+        socket.apply_translation([main_table_length/2 + 5, 0, z_pos])
+        set_mesh_color(socket, COLOR_BLACK)
+        meshes.append((f'socket_{i}', socket))
+    
+    # 使用Scene并应用坐标转换
+    scene = trimesh.Scene()
+    rotation_matrix = trimesh.transformations.rotation_matrix(
+        angle=-np.pi / 2,
+        direction=[1, 0, 0],
+        point=[0, 0, 0]
+    )
+    
+    for name, mesh in meshes:
+        mesh.apply_transform(rotation_matrix)
+        scene.add_geometry(mesh, node_name=name)
+    
+    return scene
+
+
 def main():
     """主函数：生成所有模型"""
     print("=" * 50)
@@ -3076,6 +3324,24 @@ def main():
         }
     }
     metadata_list.append(save_model(roller_conveyor, "conveyor-roller-straight-600-red.glb", meta_roller_conveyor))
+    
+    # 生成复核打包一体作业台
+    print("\n📦 生成复核打包一体作业台...")
+    print("  - 红白配色作业台...")
+    packing_station = generate_packing_checking_station()
+    meta_packing_station = {
+        "id": "station-packcheck-integrated-red",
+        "name": "复核打包一体作业台-红白配色",
+        "category": "picking",
+        "description": "红白配色与红色输送线配套，视觉冲击力强，适用于电商仓订单处理末端",
+        "tags": ["作业台", "复核打包", "红白配色", "电商仓"],
+        "parameters": {
+            "length": {"type": "number", "min": 1500, "max": 2200, "default": 1800, "unit": "mm"},
+            "width": {"type": "number", "min": 700, "max": 1100, "default": 900, "unit": "mm"},
+            "height": {"type": "number", "min": 1800, "max": 2200, "default": 2000, "unit": "mm"}
+        }
+    }
+    metadata_list.append(save_model(packing_station, "station-packcheck-integrated-red.glb", meta_packing_station))
     
     # 保存元数据
     print("\n📝 保存元数据...")
