@@ -1191,6 +1191,180 @@ def generate_tote_box(length=600, width=400, height=300, color=None):
     return box
 
 
+def generate_reach_truck(length=2900, width=1100, height=2500, lift_height=9000):
+    """
+    生成前移式叉车（Reach Truck）
+    窄通道高位存取专用，适配重型5层立体库
+    
+    Args:
+        length: 车身总长（含货叉）
+        width: 车身宽度
+        height: 门架收起时高度
+        lift_height: 最大举升高度
+    """
+    meshes = []
+    
+    # 颜色定义
+    COLOR_ORANGE = [0.96, 0.62, 0.04]    # 工业橙 #F59E0B
+    COLOR_BLACK = [0.15, 0.15, 0.15]      # 黑色部件
+    COLOR_GREY = [0.4, 0.4, 0.4]          # 灰色金属
+    COLOR_SILVER = [0.75, 0.75, 0.75]     # 银色货叉
+    
+    # 尺寸参数
+    body_length = 1700      # 车身长度（不含货叉）
+    body_width = width
+    body_height = 1400      # 车身高度
+    mast_height = height - 500  # 门架高度
+    fork_length = 1200      # 货叉长度
+    fork_width = 100        # 货叉宽度
+    fork_thickness = 40     # 货叉厚度
+    
+    # 1. 车身主体（橙色）
+    body = trimesh.creation.box(
+        extents=[body_length, body_width, body_height]
+    )
+    body.apply_translation([fork_length/2, 0, body_height/2 + 300])
+    set_mesh_color(body, COLOR_ORANGE)
+    meshes.append(('body', body))
+    
+    # 2. 驾驶室顶棚
+    roof = trimesh.creation.box(
+        extents=[800, body_width - 50, 50]
+    )
+    roof.apply_translation([fork_length/2 + 200, 0, height - 100])
+    set_mesh_color(roof, COLOR_ORANGE)
+    meshes.append(('roof', roof))
+    
+    # 3. 驾驶室立柱（4根）
+    pillar_positions = [
+        [fork_length/2 - 300, -body_width/2 + 50],
+        [fork_length/2 - 300, body_width/2 - 50],
+        [fork_length/2 + 300, -body_width/2 + 50],
+        [fork_length/2 + 300, body_width/2 - 50]
+    ]
+    for i, (x, y) in enumerate(pillar_positions):
+        pillar = trimesh.creation.box(
+            extents=[50, 50, height - body_height - 300]
+        )
+        pillar.apply_translation([x, y, body_height + 300 + (height - body_height - 300)/2])
+        set_mesh_color(pillar, COLOR_ORANGE)
+        meshes.append((f'pillar_{i}', pillar))
+    
+    # 4. 门架（黑色，3节结构）
+    mast_width = 300
+    mast_depth = 150
+    
+    # 外门架
+    mast_outer = trimesh.creation.box(
+        extents=[mast_depth, mast_width, mast_height]
+    )
+    mast_outer.apply_translation([0, 0, mast_height/2 + 300])
+    set_mesh_color(mast_outer, COLOR_BLACK)
+    meshes.append(('mast_outer', mast_outer))
+    
+    # 中门架（稍短）
+    mast_middle = trimesh.creation.box(
+        extents=[mast_depth - 20, mast_width - 20, mast_height * 0.85]
+    )
+    mast_middle.apply_translation([0, 0, mast_height * 0.85/2 + 400])
+    set_mesh_color(mast_middle, COLOR_GREY)
+    meshes.append(('mast_middle', mast_middle))
+    
+    # 内门架（最短）
+    mast_inner = trimesh.creation.box(
+        extents=[mast_depth - 40, mast_width - 40, mast_height * 0.7]
+    )
+    mast_inner.apply_translation([0, 0, mast_height * 0.7/2 + 500])
+    set_mesh_color(mast_inner, COLOR_BLACK)
+    meshes.append(('mast_inner', mast_inner))
+    
+    # 5. 货叉架
+    carriage = trimesh.creation.box(
+        extents=[100, mast_width + 50, 200]
+    )
+    carriage.apply_translation([0, 0, 800])
+    set_mesh_color(carriage, COLOR_GREY)
+    meshes.append(('carriage', carriage))
+    
+    # 6. 货叉（2根，银色）
+    fork_spacing = 300
+    for i, y_offset in enumerate([-fork_spacing/2, fork_spacing/2]):
+        fork = trimesh.creation.box(
+            extents=[fork_length, fork_width, fork_thickness]
+        )
+        fork.apply_translation([-fork_length/2, y_offset, 750])
+        set_mesh_color(fork, COLOR_SILVER)
+        meshes.append((f'fork_{i}', fork))
+    
+    # 7. 后轮（2个）
+    wheel_radius = 150
+    wheel_width = 80
+    for i, x_offset in enumerate([fork_length/2 + 600, fork_length/2 + 1200]):
+        wheel = trimesh.creation.cylinder(
+            radius=wheel_radius,
+            height=wheel_width
+        )
+        wheel.apply_transform(trimesh.transformations.rotation_matrix(
+            angle=np.pi/2, direction=[1, 0, 0], point=[0, 0, 0]
+        ))
+        wheel.apply_translation([x_offset, -body_width/2 - wheel_width/2, wheel_radius])
+        set_mesh_color(wheel, COLOR_BLACK)
+        meshes.append((f'wheel_left_{i}', wheel))
+        
+        wheel_right = trimesh.creation.cylinder(
+            radius=wheel_radius,
+            height=wheel_width
+        )
+        wheel_right.apply_transform(trimesh.transformations.rotation_matrix(
+            angle=np.pi/2, direction=[1, 0, 0], point=[0, 0, 0]
+        ))
+        wheel_right.apply_translation([x_offset, body_width/2 + wheel_width/2, wheel_radius])
+        set_mesh_color(wheel_right, COLOR_BLACK)
+        meshes.append((f'wheel_right_{i}', wheel_right))
+    
+    # 8. 前轮（2个，转向轮）
+    front_wheel_radius = 100
+    for i, y_offset in enumerate([-150, 150]):
+        wheel = trimesh.creation.cylinder(
+            radius=front_wheel_radius,
+            height=60
+        )
+        wheel.apply_transform(trimesh.transformations.rotation_matrix(
+            angle=np.pi/2, direction=[1, 0, 0], point=[0, 0, 0]
+        ))
+        wheel.apply_translation([fork_length/2 + 1400, y_offset, front_wheel_radius])
+        set_mesh_color(wheel, COLOR_BLACK)
+        meshes.append((f'front_wheel_{i}', wheel))
+    
+    # 9. 配重块（后部）
+    counterweight = trimesh.creation.box(
+        extents=[400, body_width - 100, 800]
+    )
+    counterweight.apply_translation([fork_length/2 + body_length - 300, 0, 700])
+    set_mesh_color(counterweight, COLOR_GREY)
+    meshes.append(('counterweight', counterweight))
+    
+    # 10. 警示灯（顶部）
+    light = trimesh.creation.cylinder(radius=30, height=50)
+    light.apply_translation([fork_length/2 + 200, 0, height + 25])
+    set_mesh_color(light, [1.0, 0.0, 0.0])  # 红色警示灯
+    meshes.append(('warning_light', light))
+    
+    # 使用Scene并应用坐标转换
+    scene = trimesh.Scene()
+    rotation_matrix = trimesh.transformations.rotation_matrix(
+        angle=-np.pi / 2,
+        direction=[1, 0, 0],
+        point=[0, 0, 0]
+    )
+    
+    for name, mesh in meshes:
+        mesh.apply_transform(rotation_matrix)
+        scene.add_geometry(mesh, node_name=name)
+    
+    return scene
+
+
 def main():
     """主函数：生成所有模型"""
     print("=" * 50)
@@ -1511,6 +1685,25 @@ def main():
         }
     }
     metadata_list.append(save_model(tote_small, "container-tote-400x300.glb", meta_tote_small))
+    
+    # 生成前移式叉车
+    print("\n🚛 生成前移式叉车...")
+    print("  - 前移式叉车 2吨9米...")
+    forklift_reach = generate_reach_truck()
+    meta_forklift = {
+        "id": "forklift-reach-2t-9m",
+        "name": "前移式叉车-2吨9米",
+        "category": "handling",
+        "description": "前移式叉车，窄通道高位存取，适配重型5层立体库，举升高度9米",
+        "tags": ["前移式叉车", "窄通道", "高位存取", "2吨", "9米"],
+        "parameters": {
+            "length": {"type": "number", "min": 2500, "max": 3500, "default": 2900, "unit": "mm"},
+            "width": {"type": "number", "min": 1000, "max": 1300, "default": 1100, "unit": "mm"},
+            "height": {"type": "number", "min": 2200, "max": 2800, "default": 2500, "unit": "mm"},
+            "liftHeight": {"type": "number", "min": 6000, "max": 12000, "default": 9000, "unit": "mm"}
+        }
+    }
+    metadata_list.append(save_model(forklift_reach, "forklift-reach-2t.glb", meta_forklift))
     
     # 保存元数据
     print("\n📝 保存元数据...")

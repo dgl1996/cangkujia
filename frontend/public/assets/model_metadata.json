@@ -787,5 +787,49 @@
       }
     },
     "filename": "container-tote-400x300.glb"
+  },
+  {
+    "id": "forklift-reach-2t-9m",
+    "name": "前移式叉车-2吨9米",
+    "category": "handling",
+    "description": "前移式叉车，窄通道高位存取，适配重型5层立体库，举升高度9米",
+    "tags": [
+      "前移式叉车",
+      "窄通道",
+      "高位存取",
+      "2吨",
+      "9米"
+    ],
+    "parameters": {
+      "length": {
+        "type": "number",
+        "min": 2500,
+        "max": 3500,
+        "default": 2900,
+        "unit": "mm"
+      },
+      "width": {
+        "type": "number",
+        "min": 1000,
+        "max": 1300,
+        "default": 1100,
+        "unit": "mm"
+      },
+      "height": {
+        "type": "number",
+        "min": 2200,
+        "max": 2800,
+        "default": 2500,
+        "unit": "mm"
+      },
+      "liftHeight": {
+        "type": "number",
+        "min": 6000,
+        "max": 12000,
+        "default": 9000,
+        "unit": "mm"
+      }
+    },
+    "filename": "forklift-reach-2t.glb"
   }
 ]
