@@ -109,6 +109,10 @@
               :modelUrl="selectedModel?.modelUrl" 
               :autoRotate="true"
             />
+            <div class="preview-hint">
+              <span class="hint-icon">🖱️</span>
+              <span class="hint-text">滚轮放大 / 左键旋转查看</span>
+            </div>
           </div>
           <div class="preview-params">
             <h4>参数配置</h4>
@@ -838,6 +842,32 @@ const goUsage = () => {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+}
+
+.preview-hint {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.hint-icon {
+  font-size: 0.9rem;
+}
+
+.hint-text {
+  white-space: nowrap;
 }
 
 .preview-canvas {
