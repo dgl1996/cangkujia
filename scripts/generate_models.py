@@ -3045,6 +3045,218 @@ def generate_check_weigher(length=1600, width=700, height=800):
     return scene
 
 
+def generate_cage_cart(length=800, width=600, height=1700):
+    """
+    生成标准物流笼车（Roll Container / Cage Trolley）
+    带围栏多层结构，适用于电商仓、配送中心货物转运
+    
+    Args:
+        length: 笼车长度
+        width: 笼车宽度
+        height: 笼车高度
+    """
+    meshes = []
+    
+    # 颜色定义 - 物流蓝
+    COLOR_FRAME = [0.15, 0.39, 0.92]      # 物流蓝 #2563EB
+    COLOR_SHELF = [0.15, 0.39, 0.92]      # 层板蓝
+    COLOR_WHEEL = [0.3, 0.3, 0.3]         # 轮子灰
+    COLOR_WHEEL_RED = [0.8, 0.2, 0.2]     # 红色刹车轮
+    
+    # 尺寸参数
+    tube_radius = 12                        # 管径
+    tier_height = 800                       # 每层高度
+    tier_count = 2
+    grid_spacing = 50                       # 网格间距
+    wheel_radius = 62                       # 5寸轮半径
+    
+    # 1. 底部平台（花纹钢板）
+    base_platform = trimesh.creation.box(
+        extents=[length, width, 30]
+    )
+    base_platform.apply_translation([0, 0, 30])
+    set_mesh_color(base_platform, COLOR_SHELF)
+    meshes.append(('base_platform', base_platform))
+    
+    # 2. 四根立柱
+    corner_positions = [
+        [-length/2 + tube_radius, -width/2 + tube_radius],
+        [length/2 - tube_radius, -width/2 + tube_radius],
+        [-length/2 + tube_radius, width/2 - tube_radius],
+        [length/2 - tube_radius, width/2 - tube_radius]
+    ]
+    
+    for i, (x, y) in enumerate(corner_positions):
+        post = trimesh.creation.cylinder(radius=tube_radius, height=height - 100)
+        post.apply_translation([x, y, (height - 100)/2 + 50])
+        set_mesh_color(post, COLOR_FRAME)
+        meshes.append((f'post_{i}', post))
+    
+    # 3. 中层隔板（花纹钢板）
+    mid_shelf = trimesh.creation.box(
+        extents=[length - 40, width - 40, 20]
+    )
+    mid_shelf.apply_translation([0, 0, tier_height + 50])
+    set_mesh_color(mid_shelf, COLOR_SHELF)
+    meshes.append(('mid_shelf', mid_shelf))
+    
+    # 4. 网格围栏（四面）
+    # 前面（带折叠门）
+    front_grid_height = height - 100
+    # 左侧网格柱
+    for i in range(int(width / grid_spacing) + 1):
+        y_pos = -width/2 + i * grid_spacing
+        if abs(y_pos) < width/2 - tube_radius:
+            bar = trimesh.creation.cylinder(radius=4, height=front_grid_height)
+            bar.apply_translation([-length/2, y_pos, front_grid_height/2 + 50])
+            set_mesh_color(bar, COLOR_FRAME)
+            meshes.append((f'front_grid_{i}', bar))
+    
+    # 前面横杆（3根）
+    for h in [50, tier_height + 50, height - 50]:
+        cross_bar = trimesh.creation.cylinder(radius=6, height=width - 2*tube_radius)
+        cross_bar.apply_transform(trimesh.transformations.rotation_matrix(
+            angle=np.pi/2, direction=[0, 0, 1], point=[0, 0, 0]
+        ))
+        cross_bar.apply_translation([-length/2, 0, h])
+        set_mesh_color(cross_bar, COLOR_FRAME)
+        meshes.append((f'front_cross_{h}', cross_bar))
+    
+    # 后面网格
+    for i in range(int(width / grid_spacing) + 1):
+        y_pos = -width/2 + i * grid_spacing
+        if abs(y_pos) < width/2 - tube_radius:
+            bar = trimesh.creation.cylinder(radius=4, height=front_grid_height)
+            bar.apply_translation([length/2, y_pos, front_grid_height/2 + 50])
+            set_mesh_color(bar, COLOR_FRAME)
+            meshes.append((f'back_grid_{i}', bar))
+    
+    # 后面横杆
+    for h in [50, tier_height + 50, height - 50]:
+        cross_bar = trimesh.creation.cylinder(radius=6, height=width - 2*tube_radius)
+        cross_bar.apply_transform(trimesh.transformations.rotation_matrix(
+            angle=np.pi/2, direction=[0, 0, 1], point=[0, 0, 0]
+        ))
+        cross_bar.apply_translation([length/2, 0, h])
+        set_mesh_color(cross_bar, COLOR_FRAME)
+        meshes.append((f'back_cross_{h}', cross_bar))
+    
+    # 左侧网格
+    for i in range(int(length / grid_spacing) + 1):
+        x_pos = -length/2 + i * grid_spacing
+        if abs(x_pos) < length/2 - tube_radius:
+            bar = trimesh.creation.cylinder(radius=4, height=front_grid_height)
+            bar.apply_translation([x_pos, -width/2, front_grid_height/2 + 50])
+            set_mesh_color(bar, COLOR_FRAME)
+            meshes.append((f'left_grid_{i}', bar))
+    
+    # 左侧横杆
+    for h in [50, tier_height + 50, height - 50]:
+        cross_bar = trimesh.creation.cylinder(radius=6, height=length - 2*tube_radius)
+        cross_bar.apply_transform(trimesh.transformations.rotation_matrix(
+            angle=np.pi/2, direction=[1, 0, 0], point=[0, 0, 0]
+        ))
+        cross_bar.apply_translation([0, -width/2, h])
+        set_mesh_color(cross_bar, COLOR_FRAME)
+        meshes.append((f'left_cross_{h}', cross_bar))
+    
+    # 右侧网格
+    for i in range(int(length / grid_spacing) + 1):
+        x_pos = -length/2 + i * grid_spacing
+        if abs(x_pos) < length/2 - tube_radius:
+            bar = trimesh.creation.cylinder(radius=4, height=front_grid_height)
+            bar.apply_translation([x_pos, width/2, front_grid_height/2 + 50])
+            set_mesh_color(bar, COLOR_FRAME)
+            meshes.append((f'right_grid_{i}', bar))
+    
+    # 右侧横杆
+    for h in [50, tier_height + 50, height - 50]:
+        cross_bar = trimesh.creation.cylinder(radius=6, height=length - 2*tube_radius)
+        cross_bar.apply_transform(trimesh.transformations.rotation_matrix(
+            angle=np.pi/2, direction=[1, 0, 0], point=[0, 0, 0]
+        ))
+        cross_bar.apply_translation([0, width/2, h])
+        set_mesh_color(cross_bar, COLOR_FRAME)
+        meshes.append((f'right_cross_{h}', cross_bar))
+    
+    # 5. 折叠门（前面中间部分）
+    door_width = 400
+    # 门框
+    door_frame_left = trimesh.creation.cylinder(radius=6, height=front_grid_height)
+    door_frame_left.apply_translation([-door_width/2, -width/2 + 50, front_grid_height/2 + 50])
+    set_mesh_color(door_frame_left, COLOR_FRAME)
+    meshes.append(('door_frame_left', door_frame_left))
+    
+    door_frame_right = trimesh.creation.cylinder(radius=6, height=front_grid_height)
+    door_frame_right.apply_translation([door_width/2, -width/2 + 50, front_grid_height/2 + 50])
+    set_mesh_color(door_frame_right, COLOR_FRAME)
+    meshes.append(('door_frame_right', door_frame_right))
+    
+    # 门插销
+    latch = trimesh.creation.box(extents=[20, 30, 60])
+    latch.apply_translation([0, -width/2 + 70, height - 100])
+    set_mesh_color(latch, COLOR_FRAME)
+    meshes.append(('door_latch', latch))
+    
+    # 6. 万向轮（带刹车，2个红色）
+    wheel_positions_swivel = [
+        [-length/2 + 80, -width/2 + 80],
+        [length/2 - 80, -width/2 + 80]
+    ]
+    
+    for i, (x, y) in enumerate(wheel_positions_swivel):
+        # 轮支架
+        bracket = trimesh.creation.box(extents=[50, 50, 60])
+        bracket.apply_translation([x, y, 30])
+        set_mesh_color(bracket, COLOR_FRAME)
+        meshes.append((f'swivel_bracket_{i}', bracket))
+        
+        # 轮子（红色表示带刹车）
+        wheel = trimesh.creation.cylinder(radius=wheel_radius, height=30)
+        wheel.apply_transform(trimesh.transformations.rotation_matrix(
+            angle=np.pi/2, direction=[1, 0, 0], point=[0, 0, 0]
+        ))
+        wheel.apply_translation([x, y, wheel_radius])
+        set_mesh_color(wheel, COLOR_WHEEL_RED)
+        meshes.append((f'swivel_wheel_{i}', wheel))
+    
+    # 7. 定向轮（2个灰色）
+    wheel_positions_fixed = [
+        [-length/2 + 80, width/2 - 80],
+        [length/2 - 80, width/2 - 80]
+    ]
+    
+    for i, (x, y) in enumerate(wheel_positions_fixed):
+        # 轮支架
+        bracket = trimesh.creation.box(extents=[50, 50, 60])
+        bracket.apply_translation([x, y, 30])
+        set_mesh_color(bracket, COLOR_FRAME)
+        meshes.append((f'fixed_bracket_{i}', bracket))
+        
+        # 轮子
+        wheel = trimesh.creation.cylinder(radius=wheel_radius, height=30)
+        wheel.apply_transform(trimesh.transformations.rotation_matrix(
+            angle=np.pi/2, direction=[1, 0, 0], point=[0, 0, 0]
+        ))
+        wheel.apply_translation([x, y, wheel_radius])
+        set_mesh_color(wheel, COLOR_WHEEL)
+        meshes.append((f'fixed_wheel_{i}', wheel))
+    
+    # 使用Scene并应用坐标转换
+    scene = trimesh.Scene()
+    rotation_matrix = trimesh.transformations.rotation_matrix(
+        angle=-np.pi / 2,
+        direction=[1, 0, 0],
+        point=[0, 0, 0]
+    )
+    
+    for name, mesh in meshes:
+        mesh.apply_transform(rotation_matrix)
+        scene.add_geometry(mesh, node_name=name)
+    
+    return scene
+
+
 def main():
     """主函数：生成所有模型"""
     print("=" * 50)
@@ -3572,6 +3784,24 @@ def main():
         }
     }
     metadata_list.append(save_model(check_weigher, "weigher-automatic-check-600-red.glb", meta_check_weigher))
+    
+    # 生成物流笼车
+    print("\n🛒 生成物流笼车...")
+    print("  - 2层标准款笼车...")
+    cage_cart = generate_cage_cart()
+    meta_cage_cart = {
+        "id": "cart-cage-logistics-2tier",
+        "name": "物流笼车-2层标准款",
+        "category": "handling",
+        "description": "带围栏多层结构，适用于电商仓、配送中心货物转运及超市配送",
+        "tags": ["笼车", "物流笼车", "2层", "可折叠", "配送"],
+        "parameters": {
+            "length": {"type": "number", "min": 700, "max": 900, "default": 800, "unit": "mm"},
+            "width": {"type": "number", "min": 500, "max": 700, "default": 600, "unit": "mm"},
+            "height": {"type": "number", "min": 1500, "max": 1900, "default": 1700, "unit": "mm"}
+        }
+    }
+    metadata_list.append(save_model(cage_cart, "cart-cage-logistics-2tier.glb", meta_cage_cart))
     
     # 保存元数据
     print("\n📝 保存元数据...")

@@ -1248,5 +1248,42 @@
       }
     },
     "filename": "weigher-automatic-check-600-red.glb"
+  },
+  {
+    "id": "cart-cage-logistics-2tier",
+    "name": "物流笼车-2层标准款",
+    "category": "handling",
+    "description": "带围栏多层结构，适用于电商仓、配送中心货物转运及超市配送",
+    "tags": [
+      "笼车",
+      "物流笼车",
+      "2层",
+      "可折叠",
+      "配送"
+    ],
+    "parameters": {
+      "length": {
+        "type": "number",
+        "min": 700,
+        "max": 900,
+        "default": 800,
+        "unit": "mm"
+      },
+      "width": {
+        "type": "number",
+        "min": 500,
+        "max": 700,
+        "default": 600,
+        "unit": "mm"
+      },
+      "height": {
+        "type": "number",
+        "min": 1500,
+        "max": 1900,
+        "default": 1700,
+        "unit": "mm"
+      }
+    },
+    "filename": "cart-cage-logistics-2tier.glb"
   }
 ]
