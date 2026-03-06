@@ -1064,6 +1064,133 @@ def generate_plastic_pallet_grid(length=1200, width=1000, height=150):
     }
 
 
+def generate_tote_box(length=600, width=400, height=300, color=None):
+    """
+    生成可堆叠周转箱（EU箱标准）
+    
+    Args:
+        length: 长度 (mm)
+        width: 宽度 (mm)
+        height: 高度 (mm)
+        color: 颜色RGB列表，默认根据尺寸自动选择
+    """
+    meshes = []
+    
+    # 根据尺寸选择颜色
+    if color is None:
+        if length >= 600:
+            COLOR_BOX = [0.29, 0.56, 0.89]  # 蓝色 #4A90E2
+        else:
+            COLOR_BOX = [0.96, 0.68, 0.33]  # 橙色 #F6AD55
+    else:
+        COLOR_BOX = color
+    
+    # 壁厚
+    wall_thickness = 8
+    
+    # 外框（底部）
+    bottom = trimesh.creation.box(
+        extents=[length, width, wall_thickness]
+    )
+    bottom.apply_translation([0, 0, wall_thickness/2])
+    set_mesh_color(bottom, COLOR_BOX)
+    meshes.append(bottom)
+    
+    # 四壁
+    # 前壁
+    front_wall = trimesh.creation.box(
+        extents=[length, wall_thickness, height]
+    )
+    front_wall.apply_translation([0, -width/2 + wall_thickness/2, height/2])
+    set_mesh_color(front_wall, COLOR_BOX)
+    meshes.append(front_wall)
+    
+    # 后壁
+    back_wall = trimesh.creation.box(
+        extents=[length, wall_thickness, height]
+    )
+    back_wall.apply_translation([0, width/2 - wall_thickness/2, height/2])
+    set_mesh_color(back_wall, COLOR_BOX)
+    meshes.append(back_wall)
+    
+    # 左壁
+    left_wall = trimesh.creation.box(
+        extents=[wall_thickness, width - 2*wall_thickness, height]
+    )
+    left_wall.apply_translation([-length/2 + wall_thickness/2, 0, height/2])
+    set_mesh_color(left_wall, COLOR_BOX)
+    meshes.append(left_wall)
+    
+    # 右壁
+    right_wall = trimesh.creation.box(
+        extents=[wall_thickness, width - 2*wall_thickness, height]
+    )
+    right_wall.apply_translation([length/2 - wall_thickness/2, 0, height/2])
+    set_mesh_color(right_wall, COLOR_BOX)
+    meshes.append(right_wall)
+    
+    # 加强筋（侧面）
+    rib_count = 3
+    for i in range(rib_count):
+        y_pos = -width/2 + wall_thickness + (width - 2*wall_thickness) * (i + 0.5) / rib_count
+        # 左侧面加强筋
+        rib_left = trimesh.creation.box(
+            extents=[wall_thickness + 5, 20, height * 0.8]
+        )
+        rib_left.apply_translation([-length/2 + wall_thickness/2, y_pos, height * 0.4])
+        set_mesh_color(rib_left, COLOR_BOX)
+        meshes.append(rib_left)
+        
+        # 右侧面加强筋
+        rib_right = trimesh.creation.box(
+            extents=[wall_thickness + 5, 20, height * 0.8]
+        )
+        rib_right.apply_translation([length/2 - wall_thickness/2, y_pos, height * 0.4])
+        set_mesh_color(rib_right, COLOR_BOX)
+        meshes.append(rib_right)
+    
+    # 把手（侧面凹槽）- 用稍暗的颜色表示
+    COLOR_HANDLE = [c * 0.8 for c in COLOR_BOX]
+    handle_width = 80
+    handle_height = 30
+    # 左侧把手
+    handle_left = trimesh.creation.box(
+        extents=[wall_thickness + 2, handle_width, handle_height]
+    )
+    handle_left.apply_translation([-length/2 + wall_thickness/2, 0, height * 0.6])
+    set_mesh_color(handle_left, COLOR_HANDLE)
+    meshes.append(handle_left)
+    
+    # 右侧把手
+    handle_right = trimesh.creation.box(
+        extents=[wall_thickness + 2, handle_width, handle_height]
+    )
+    handle_right.apply_translation([length/2 - wall_thickness/2, 0, height * 0.6])
+    set_mesh_color(handle_right, COLOR_HANDLE)
+    meshes.append(handle_right)
+    
+    # 标签卡槽（前面）
+    label_slot = trimesh.creation.box(
+        extents=[60, wall_thickness + 2, 30]
+    )
+    label_slot.apply_translation([0, -width/2 + wall_thickness/2, height * 0.75])
+    set_mesh_color(label_slot, [c * 0.9 for c in COLOR_BOX])
+    meshes.append(label_slot)
+    
+    # 合并所有部件
+    box = trimesh.util.concatenate(meshes)
+    
+    # 坐标转换
+    rotation_matrix = trimesh.transformations.rotation_matrix(
+        angle=-np.pi / 2,
+        direction=[1, 0, 0],
+        point=[0, 0, 0]
+    )
+    box.apply_transform(rotation_matrix)
+    
+    return box
+
+
 def main():
     """主函数：生成所有模型"""
     print("=" * 50)
@@ -1330,6 +1457,60 @@ def main():
     print("  - 塑料网格托盘...")
     pallet_plastic_grid, meta_plastic_grid = generate_plastic_pallet_grid()
     metadata_list.append(save_model(pallet_plastic_grid, "pallet-plastic-1200x1000.glb", meta_plastic_grid))
+    
+    # 生成周转箱
+    print("\n📦 生成周转箱...")
+    
+    # 规格1：大型周转箱 600×400×300（适配中型货架）
+    print("  - 大型周转箱 600×400×300...")
+    tote_large = generate_tote_box(length=600, width=400, height=300)
+    meta_tote_large = {
+        "id": "container-tote-600x400x300",
+        "name": "可堆叠周转箱-600×400×300",
+        "category": "containers",
+        "description": "EU标准周转箱，适配中型货架，可堆叠4层",
+        "tags": ["周转箱", "EU标准", "可堆叠", "蓝色"],
+        "parameters": {
+            "length": {"type": "number", "min": 500, "max": 700, "default": 600, "unit": "mm"},
+            "width": {"type": "number", "min": 300, "max": 500, "default": 400, "unit": "mm"},
+            "height": {"type": "number", "min": 200, "max": 400, "default": 300, "unit": "mm"}
+        }
+    }
+    metadata_list.append(save_model(tote_large, "container-tote-600x400.glb", meta_tote_large))
+    
+    # 规格2：标准周转箱 600×400×220（适配流利式货架）
+    print("  - 标准周转箱 600×400×220...")
+    tote_medium = generate_tote_box(length=600, width=400, height=220)
+    meta_tote_medium = {
+        "id": "container-tote-600x400x220",
+        "name": "可堆叠周转箱-600×400×220",
+        "category": "containers",
+        "description": "EU标准矮型周转箱，适配流利式货架，可堆叠5层",
+        "tags": ["周转箱", "EU标准", "矮型", "流利式", "蓝色"],
+        "parameters": {
+            "length": {"type": "number", "min": 500, "max": 700, "default": 600, "unit": "mm"},
+            "width": {"type": "number", "min": 300, "max": 500, "default": 400, "unit": "mm"},
+            "height": {"type": "number", "min": 150, "max": 300, "default": 220, "unit": "mm"}
+        }
+    }
+    metadata_list.append(save_model(tote_medium, "container-tote-600x400-low.glb", meta_tote_medium))
+    
+    # 规格3：小型周转箱 400×300×150（适配轻型货架）
+    print("  - 小型周转箱 400×300×150...")
+    tote_small = generate_tote_box(length=400, width=300, height=150)
+    meta_tote_small = {
+        "id": "container-tote-400x300x150",
+        "name": "可堆叠周转箱-400×300×150",
+        "category": "containers",
+        "description": "小型零件周转箱，适配轻型货架，可堆叠6层",
+        "tags": ["周转箱", "零件盒", "小型", "橙色"],
+        "parameters": {
+            "length": {"type": "number", "min": 300, "max": 500, "default": 400, "unit": "mm"},
+            "width": {"type": "number", "min": 200, "max": 400, "default": 300, "unit": "mm"},
+            "height": {"type": "number", "min": 100, "max": 200, "default": 150, "unit": "mm"}
+        }
+    }
+    metadata_list.append(save_model(tote_small, "container-tote-400x300.glb", meta_tote_small))
     
     # 保存元数据
     print("\n📝 保存元数据...")

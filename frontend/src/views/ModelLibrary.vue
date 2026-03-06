@@ -581,6 +581,46 @@ const models = ref([
     },
     modelUrl: '/assets/models/container-foldable.glb',
   },
+  // EU标准周转箱
+  {
+    id: 'container-tote-600x400x300',
+    name: '可堆叠周转箱-600×400×300',
+    category: 'containers',
+    description: 'EU标准周转箱，适配中型货架，可堆叠4层，蓝色',
+    tags: ['周转箱', 'EU标准', '可堆叠', '蓝色', '中型货架'],
+    parameters: {
+      length: { type: 'number', min: 500, max: 700, default: 600, unit: 'mm' },
+      width: { type: 'number', min: 300, max: 500, default: 400, unit: 'mm' },
+      height: { type: 'number', min: 200, max: 400, default: 300, unit: 'mm' },
+    },
+    modelUrl: '/assets/models/container-tote-600x400.glb',
+  },
+  {
+    id: 'container-tote-600x400x220',
+    name: '可堆叠周转箱-600×400×220',
+    category: 'containers',
+    description: 'EU标准矮型周转箱，适配流利式货架，可堆叠5层，蓝色',
+    tags: ['周转箱', 'EU标准', '矮型', '流利式', '蓝色'],
+    parameters: {
+      length: { type: 'number', min: 500, max: 700, default: 600, unit: 'mm' },
+      width: { type: 'number', min: 300, max: 500, default: 400, unit: 'mm' },
+      height: { type: 'number', min: 150, max: 300, default: 220, unit: 'mm' },
+    },
+    modelUrl: '/assets/models/container-tote-600x400-low.glb',
+  },
+  {
+    id: 'container-tote-400x300x150',
+    name: '可堆叠周转箱-400×300×150',
+    category: 'containers',
+    description: '小型零件周转箱，适配轻型货架，可堆叠6层，橙色',
+    tags: ['周转箱', '零件盒', '小型', '橙色', '轻型货架'],
+    parameters: {
+      length: { type: 'number', min: 300, max: 500, default: 400, unit: 'mm' },
+      width: { type: 'number', min: 200, max: 400, default: 300, unit: 'mm' },
+      height: { type: 'number', min: 100, max: 200, default: 150, unit: 'mm' },
+    },
+    modelUrl: '/assets/models/container-tote-400x300.glb',
+  },
 ]);
 
 // 状态
