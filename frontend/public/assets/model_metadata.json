@@ -1321,5 +1321,34 @@
       }
     },
     "filename": "guard-rack-heavy-redyellow.glb"
+  },
+  {
+    "id": "person-warehouse-admin-red",
+    "name": "仓库管理员-红帽黄马甲",
+    "category": "personnel",
+    "description": "佩戴红色安全帽、红黄反光马甲，用于场景人员密度规划、作业流程演示及安全规范展示",
+    "tags": [
+      "人员",
+      "仓库管理员",
+      "红帽黄马甲",
+      "安全着装"
+    ],
+    "parameters": {
+      "height": {
+        "type": "number",
+        "min": 1600,
+        "max": 1900,
+        "default": 1750,
+        "unit": "mm"
+      },
+      "shoulderWidth": {
+        "type": "number",
+        "min": 400,
+        "max": 500,
+        "default": 450,
+        "unit": "mm"
+      }
+    },
+    "filename": "person-warehouse-admin-red.glb"
   }
 ]

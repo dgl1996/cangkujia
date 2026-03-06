@@ -807,6 +807,19 @@ const models = ref([
     },
     modelUrl: '/assets/models/guard-rack-heavy-redyellow.glb',
   },
+  // 人员 (G101-G199)
+  {
+    id: 'person-warehouse-admin-red',
+    name: '仓库管理员-红帽黄马甲',
+    category: 'personnel',
+    description: '佩戴红色安全帽、红黄反光马甲，用于场景人员密度规划、作业流程演示及安全规范展示',
+    tags: ['人员', '仓库管理员', '红帽黄马甲', '安全着装'],
+    parameters: {
+      height: { type: 'number', min: 1600, max: 1900, default: 1750, unit: 'mm' },
+      shoulderWidth: { type: 'number', min: 400, max: 500, default: 450, unit: 'mm' },
+    },
+    modelUrl: '/assets/models/person-warehouse-admin-red.glb',
+  },
 ]);
 
 // 状态
@@ -847,6 +860,8 @@ const assignShortIds = () => {
     'containers': 101, // C - 载具容器
     'conveying': 101,  // D - 输送设备
     'picking': 101,    // E - 拣选设备
+    'others': 101,     // F - 其他
+    'personnel': 101,  // G - 人员
   };
 
   const categoryLetters = {
@@ -855,11 +870,13 @@ const assignShortIds = () => {
     'containers': 'C',
     'conveying': 'D',
     'picking': 'E',
+    'others': 'F',
+    'personnel': 'G',
   };
 
   models.value.forEach((model) => {
     if (!model.shortId) {
-      const letter = categoryLetters[model.category] || 'F';
+      const letter = categoryLetters[model.category] || 'H';
       const counter = categoryCounters[model.category]++;
       model.shortId = `${letter}${counter}`;
     }

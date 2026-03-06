@@ -3374,6 +3374,163 @@ def generate_rack_guard(length=1500, width=150, height=400):
     return scene
 
 
+def generate_warehouse_person(height=1750, shoulder_width=450):
+    """
+    生成仓库管理员人物模型（Personnel）
+    佩戴红色安全帽、红黄反光马甲，用于场景人员密度规划、作业流程演示
+    
+    Args:
+        height: 人物身高
+        shoulder_width: 肩宽
+    """
+    meshes = []
+    
+    # 颜色定义
+    COLOR_HELMET = [0.86, 0.15, 0.15]     # 安全帽红 #DC2626
+    COLOR_VEST_BASE = [0.98, 0.8, 0.08]   # 马甲黄底 #FACC15
+    COLOR_VEST_STRIPE = [0.86, 0.15, 0.15] # 马甲红条纹 #DC2626
+    COLOR_UNIFORM = [0.12, 0.23, 0.54]    # 深蓝工装 #1E3A8A
+    COLOR_SKIN = [0.96, 0.8, 0.69]        # 肤色
+    COLOR_SHOES = [0.2, 0.2, 0.2]         # 黑色安全鞋
+    COLOR_CLIPBOARD = [0.4, 0.3, 0.2]     # 文件夹棕色
+    
+    # 尺寸参数
+    head_radius = 90
+    torso_width = shoulder_width
+    torso_depth = 250
+    torso_height = 550
+    leg_height = 800
+    arm_length = 650
+    
+    # 1. 头部（安全帽）
+    head = trimesh.creation.icosphere(subdivisions=2, radius=head_radius)
+    head.apply_translation([0, 0, height - head_radius])
+    set_mesh_color(head, COLOR_HELMET)
+    meshes.append(('head', head))
+    
+    # 安全帽帽檐
+    helmet_brim = trimesh.creation.cylinder(radius=head_radius + 20, height=15)
+    helmet_brim.apply_translation([0, 30, height - head_radius - 30])
+    set_mesh_color(helmet_brim, COLOR_HELMET)
+    meshes.append(('helmet_brim', helmet_brim))
+    
+    # 2. 躯干（上身）
+    torso = trimesh.creation.box(
+        extents=[torso_width, torso_depth, torso_height]
+    )
+    torso.apply_translation([0, 0, height - head_radius*2 - torso_height/2])
+    set_mesh_color(torso, COLOR_UNIFORM)
+    meshes.append(('torso', torso))
+    
+    # 3. 反光马甲（外层）
+    # 马甲主体（黄色）
+    vest = trimesh.creation.box(
+        extents=[torso_width + 10, torso_depth + 15, torso_height - 50]
+    )
+    vest.apply_translation([0, 10, height - head_radius*2 - torso_height/2])
+    set_mesh_color(vest, COLOR_VEST_BASE)
+    meshes.append(('vest', vest))
+    
+    # 胸口红条纹
+    chest_stripe = trimesh.creation.box(
+        extents=[torso_width + 15, torso_depth + 20, 60]
+    )
+    chest_stripe.apply_translation([0, 12, height - head_radius*2 - 150])
+    set_mesh_color(chest_stripe, COLOR_VEST_STRIPE)
+    meshes.append(('chest_stripe', chest_stripe))
+    
+    # 腰口红条纹
+    waist_stripe = trimesh.creation.box(
+        extents=[torso_width + 15, torso_depth + 20, 60]
+    )
+    waist_stripe.apply_translation([0, 12, height - head_radius*2 - 350])
+    set_mesh_color(waist_stripe, COLOR_VEST_STRIPE)
+    meshes.append(('waist_stripe', waist_stripe))
+    
+    # 4. 腿部
+    leg_width = 140
+    leg_depth = 180
+    
+    # 左腿
+    left_leg = trimesh.creation.box(
+        extents=[leg_width, leg_depth, leg_height]
+    )
+    left_leg.apply_translation([-80, 0, leg_height/2])
+    set_mesh_color(left_leg, COLOR_UNIFORM)
+    meshes.append(('left_leg', left_leg))
+    
+    # 右腿
+    right_leg = trimesh.creation.box(
+        extents=[leg_width, leg_depth, leg_height]
+    )
+    right_leg.apply_translation([80, 0, leg_height/2])
+    set_mesh_color(right_leg, COLOR_UNIFORM)
+    meshes.append(('right_leg', right_leg))
+    
+    # 5. 鞋子
+    shoe_length = 280
+    shoe_width = 120
+    shoe_height = 80
+    
+    # 左鞋
+    left_shoe = trimesh.creation.box(
+        extents=[shoe_width, shoe_length, shoe_height]
+    )
+    left_shoe.apply_translation([-80, 30, shoe_height/2])
+    set_mesh_color(left_shoe, COLOR_SHOES)
+    meshes.append(('left_shoe', left_shoe))
+    
+    # 右鞋
+    right_shoe = trimesh.creation.box(
+        extents=[shoe_width, shoe_length, shoe_height]
+    )
+    right_shoe.apply_translation([80, 30, shoe_height/2])
+    set_mesh_color(right_shoe, COLOR_SHOES)
+    meshes.append(('right_shoe', right_shoe))
+    
+    # 6. 手臂
+    arm_width = 100
+    arm_depth = 100
+    
+    # 左臂（自然下垂）
+    left_arm = trimesh.creation.box(
+        extents=[arm_width, arm_depth, arm_length]
+    )
+    left_arm.apply_translation([-(torso_width/2 + arm_width/2), 0, height - head_radius*2 - arm_length/2 - 50])
+    set_mesh_color(left_arm, COLOR_UNIFORM)
+    meshes.append(('left_arm', left_arm))
+    
+    # 右臂（持文件夹）
+    right_arm = trimesh.creation.box(
+        extents=[arm_width, arm_depth, arm_length]
+    )
+    right_arm.apply_translation([torso_width/2 + arm_width/2, 0, height - head_radius*2 - arm_length/2 - 50])
+    set_mesh_color(right_arm, COLOR_UNIFORM)
+    meshes.append(('right_arm', right_arm))
+    
+    # 7. 文件夹（左手持）
+    clipboard = trimesh.creation.box(
+        extents=[200, 30, 280]
+    )
+    clipboard.apply_translation([-(torso_width/2 + 150), 80, height - head_radius*2 - arm_length + 100])
+    set_mesh_color(clipboard, COLOR_CLIPBOARD)
+    meshes.append(('clipboard', clipboard))
+    
+    # 使用Scene并应用坐标转换
+    scene = trimesh.Scene()
+    rotation_matrix = trimesh.transformations.rotation_matrix(
+        angle=-np.pi / 2,
+        direction=[1, 0, 0],
+        point=[0, 0, 0]
+    )
+    
+    for name, mesh in meshes:
+        mesh.apply_transform(rotation_matrix)
+        scene.add_geometry(mesh, node_name=name)
+    
+    return scene
+
+
 def main():
     """主函数：生成所有模型"""
     print("=" * 50)
@@ -3937,6 +4094,23 @@ def main():
         }
     }
     metadata_list.append(save_model(rack_guard, "guard-rack-heavy-redyellow.glb", meta_rack_guard))
+    
+    # 生成仓库管理员人物模型
+    print("\n👷 生成仓库管理员人物模型...")
+    print("  - 红帽黄马甲标准着装...")
+    warehouse_person = generate_warehouse_person()
+    meta_warehouse_person = {
+        "id": "person-warehouse-admin-red",
+        "name": "仓库管理员-红帽黄马甲",
+        "category": "personnel",
+        "description": "佩戴红色安全帽、红黄反光马甲，用于场景人员密度规划、作业流程演示及安全规范展示",
+        "tags": ["人员", "仓库管理员", "红帽黄马甲", "安全着装"],
+        "parameters": {
+            "height": {"type": "number", "min": 1600, "max": 1900, "default": 1750, "unit": "mm"},
+            "shoulderWidth": {"type": "number", "min": 400, "max": 500, "default": 450, "unit": "mm"}
+        }
+    }
+    metadata_list.append(save_model(warehouse_person, "person-warehouse-admin-red.glb", meta_warehouse_person))
     
     # 保存元数据
     print("\n📝 保存元数据...")
