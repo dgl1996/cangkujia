@@ -532,9 +532,18 @@ def generate_light_shelf_v2(length=1200, width=400, height=2000, levels=4):
 
 
 def generate_heavy_shelf_simple(length=2300, width=1000, height=4500, levels=4, 
-                                 layer_heights=None):
+                                 layer_heights=None, upright_size=(90, 80), beam_size=(100, 50)):
     """
-    简化版重型货架生成 - 完全复制V2的成功模式
+    通用货架生成函数 - 支持自定义立柱和横梁尺寸
+    
+    Args:
+        length: 货架长度 (mm)
+        width: 货架深度 (mm)
+        height: 货架高度 (mm)
+        levels: 层数
+        layer_heights: 各层层高列表
+        upright_size: (宽度, 深度) 立柱截面尺寸
+        beam_size: (高度, 宽度) 横梁截面尺寸
     """
     meshes = []
     
@@ -544,10 +553,8 @@ def generate_heavy_shelf_simple(length=2300, width=1000, height=4500, levels=4,
     COLOR_DECK = [0.75, 0.75, 0.75]      # 层板灰色
     
     # 尺寸参数
-    upright_width = 90
-    upright_depth = 80
-    beam_height = 100
-    beam_width = 50
+    upright_width, upright_depth = upright_size
+    beam_height, beam_width = beam_size
     deck_thickness = 30
     foot_height = 50
     
@@ -793,14 +800,16 @@ def main():
     # 生成3种行业标准重型货架（使用简化版函数）
     print("\n🏗️ 生成行业标准重型货架（简化版）...")
     
-    # 规格1：重型3层中高位货架（适配净空5.5m仓库）
+    # 规格1：重型3层中高位货架（适配净空5.5m仓库）- 立柱90x70，横梁120x50
     print("  - 重型3层中高位货架...")
     shelf_3level = generate_heavy_shelf_simple(
         length=2300, 
         width=1000, 
         height=4500, 
         levels=3,
-        layer_heights=[1400, 1400, 1400]
+        layer_heights=[1400, 1400, 1400],
+        upright_size=(90, 70),
+        beam_size=(120, 50)
     )
     meta_3level = {
         "id": "shelf-beam-heavy-3level-5m",
@@ -817,14 +826,16 @@ def main():
     }
     metadata_list.append(save_model(shelf_3level, "shelf-beam-heavy-3level.glb", meta_3level))
     
-    # 规格2：重型4层标准货架（适配净空7m仓库，最常用）
+    # 规格2：重型4层标准货架（适配净空7m仓库，最常用）- 立柱90x80，横梁120x50
     print("  - 重型4层标准货架...")
     shelf_4level = generate_heavy_shelf_simple(
         length=2300, 
         width=1000, 
         height=6500, 
         levels=4,
-        layer_heights=[1600, 1600, 1600, 1300]
+        layer_heights=[1600, 1600, 1600, 1300],
+        upright_size=(90, 80),
+        beam_size=(120, 50)
     )
     meta_4level = {
         "id": "shelf-beam-heavy-4level-6m",
@@ -841,14 +852,16 @@ def main():
     }
     metadata_list.append(save_model(shelf_4level, "shelf-beam-heavy-4level.glb", meta_4level))
     
-    # 规格3：重型5层高位货架（适配净空9m仓库）
+    # 规格3：重型5层高位货架（适配净空9m仓库）- 立柱90x90，横梁140x50
     print("  - 重型5层高位货架...")
     shelf_5level = generate_heavy_shelf_simple(
         length=2700, 
         width=1000, 
         height=8200, 
         levels=5,
-        layer_heights=[1700, 1700, 1700, 1700, 1400]
+        layer_heights=[1700, 1700, 1700, 1700, 1400],
+        upright_size=(90, 90),
+        beam_size=(140, 50)
     )
     meta_5level = {
         "id": "shelf-beam-heavy-5level-8m",
@@ -865,17 +878,19 @@ def main():
     }
     metadata_list.append(save_model(shelf_5level, "shelf-beam-heavy-5level.glb", meta_5level))
     
-    # 生成2种中型货架（人工拣选用）
+    # 生成2种中型货架（人工拣选用）- 立柱50x30，横梁80x40
     print("\n🏗️ 生成中型货架（人工拣选）...")
     
-    # 规格1：中型4层货架（L2000*D600*H2500）
+    # 规格1：中型4层货架（L2000*D600*H2500）- 立柱50x30，横梁80x40
     print("  - 中型4层货架...")
     shelf_medium_4level = generate_heavy_shelf_simple(
         length=2000, 
         width=600, 
         height=2500, 
         levels=4,
-        layer_heights=[600, 600, 600, 500]
+        layer_heights=[600, 600, 600, 500],
+        upright_size=(50, 30),
+        beam_size=(80, 40)
     )
     meta_medium_4level = {
         "id": "shelf-beam-medium-4level-2m",
@@ -892,14 +907,16 @@ def main():
     }
     metadata_list.append(save_model(shelf_medium_4level, "shelf-beam-medium-4level-2m.glb", meta_medium_4level))
     
-    # 规格2：中型5层货架（L1500*D600*H2500）
+    # 规格2：中型5层货架（L1500*D600*H2500）- 立柱50x30，横梁80x40
     print("  - 中型5层货架...")
     shelf_medium_5level = generate_heavy_shelf_simple(
         length=1500, 
         width=600, 
         height=2500, 
         levels=5,
-        layer_heights=[500, 500, 500, 500, 400]
+        layer_heights=[500, 500, 500, 500, 400],
+        upright_size=(50, 30),
+        beam_size=(80, 40)
     )
     meta_medium_5level = {
         "id": "shelf-beam-medium-5level-2m",
@@ -916,16 +933,19 @@ def main():
     }
     metadata_list.append(save_model(shelf_medium_5level, "shelf-beam-medium-5level-2m.glb", meta_medium_5level))
     
-    # 生成2种轻型货架（使用V2的细参数）
-    print("\n🏗️ 生成轻型货架（使用V2细参数）...")
+    # 生成2种轻型货架 - 立柱40x30，横梁60x30
+    print("\n🏗️ 生成轻型货架...")
     
-    # 规格1：轻型4层货架（L1200*D400*H2000）
+    # 规格1：轻型4层货架（L1200*D400*H2000）- 立柱40x30，横梁60x30
     print("  - 轻型4层货架...")
-    shelf_light_4level = generate_light_shelf_v2_style(
+    shelf_light_4level = generate_heavy_shelf_simple(
         length=1200, 
         width=400, 
         height=2000, 
-        levels=4
+        levels=4,
+        layer_heights=[450, 450, 450, 450],
+        upright_size=(40, 30),
+        beam_size=(60, 30)
     )
     meta_light_4level = {
         "id": "shelf-beam-light-4level-2m",
@@ -942,13 +962,16 @@ def main():
     }
     metadata_list.append(save_model(shelf_light_4level, "shelf-beam-light-4level.glb", meta_light_4level))
     
-    # 规格2：轻型5层货架（L1200*D500*H2000）
+    # 规格2：轻型5层货架（L1200*D500*H2000）- 立柱40x30，横梁60x30
     print("  - 轻型5层货架...")
-    shelf_light_5level = generate_light_shelf_v2_style(
+    shelf_light_5level = generate_heavy_shelf_simple(
         length=1200, 
         width=500, 
         height=2000, 
-        levels=5
+        levels=5,
+        layer_heights=[360, 360, 360, 360, 360],
+        upright_size=(40, 30),
+        beam_size=(60, 30)
     )
     meta_light_5level = {
         "id": "shelf-beam-light-5level-2m",
