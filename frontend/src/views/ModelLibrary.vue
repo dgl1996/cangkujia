@@ -346,20 +346,7 @@ import {
   Search,
   Plus,
   X,
-  ChevronLeft,
-  ChevronRight,
-  Eye,
-  Trash2,
-  Save,
-  RotateCcw,
-  Box,
-  Layers,
-  Container,
-  ConveyerBelt,
-  ScanLine,
-  UserCog,
-  Shield,
-  AlertTriangle
+  Eye
 } from 'lucide-vue-next';
 
 const router = useRouter();
