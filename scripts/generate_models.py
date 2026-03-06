@@ -2833,6 +2833,218 @@ def generate_packing_checking_station(length=1800, width=900, height=2000):
     return scene
 
 
+def generate_check_weigher(length=1600, width=700, height=800):
+    """
+    生成自动称重机（Automatic Checkweigher）
+    三段式皮带结构（进料-称重-剔除），红白配色与红色输送线配套
+    
+    Args:
+        length: 总长度
+        width: 总宽度
+        height: 机架高度
+    """
+    meshes = []
+    
+    # 颜色定义 - 红白配色
+    COLOR_FRAME = [0.86, 0.15, 0.15]      # 框架红 #DC2626
+    COLOR_BELT = [0.98, 0.98, 0.98]       # 皮带白 #FFFFFF
+    COLOR_SILVER = [0.75, 0.75, 0.75]     # 银色金属
+    COLOR_BLACK = [0.15, 0.15, 0.15]      # 黑色部件
+    COLOR_SCREEN = [0.1, 0.1, 0.1]        # 屏幕黑
+    
+    # 尺寸参数
+    section_infeed = 500                    # 进料段长度
+    section_weighing = 600                  # 称重段长度
+    section_reject = 500                    # 剔除段长度
+    belt_width = 600                        # 皮带宽度
+    frame_thickness = 40
+    
+    # 1. 三段皮带（白色PVC）
+    belt_z = height - 30                    # 皮带高度
+    
+    # 进料段皮带
+    infeed_belt = trimesh.creation.box(
+        extents=[section_infeed - 20, belt_width, 8]
+    )
+    infeed_belt.apply_translation([-length/2 + section_infeed/2, 0, belt_z])
+    set_mesh_color(infeed_belt, COLOR_BELT)
+    meshes.append(('infeed_belt', infeed_belt))
+    
+    # 称重段皮带（中部略微下沉）
+    weighing_belt = trimesh.creation.box(
+        extents=[section_weighing - 20, belt_width, 8]
+    )
+    weighing_belt.apply_translation([-length/2 + section_infeed + section_weighing/2, 0, belt_z - 5])
+    set_mesh_color(weighing_belt, COLOR_BELT)
+    meshes.append(('weighing_belt', weighing_belt))
+    
+    # 剔除段皮带
+    reject_belt = trimesh.creation.box(
+        extents=[section_reject - 20, belt_width, 8]
+    )
+    reject_belt.apply_translation([length/2 - section_reject/2, 0, belt_z])
+    set_mesh_color(reject_belt, COLOR_BELT)
+    meshes.append(('reject_belt', reject_belt))
+    
+    # 2. 机架框架（红色）
+    # 左侧框架（三段共用）
+    left_frame = trimesh.creation.box(
+        extents=[length, frame_thickness, height - 50]
+    )
+    left_frame.apply_translation([0, -belt_width/2 - frame_thickness/2, (height - 50)/2 + 25])
+    set_mesh_color(left_frame, COLOR_FRAME)
+    meshes.append(('left_frame', left_frame))
+    
+    # 右侧框架
+    right_frame = trimesh.creation.box(
+        extents=[length, frame_thickness, height - 50]
+    )
+    right_frame.apply_translation([0, belt_width/2 + frame_thickness/2, (height - 50)/2 + 25])
+    set_mesh_color(right_frame, COLOR_FRAME)
+    meshes.append(('right_frame', right_frame))
+    
+    # 3. 三段支撑腿（红色）
+    leg_positions = [
+        [-length/2 + 150, -belt_width/2 - 30],
+        [-length/2 + 150, belt_width/2 + 30],
+        [0, -belt_width/2 - 30],
+        [0, belt_width/2 + 30],
+        [length/2 - 150, -belt_width/2 - 30],
+        [length/2 - 150, belt_width/2 + 30]
+    ]
+    
+    for i, (x, y) in enumerate(leg_positions):
+        leg = trimesh.creation.box(
+            extents=[40, 40, height - 30]
+        )
+        leg.apply_translation([x, y, (height - 30)/2])
+        set_mesh_color(leg, COLOR_FRAME)
+        meshes.append((f'leg_{i}', leg))
+        
+        # 地脚
+        foot = trimesh.creation.cylinder(radius=30, height=20)
+        foot.apply_translation([x, y, 10])
+        set_mesh_color(foot, COLOR_BLACK)
+        meshes.append((f'foot_{i}', foot))
+    
+    # 4. 称重传感器区域（中部银色金属板）
+    sensor_plate = trimesh.creation.box(
+        extents=[section_weighing - 40, belt_width + 20, 20]
+    )
+    sensor_plate.apply_translation([-length/2 + section_infeed + section_weighing/2, 0, belt_z - 20])
+    set_mesh_color(sensor_plate, COLOR_SILVER)
+    meshes.append(('sensor_plate', sensor_plate))
+    
+    # 5. 剔除装置（左侧气动推杆）
+    pusher_x = length/2 - section_reject/2
+    
+    # 气缸
+    cylinder = trimesh.creation.cylinder(radius=25, height=150)
+    cylinder.apply_transform(trimesh.transformations.rotation_matrix(
+        angle=np.pi/2, direction=[0, 1, 0], point=[0, 0, 0]
+    ))
+    cylinder.apply_translation([pusher_x - 100, -belt_width/2 - 80, belt_z + 20])
+    set_mesh_color(cylinder, COLOR_SILVER)
+    meshes.append(('pusher_cylinder', cylinder))
+    
+    # 推板
+    pusher_plate = trimesh.creation.box(extents=[20, 100, 60])
+    pusher_plate.apply_translation([pusher_x, -belt_width/2 - 20, belt_z + 20])
+    set_mesh_color(pusher_plate, COLOR_SILVER)
+    meshes.append(('pusher_plate', pusher_plate))
+    
+    # 6. 剔除收集箱（红色，左侧下方）
+    reject_bin = trimesh.creation.box(
+        extents=[400, 300, 200]
+    )
+    reject_bin.apply_translation([pusher_x, -belt_width/2 - 250, 100])
+    set_mesh_color(reject_bin, COLOR_FRAME)
+    meshes.append(('reject_bin', reject_bin))
+    
+    # 收集箱开口
+    bin_opening = trimesh.creation.box(extents=[10, 200, 100])
+    bin_opening.apply_translation([pusher_x, -belt_width/2 - 110, belt_z - 50])
+    set_mesh_color(bin_opening, [0.7, 0.7, 0.7])
+    meshes.append(('bin_opening', bin_opening))
+    
+    # 7. 控制面板（右侧立柱，高度1.2m）
+    panel_x = length/2 - 100
+    panel_y = belt_width/2 + 80
+    panel_height = 1200
+    
+    # 立柱
+    panel_post = trimesh.creation.box(
+        extents=[40, 40, panel_height - height]
+    )
+    panel_post.apply_translation([panel_x, panel_y, height + (panel_height - height)/2])
+    set_mesh_color(panel_post, COLOR_FRAME)
+    meshes.append(('panel_post', panel_post))
+    
+    # 控制箱（银色）
+    control_box = trimesh.creation.box(
+        extents=[200, 150, 300]
+    )
+    control_box.apply_translation([panel_x, panel_y + 50, panel_height])
+    set_mesh_color(control_box, COLOR_SILVER)
+    meshes.append(('control_box', control_box))
+    
+    # 触摸屏（黑色）
+    screen = trimesh.creation.box(extents=[180, 10, 220])
+    screen.apply_translation([panel_x, panel_y + 120, panel_height + 20])
+    set_mesh_color(screen, COLOR_SCREEN)
+    meshes.append(('screen', screen))
+    
+    # 急停按钮（红色蘑菇头）
+    e_stop = trimesh.creation.cylinder(radius=25, height=30)
+    e_stop.apply_translation([panel_x - 50, panel_y + 130, panel_height + 150])
+    set_mesh_color(e_stop, [0.9, 0.1, 0.1])
+    meshes.append(('e_stop', e_stop))
+    
+    # 8. 护栏（红色，三段）
+    guard_height = 40
+    for section_start, section_len in [
+        (-length/2, section_infeed),
+        (-length/2 + section_infeed, section_weighing),
+        (length/2 - section_reject, section_reject)
+    ]:
+        # 左侧护栏
+        left_guard = trimesh.creation.box(
+            extents=[section_len - 20, 10, guard_height]
+        )
+        left_guard.apply_translation([section_start + section_len/2, -belt_width/2 - 5, belt_z + guard_height/2])
+        set_mesh_color(left_guard, COLOR_FRAME)
+        meshes.append((f'left_guard_{section_start}', left_guard))
+        
+        # 右侧护栏
+        right_guard = trimesh.creation.box(
+            extents=[section_len - 20, 10, guard_height]
+        )
+        right_guard.apply_translation([section_start + section_len/2, belt_width/2 + 5, belt_z + guard_height/2])
+        set_mesh_color(right_guard, COLOR_FRAME)
+        meshes.append((f'right_guard_{section_start}', right_guard))
+    
+    # 9. 段间分隔板（透明/银色）
+    for x_pos in [-length/2 + section_infeed, -length/2 + section_infeed + section_weighing]:
+        divider = trimesh.creation.box(extents=[5, belt_width, 30])
+        divider.apply_translation([x_pos, 0, belt_z + 15])
+        set_mesh_color(divider, COLOR_SILVER)
+        meshes.append((f'divider_{x_pos}', divider))
+    
+    # 使用Scene并应用坐标转换
+    scene = trimesh.Scene()
+    rotation_matrix = trimesh.transformations.rotation_matrix(
+        angle=-np.pi / 2,
+        direction=[1, 0, 0],
+        point=[0, 0, 0]
+    )
+    
+    for name, mesh in meshes:
+        mesh.apply_transform(rotation_matrix)
+        scene.add_geometry(mesh, node_name=name)
+    
+    return scene
+
+
 def main():
     """主函数：生成所有模型"""
     print("=" * 50)
@@ -3342,6 +3554,24 @@ def main():
         }
     }
     metadata_list.append(save_model(packing_station, "station-packcheck-integrated-red.glb", meta_packing_station))
+    
+    # 生成自动称重机
+    print("\n⚖️ 生成自动称重机...")
+    print("  - 三段式动态检重秤...")
+    check_weigher = generate_check_weigher()
+    meta_check_weigher = {
+        "id": "weigher-automatic-check-600-red",
+        "name": "自动称重机-动态检重（红白配色）",
+        "category": "picking",
+        "description": "三段式皮带结构，用于包裹自动称重与异常剔除，与红色输送线配套",
+        "tags": ["称重机", "动态检重", "三段式", "红白配色", "电商仓"],
+        "parameters": {
+            "length": {"type": "number", "min": 1400, "max": 2000, "default": 1600, "unit": "mm"},
+            "width": {"type": "number", "min": 600, "max": 800, "default": 700, "unit": "mm"},
+            "height": {"type": "number", "min": 700, "max": 900, "default": 800, "unit": "mm"}
+        }
+    }
+    metadata_list.append(save_model(check_weigher, "weigher-automatic-check-600-red.glb", meta_check_weigher))
     
     # 保存元数据
     print("\n📝 保存元数据...")

@@ -1211,5 +1211,42 @@
       }
     },
     "filename": "station-packcheck-integrated-red.glb"
+  },
+  {
+    "id": "weigher-automatic-check-600-red",
+    "name": "自动称重机-动态检重（红白配色）",
+    "category": "picking",
+    "description": "三段式皮带结构，用于包裹自动称重与异常剔除，与红色输送线配套",
+    "tags": [
+      "称重机",
+      "动态检重",
+      "三段式",
+      "红白配色",
+      "电商仓"
+    ],
+    "parameters": {
+      "length": {
+        "type": "number",
+        "min": 1400,
+        "max": 2000,
+        "default": 1600,
+        "unit": "mm"
+      },
+      "width": {
+        "type": "number",
+        "min": 600,
+        "max": 800,
+        "default": 700,
+        "unit": "mm"
+      },
+      "height": {
+        "type": "number",
+        "min": 700,
+        "max": 900,
+        "default": 800,
+        "unit": "mm"
+      }
+    },
+    "filename": "weigher-automatic-check-600-red.glb"
   }
 ]
