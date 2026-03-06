@@ -50,8 +50,7 @@ const initThree = () => {
   // 渲染器
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(width, height);
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.enabled = false; // 禁用阴影避免纹理问题
   container.value.appendChild(renderer.domElement);
 
   // 控制器
@@ -67,9 +66,7 @@ const initThree = () => {
 
   const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
   directionalLight.position.set(1000, 2000, 1000);
-  directionalLight.castShadow = true;
-  directionalLight.shadow.mapSize.width = 2048;
-  directionalLight.shadow.mapSize.height = 2048;
+  directionalLight.castShadow = false; // 禁用阴影
   scene.add(directionalLight);
 
   const fillLight = new THREE.DirectionalLight(0xffffff, 0.4);
@@ -111,18 +108,37 @@ const loadModel = () => {
       model.position.y = -box.min.y; // 放在地面上
       model.position.z = -center.z;
 
-      // 启用阴影并确保材质正确显示
+      // 处理材质 - 禁用阴影并确保PBR材质正确显示
       model.traverse((child) => {
         if (child.isMesh) {
-          child.castShadow = true;
-          child.receiveShadow = true;
+          child.castShadow = false;
+          child.receiveShadow = false;
           
-          // 确保材质颜色正确显示
+          // 处理PBR材质
           if (child.material) {
-            // 如果材质没有颜色，设置为白色
-            if (!child.material.color) {
-              child.material.color = new THREE.Color(0xffffff);
+            // 确保材质颜色正确显示
+            if (child.material.color) {
+              child.material.color.setHex(child.material.color.getHex());
             }
+            
+            // 禁用可能导致问题的纹理
+            if (child.material.map) {
+              child.material.map = null;
+            }
+            if (child.material.normalMap) {
+              child.material.normalMap = null;
+            }
+            if (child.material.roughnessMap) {
+              child.material.roughnessMap = null;
+            }
+            if (child.material.metalnessMap) {
+              child.material.metalnessMap = null;
+            }
+            
+            // 设置默认的粗糙度和金属度
+            child.material.roughness = 0.7;
+            child.material.metalness = 0.3;
+            
             // 确保材质更新
             child.material.needsUpdate = true;
           }
