@@ -1350,5 +1350,41 @@
       }
     },
     "filename": "person-warehouse-admin-red.glb"
+  },
+  {
+    "id": "guard-column-protector-redyellow",
+    "name": "货架立柱防撞护角-红黄U型",
+    "category": "others",
+    "description": "红黄间隔反光警示色，紧密安装于重型货架立柱底部，防止叉车叉臂直接撞击立柱",
+    "tags": [
+      "防撞护角",
+      "立柱保护",
+      "U型包裹",
+      "红黄警示"
+    ],
+    "parameters": {
+      "width": {
+        "type": "number",
+        "min": 100,
+        "max": 150,
+        "default": 120,
+        "unit": "mm"
+      },
+      "depth": {
+        "type": "number",
+        "min": 100,
+        "max": 150,
+        "default": 120,
+        "unit": "mm"
+      },
+      "height": {
+        "type": "number",
+        "min": 300,
+        "max": 500,
+        "default": 400,
+        "unit": "mm"
+      }
+    },
+    "filename": "guard-column-protector-redyellow.glb"
   }
 ]

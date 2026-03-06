@@ -3531,6 +3531,128 @@ def generate_warehouse_person(height=1750, shoulder_width=450):
     return scene
 
 
+def generate_column_protector(width=120, depth=120, height=400):
+    """
+    生成货架立柱防撞护角（U型包裹式）
+    红黄间隔反光警示色，紧密安装于重型货架立柱底部
+    
+    Args:
+        width: 护角宽度
+        depth: 护角深度
+        height: 护角高度
+    """
+    meshes = []
+    
+    # 颜色定义 - 红黄警示
+    COLOR_YELLOW = [0.98, 0.8, 0.08]      # 黄色 #FACC15
+    COLOR_RED = [0.86, 0.15, 0.15]        # 红色 #DC2626
+    COLOR_METAL = [0.6, 0.6, 0.6]         # 金属银灰
+    
+    # 尺寸参数
+    thickness = 3                           # 钢板厚度
+    opening_width = 100                     # U型开口宽度
+    stripe_height = 80                      # 条纹高度
+    
+    # 1. U型护角主体（三面：前+两侧）
+    # 前面板
+    front_panel = trimesh.creation.box(
+        extents=[width, thickness, height]
+    )
+    front_panel.apply_translation([0, -depth/2 + thickness/2, height/2])
+    
+    # 左侧面板
+    left_panel = trimesh.creation.box(
+        extents=[thickness, depth, height]
+    )
+    left_panel.apply_translation([-width/2 + thickness/2, 0, height/2])
+    
+    # 右侧面板
+    right_panel = trimesh.creation.box(
+        extents=[thickness, depth, height]
+    )
+    right_panel.apply_translation([width/2 - thickness/2, 0, height/2])
+    
+    # 2. 为三面添加垂直条纹（红黄交替）
+    num_stripes = int(height / stripe_height)
+    
+    for i in range(num_stripes):
+        z_start = i * stripe_height
+        z_center = z_start + stripe_height / 2
+        
+        # 交替颜色
+        color = COLOR_YELLOW if i % 2 == 0 else COLOR_RED
+        
+        # 前面板条纹
+        front_stripe = trimesh.creation.box(
+            extents=[width - 4, thickness + 2, stripe_height - 4]
+        )
+        front_stripe.apply_translation([0, -depth/2 + thickness/2, z_center])
+        set_mesh_color(front_stripe, color)
+        meshes.append((f'front_stripe_{i}', front_stripe))
+        
+        # 左侧面板条纹
+        left_stripe = trimesh.creation.box(
+            extents=[thickness + 2, depth - 4, stripe_height - 4]
+        )
+        left_stripe.apply_translation([-width/2 + thickness/2, 0, z_center])
+        set_mesh_color(left_stripe, color)
+        meshes.append((f'left_stripe_{i}', left_stripe))
+        
+        # 右侧面板条纹
+        right_stripe = trimesh.creation.box(
+            extents=[thickness + 2, depth - 4, stripe_height - 4]
+        )
+        right_stripe.apply_translation([width/2 - thickness/2, 0, z_center])
+        set_mesh_color(right_stripe, color)
+        meshes.append((f'right_stripe_{i}', right_stripe))
+    
+    # 3. 顶部圆角处理（可选）
+    top_cap = trimesh.creation.cylinder(radius=width/2, height=thickness)
+    top_cap.apply_transform(trimesh.transformations.rotation_matrix(
+        angle=np.pi/2, direction=[1, 0, 0], point=[0, 0, 0]
+    ))
+    top_cap.apply_translation([0, 0, height + thickness/2])
+    set_mesh_color(top_cap, COLOR_YELLOW)
+    meshes.append(('top_cap', top_cap))
+    
+    # 4. 底部安装法兰（4个螺栓孔位置）
+    base_plate = trimesh.creation.box(
+        extents=[width + 20, depth + 20, 10]
+    )
+    base_plate.apply_translation([0, 0, 5])
+    set_mesh_color(base_plate, COLOR_METAL)
+    meshes.append(('base_plate', base_plate))
+    
+    # 5. 膨胀螺栓（4颗）
+    bolt_positions = [
+        [-width/2 + 20, -depth/2 + 20],
+        [width/2 - 20, -depth/2 + 20],
+        [-width/2 + 20, depth/2 - 20],
+        [width/2 - 20, depth/2 - 20]
+    ]
+    
+    for i, (x, y) in enumerate(bolt_positions):
+        # 螺栓头
+        bolt_head = trimesh.creation.cylinder(radius=8, height=10)
+        bolt_head.apply_translation([x, y, 10])
+        set_mesh_color(bolt_head, [0.4, 0.4, 0.4])
+        meshes.append((f'bolt_head_{i}', bolt_head))
+    
+    # 使用Scene并应用坐标转换
+    scene = trimesh.Scene()
+    rotation_matrix = trimesh.transformations.rotation_matrix(
+        angle=-np.pi / 2,
+        direction=[1, 0, 0],
+        point=[0, 0, 0]
+    )
+    
+    for name, mesh in meshes:
+        mesh.apply_transform(rotation_matrix)
+        scene.add_geometry(mesh, node_name=name)
+    
+    return scene
+
+
 def main():
     """主函数：生成所有模型"""
     print("=" * 50)
@@ -4111,6 +4233,24 @@ def main():
         }
     }
     metadata_list.append(save_model(warehouse_person, "person-warehouse-admin-red.glb", meta_warehouse_person))
+    
+    # 生成货架立柱防撞护角
+    print("\n🛡️ 生成货架立柱防撞护角...")
+    print("  - U型包裹式红黄护角...")
+    column_protector = generate_column_protector()
+    meta_column_protector = {
+        "id": "guard-column-protector-redyellow",
+        "name": "货架立柱防撞护角-红黄U型",
+        "category": "others",
+        "description": "红黄间隔反光警示色，紧密安装于重型货架立柱底部，防止叉车叉臂直接撞击立柱",
+        "tags": ["防撞护角", "立柱保护", "U型包裹", "红黄警示"],
+        "parameters": {
+            "width": {"type": "number", "min": 100, "max": 150, "default": 120, "unit": "mm"},
+            "depth": {"type": "number", "min": 100, "max": 150, "default": 120, "unit": "mm"},
+            "height": {"type": "number", "min": 300, "max": 500, "default": 400, "unit": "mm"}
+        }
+    }
+    metadata_list.append(save_model(column_protector, "guard-column-protector-redyellow.glb", meta_column_protector))
     
     # 保存元数据
     print("\n📝 保存元数据...")
