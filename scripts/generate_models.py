@@ -300,6 +300,14 @@ def generate_beam_shelf(length=2700, width=1000, height=4500, levels=4, load_cap
     shelf = trimesh.util.concatenate(meshes)
     shelf.visual.vertex_colors = color
     
+    # 坐标转换：Trimesh(Z轴向上) -> Three.js(Y轴向上)
+    rotation_matrix = trimesh.transformations.rotation_matrix(
+        angle=-np.pi / 2,
+        direction=[1, 0, 0],
+        point=[0, 0, 0]
+    )
+    shelf.apply_transform(rotation_matrix)
+    
     # 元数据
     if load_capacity == "heavy":
         name = "重型横梁式货架"
