@@ -643,6 +643,114 @@ def generate_heavy_shelf_simple(length=2300, width=1000, height=4500, levels=4,
     return scene
 
 
+def generate_light_shelf_v2_style(length=1200, width=400, height=2000, levels=4):
+    """
+    生成轻型货架 - 使用V2的细参数（细立柱、细横梁）
+    适用于轻型货架，视觉更纤细美观
+    """
+    meshes = []
+    
+    # 颜色定义 - 使用V2的颜色
+    COLOR_BLUE = [0.25, 0.45, 0.85]      # 立柱蓝色
+    COLOR_ORANGE = [0.91, 0.36, 0.02]    # 横梁橙色
+    COLOR_WHITE = [0.96, 0.96, 0.96]     # 层板白色
+    COLOR_GREY = [0.39, 0.39, 0.39]      # 脚垫灰色
+    
+    # 尺寸参数 - 使用V2的细参数
+    upright_width = 40       # 立柱宽度（细）
+    upright_depth = 30       # 立柱深度（细）
+    beam_height = 35         # 横梁高度（细）
+    beam_width = 30          # 横梁宽度（细）
+    deck_thickness = 20      # 层板厚度（薄）
+    foot_height = 30         # 脚垫高度
+    
+    # 立柱位置（4根）
+    upright_positions = [
+        [-length/2 + upright_width/2, -width/2 + upright_depth/2],
+        [length/2 - upright_width/2, -width/2 + upright_depth/2],
+        [-length/2 + upright_width/2, width/2 - upright_depth/2],
+        [length/2 - upright_width/2, width/2 - upright_depth/2]
+    ]
+    
+    # 生成立柱和脚垫
+    for x, y in upright_positions:
+        # 主立柱
+        upright = trimesh.creation.box(
+            extents=[upright_width, upright_depth, height - foot_height]
+        )
+        upright.apply_translation([x, y, (height - foot_height)/2 + foot_height])
+        set_mesh_color(upright, COLOR_BLUE)
+        meshes.append(upright)
+        
+        # 脚垫
+        foot = trimesh.creation.box(
+            extents=[upright_width + 10, upright_depth + 10, foot_height]
+        )
+        foot.apply_translation([x, y, foot_height/2])
+        set_mesh_color(foot, COLOR_GREY)
+        meshes.append(foot)
+    
+    # 计算层板高度 - 均匀分布
+    level_spacing = (height - 300) / (levels + 1)
+    
+    # 生成横梁和层板
+    for level in range(1, levels + 1):
+        z = 150 + level * level_spacing
+        
+        # 横梁（前后各一根）- 使用V2的阶梯状设计
+        for y_offset in [-width/2 + upright_depth/2, width/2 - upright_depth/2]:
+            # 横梁上部分
+            beam_top = trimesh.creation.box(
+                extents=[length - 2*upright_width - 10, beam_width, beam_height/2]
+            )
+            beam_top.apply_translation([0, y_offset, z + beam_height/4])
+            
+            # 横梁下部分
+            beam_bottom = trimesh.creation.box(
+                extents=[length - 2*upright_width, beam_width + 5, beam_height/2]
+            )
+            beam_bottom.apply_translation([0, y_offset, z - beam_height/4])
+            
+            set_mesh_color(beam_top, COLOR_ORANGE)
+            set_mesh_color(beam_bottom, COLOR_ORANGE)
+            meshes.append(beam_top)
+            meshes.append(beam_bottom)
+        
+        # 层板
+        deck = trimesh.creation.box(
+            extents=[length - 2*upright_width - 20, width - 2*upright_depth - 10, deck_thickness]
+        )
+        deck.apply_translation([0, 0, z])
+        set_mesh_color(deck, COLOR_WHITE)
+        meshes.append(deck)
+    
+    # 斜拉支撑
+    for y_offset in [-width/2 + upright_depth/2, width/2 - upright_depth/2]:
+        diag_left = trimesh.creation.box(extents=[3, 3, height * 0.7])
+        diag_left.apply_translation([-length/2 + upright_width + 20, y_offset, height/2])
+        set_mesh_color(diag_left, COLOR_BLUE)
+        meshes.append(diag_left)
+        
+        diag_right = trimesh.creation.box(extents=[3, 3, height * 0.7])
+        diag_right.apply_translation([length/2 - upright_width - 20, y_offset, height/2])
+        set_mesh_color(diag_right, COLOR_BLUE)
+        meshes.append(diag_right)
+    
+    # 使用Scene并应用坐标转换
+    scene = trimesh.Scene()
+    rotation_matrix = trimesh.transformations.rotation_matrix(
+        angle=-np.pi / 2,
+        direction=[1, 0, 0],
+        point=[0, 0, 0]
+    )
+    
+    for i, mesh in enumerate(meshes):
+        mesh.apply_transform(rotation_matrix)
+        scene.add_geometry(mesh, node_name=f'part_{i}')
+    
+    return scene
+
+
 def main():
     """主函数：生成所有模型"""
     print("=" * 50)
@@ -808,17 +916,16 @@ def main():
     }
     metadata_list.append(save_model(shelf_medium_5level, "shelf-beam-medium-5level-2m.glb", meta_medium_5level))
     
-    # 生成2种轻型货架
-    print("\n🏗️ 生成轻型货架...")
+    # 生成2种轻型货架（使用V2的细参数）
+    print("\n🏗️ 生成轻型货架（使用V2细参数）...")
     
     # 规格1：轻型4层货架（L1200*D400*H2000）
     print("  - 轻型4层货架...")
-    shelf_light_4level = generate_heavy_shelf_simple(
+    shelf_light_4level = generate_light_shelf_v2_style(
         length=1200, 
         width=400, 
         height=2000, 
-        levels=4,
-        layer_heights=[450, 450, 450, 450]
+        levels=4
     )
     meta_light_4level = {
         "id": "shelf-beam-light-4level-2m",
@@ -837,12 +944,11 @@ def main():
     
     # 规格2：轻型5层货架（L1200*D500*H2000）
     print("  - 轻型5层货架...")
-    shelf_light_5level = generate_heavy_shelf_simple(
+    shelf_light_5level = generate_light_shelf_v2_style(
         length=1200, 
         width=500, 
         height=2000, 
-        levels=5,
-        layer_heights=[360, 360, 360, 360, 360]
+        levels=5
     )
     meta_light_5level = {
         "id": "shelf-beam-light-5level-2m",
