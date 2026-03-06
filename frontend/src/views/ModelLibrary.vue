@@ -190,7 +190,7 @@ const models = ref([
   },
   {
     id: 'shelf-beam-medium',
-    name: '中型横梁式货架',
+    name: '横梁式货架-中型4层（L2000*D800*H3500）',
     category: 'storage',
     description: '适用于中型货物存储，单层承重500kg',
     tags: ['中型', '横梁式', '标准'],
@@ -204,7 +204,7 @@ const models = ref([
   },
   {
     id: 'shelf-drive-in',
-    name: '驶入式货架',
+    name: '驶入式货架-重型（L3600*D1500*H6000）',
     category: 'storage',
     description: '高密度存储，适合大批量同类型货物',
     tags: ['高密度', '驶入式', '冷链'],
@@ -218,7 +218,7 @@ const models = ref([
   },
   {
     id: 'shelf-light-v2',
-    name: '轻型货架 V2',
+    name: '横梁式货架-轻型4层（L1200*D400*H2000）',
     category: 'storage',
     description: '基于参考图片改进的轻型货架，蓝色立柱配橙色横梁',
     tags: ['轻型', '横梁式', '蓝色立柱', '橙色横梁'],
@@ -233,7 +233,7 @@ const models = ref([
   // 行业标准重型货架
   {
     id: 'shelf-beam-heavy-3level-5m',
-    name: '重型横梁式货架-3层中高位',
+    name: '横梁式货架-重型3层（L2300*D1000*H4500）',
     category: 'storage',
     description: '适配净空5.5m仓库，单层高承重2吨，适合重货存储',
     tags: ['重型', '3层', '中高位', '2吨承重'],
@@ -247,7 +247,7 @@ const models = ref([
   },
   {
     id: 'shelf-beam-heavy-4level-6m',
-    name: '重型横梁式货架-4层标准库',
+    name: '横梁式货架-重型4层（L2300*D1000*H6500）',
     category: 'storage',
     description: '适配净空7m仓库，电商仓最常用规格，平衡型设计',
     tags: ['重型', '4层', '标准', '电商仓常用'],
@@ -261,7 +261,7 @@ const models = ref([
   },
   {
     id: 'shelf-beam-heavy-5level-8m',
-    name: '重型横梁式货架-5层高位立体库',
+    name: '横梁式货架-重型5层（L2700*D1000*H8200）',
     category: 'storage',
     description: '适配净空9m仓库，高位立体库专用，需要前移式叉车',
     tags: ['重型', '5层', '高位', '立体库'],
@@ -276,7 +276,7 @@ const models = ref([
   // 中型货架（人工拣选）
   {
     id: 'shelf-beam-medium-4level-2m',
-    name: '中型横梁式货架-4层人工拣选',
+    name: '横梁式货架-中型4层（L2000*D600*H2500）',
     category: 'storage',
     description: '人工存取极限（配合2步登高梯），适配层高2.5m仓库',
     tags: ['中型', '4层', '人工拣选', '登高梯'],
@@ -290,7 +290,7 @@ const models = ref([
   },
   {
     id: 'shelf-beam-medium-5level-2m',
-    name: '中型横梁式货架-5层高密度拣选',
+    name: '横梁式货架-中型5层（L1500*D600*H2500）',
     category: 'storage',
     description: '高密度人工仓，层高2.5m极限，适合小件拣选',
     tags: ['中型', '5层', '高密度', '人工仓'],
