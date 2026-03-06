@@ -157,13 +157,13 @@
     </div>
 
     <!-- 自定义货架弹窗 -->
-    <div v-if="showCustomShelfModal" class="modal-overlay" @click="closeCustomShelfModal">
-      <div class="modal-content custom-shelf-modal" @click.stop>
-        <div class="modal-header">
+    <div v-if="showCustomShelfModal" class="preview-modal" @click="closeCustomShelfModal">
+      <div class="preview-content custom-shelf-modal" @click.stop>
+        <div class="preview-header">
           <h3>自定义横梁式货架</h3>
           <button class="btn-close" @click="closeCustomShelfModal">×</button>
         </div>
-        <div class="modal-body">
+        <div class="preview-body">
           <div class="form-section">
             <h4>基础尺寸</h4>
             <div class="form-row">
@@ -310,7 +310,7 @@
             </div>
           </div>
         </div>
-        <div class="modal-footer">
+        <div class="preview-footer">
           <button class="btn-secondary" @click="closeCustomShelfModal">取消</button>
           <button class="btn-primary" @click="saveCustomShelf" :disabled="!customShelfParams.name">
             保存到对象库
@@ -593,6 +593,7 @@ const getShelfFeatureLabel = computed(() => {
 
 // 打开自定义货架弹窗
 const openCustomShelfModal = () => {
+  console.log('openCustomShelfModal called');
   showCustomShelfModal.value = true;
   // 重置为默认值
   customShelfParams.value = {
@@ -1069,14 +1070,6 @@ const goUsage = () => {
   padding: 0.375rem 0.75rem;
   border-radius: 4px;
   border: 1px solid #e0e0e8;
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  padding-top: 1rem;
-  border-top: 1px solid #e0e0e8;
 }
 
 .btn-primary:disabled {
