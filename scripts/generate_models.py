@@ -1546,6 +1546,140 @@ def generate_counterbalance_forklift(length=3200, width=1200, height=2200, lift_
     return scene
 
 
+def generate_electric_pallet_truck(length=1850, width=680, height=1350):
+    """
+    生成电动搬运车（Electric Pallet Truck）
+    平库及重型货架底层搬运专用，步行式操作，适合短距离水平搬运
+    
+    Args:
+        length: 总长（含货叉）
+        width: 货叉外宽
+        height: 手柄立起时高度
+    """
+    meshes = []
+    
+    # 颜色定义
+    COLOR_RED = [0.94, 0.27, 0.27]       # 中国红 #EF4444
+    COLOR_BLACK = [0.15, 0.15, 0.15]      # 黑色部件
+    COLOR_GREY = [0.4, 0.4, 0.4]          # 灰色金属
+    COLOR_SILVER = [0.75, 0.75, 0.75]     # 银色货叉
+    COLOR_TIRE = [0.25, 0.25, 0.25]       # 轮胎灰色
+    
+    # 尺寸参数
+    body_length = 700       # 车身长度（不含货叉）
+    body_width = 200        # 车身宽度
+    body_height = 400       # 车身高度
+    fork_length = 1150      # 货叉长度
+    fork_width = 80         # 单根货叉宽度
+    fork_thickness = 50     # 货叉厚度
+    fork_spacing = 540      # 货叉间距
+    
+    # 1. 车身主体（红色）
+    body = trimesh.creation.box(
+        extents=[body_length, body_width, body_height]
+    )
+    body.apply_translation([fork_length + body_length/2, 0, body_height/2 + 100])
+    set_mesh_color(body, COLOR_RED)
+    meshes.append(('body', body))
+    
+    # 2. 电瓶箱盖（顶部黑色）
+    battery_cover = trimesh.creation.box(
+        extents=[body_length - 100, body_width - 20, 30]
+    )
+    battery_cover.apply_translation([fork_length + body_length/2, 0, body_height + 100 + 15])
+    set_mesh_color(battery_cover, COLOR_BLACK)
+    meshes.append(('battery_cover', battery_cover))
+    
+    # 3. 立式手柄（Tiller Head）- 长杆
+    handle_stem = trimesh.creation.cylinder(radius=25, height=800)
+    handle_stem.apply_translation([fork_length + body_length - 100, 0, body_height + 100 + 400])
+    set_mesh_color(handle_stem, COLOR_BLACK)
+    meshes.append(('handle_stem', handle_stem))
+    
+    # 4. 手柄头（控制面板）
+    handle_head = trimesh.creation.box(extents=[150, 200, 80])
+    handle_head.apply_translation([fork_length + body_length - 100, 0, body_height + 100 + 800 + 40])
+    set_mesh_color(handle_head, COLOR_BLACK)
+    meshes.append(('handle_head', handle_head))
+    
+    # 5. 手柄握把（两侧）
+    for i, y_offset in enumerate([-80, 80]):
+        grip = trimesh.creation.cylinder(radius=20, height=120)
+        grip.apply_transform(trimesh.transformations.rotation_matrix(
+            angle=np.pi/2, direction=[0, 1, 0], point=[0, 0, 0]
+        ))
+        grip.apply_translation([fork_length + body_length - 100, y_offset, body_height + 100 + 800 + 40])
+        set_mesh_color(grip, COLOR_BLACK)
+        meshes.append((f'handle_grip_{i}', grip))
+    
+    # 6. 货叉（2根，银色）
+    for i, y_offset in enumerate([-fork_spacing/2, fork_spacing/2]):
+        fork = trimesh.creation.box(
+            extents=[fork_length, fork_width, fork_thickness]
+        )
+        fork.apply_translation([fork_length/2, y_offset, fork_thickness/2 + 85])
+        set_mesh_color(fork, COLOR_SILVER)
+        meshes.append((f'fork_{i}', fork))
+    
+    # 7. 货叉滚轮（每个货叉2个）
+    wheel_radius = 40
+    for i, y_offset in enumerate([-fork_spacing/2, fork_spacing/2]):
+        for j, x_offset in enumerate([200, fork_length - 100]):
+            wheel = trimesh.creation.cylinder(radius=wheel_radius, height=20)
+            wheel.apply_transform(trimesh.transformations.rotation_matrix(
+                angle=np.pi/2, direction=[1, 0, 0], point=[0, 0, 0]
+            ))
+            wheel.apply_translation([x_offset, y_offset, wheel_radius])
+            set_mesh_color(wheel, COLOR_TIRE)
+            meshes.append((f'fork_wheel_{i}_{j}', wheel))
+    
+    # 8. 驱动轮（车身底部中央）
+    drive_wheel_radius = 100
+    drive_wheel = trimesh.creation.cylinder(radius=drive_wheel_radius, height=80)
+    drive_wheel.apply_transform(trimesh.transformations.rotation_matrix(
+        angle=np.pi/2, direction=[1, 0, 0], point=[0, 0, 0]
+    ))
+    drive_wheel.apply_translation([fork_length + body_length/2, 0, drive_wheel_radius])
+    set_mesh_color(drive_wheel, COLOR_TIRE)
+    meshes.append(('drive_wheel', drive_wheel))
+    
+    # 9. 辅助轮（车身两侧）
+    for i, y_offset in enumerate([-120, 120]):
+        aux_wheel = trimesh.creation.cylinder(radius=60, height=40)
+        aux_wheel.apply_transform(trimesh.transformations.rotation_matrix(
+            angle=np.pi/2, direction=[1, 0, 0], point=[0, 0, 0]
+        ))
+        aux_wheel.apply_translation([fork_length + body_length/2 + 100, y_offset, 60])
+        set_mesh_color(aux_wheel, COLOR_TIRE)
+        meshes.append((f'aux_wheel_{i}', aux_wheel))
+    
+    # 10. 紧急停止按钮（红色圆形）
+    e_stop = trimesh.creation.cylinder(radius=30, height=20)
+    e_stop.apply_translation([fork_length + body_length - 50, 0, body_height + 100 + 30])
+    set_mesh_color(e_stop, [0.9, 0.1, 0.1])  # 鲜红色
+    meshes.append(('e_stop', e_stop))
+    
+    # 11. 电量表（车身侧面）
+    battery_indicator = trimesh.creation.box(extents=[80, 10, 40])
+    battery_indicator.apply_translation([fork_length + body_length/2, body_width/2 + 5, body_height/2 + 100])
+    set_mesh_color(battery_indicator, [0.2, 0.8, 0.2])  # 绿色表示电量
+    meshes.append(('battery_indicator', battery_indicator))
+    
+    # 使用Scene并应用坐标转换
+    scene = trimesh.Scene()
+    rotation_matrix = trimesh.transformations.rotation_matrix(
+        angle=-np.pi / 2,
+        direction=[1, 0, 0],
+        point=[0, 0, 0]
+    )
+    
+    for name, mesh in meshes:
+        mesh.apply_transform(rotation_matrix)
+        scene.add_geometry(mesh, node_name=name)
+    
+    return scene
+
+
 def main():
     """主函数：生成所有模型"""
     print("=" * 50)
@@ -1904,6 +2038,25 @@ def main():
         }
     }
     metadata_list.append(save_model(forklift_counterbalance, "forklift-counterbalance-2.5t.glb", meta_counterbalance))
+    
+    # 生成电动搬运车
+    print("\n🚛 生成电动搬运车...")
+    print("  - 电动搬运车 2吨步行式...")
+    pallet_truck = generate_electric_pallet_truck()
+    meta_pallet_truck = {
+        "id": "forklift-pallet-truck-electric-2t",
+        "name": "电动搬运车-2吨步行式",
+        "category": "handling",
+        "description": "平库及重型货架底层搬运专用，步行式操作，适合短距离水平搬运",
+        "tags": ["电动搬运车", "步行式", "平库搬运", "2吨"],
+        "parameters": {
+            "length": {"type": "number", "min": 1600, "max": 2100, "default": 1850, "unit": "mm"},
+            "width": {"type": "number", "min": 550, "max": 750, "default": 680, "unit": "mm"},
+            "height": {"type": "number", "min": 1200, "max": 1500, "default": 1350, "unit": "mm"},
+            "liftHeight": {"type": "number", "min": 150, "max": 250, "default": 200, "unit": "mm"}
+        }
+    }
+    metadata_list.append(save_model(pallet_truck, "forklift-pallet-truck-electric.glb", meta_pallet_truck))
     
     # 保存元数据
     print("\n📝 保存元数据...")

@@ -875,5 +875,48 @@
       }
     },
     "filename": "forklift-counterbalance-2.5t.glb"
+  },
+  {
+    "id": "forklift-pallet-truck-electric-2t",
+    "name": "电动搬运车-2吨步行式",
+    "category": "handling",
+    "description": "平库及重型货架底层搬运专用，步行式操作，适合短距离水平搬运",
+    "tags": [
+      "电动搬运车",
+      "步行式",
+      "平库搬运",
+      "2吨"
+    ],
+    "parameters": {
+      "length": {
+        "type": "number",
+        "min": 1600,
+        "max": 2100,
+        "default": 1850,
+        "unit": "mm"
+      },
+      "width": {
+        "type": "number",
+        "min": 550,
+        "max": 750,
+        "default": 680,
+        "unit": "mm"
+      },
+      "height": {
+        "type": "number",
+        "min": 1200,
+        "max": 1500,
+        "default": 1350,
+        "unit": "mm"
+      },
+      "liftHeight": {
+        "type": "number",
+        "min": 150,
+        "max": 250,
+        "default": 200,
+        "unit": "mm"
+      }
+    },
+    "filename": "forklift-pallet-truck-electric.glb"
   }
 ]
