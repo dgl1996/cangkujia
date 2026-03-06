@@ -45,6 +45,12 @@
             />
             <span class="search-icon">🔍</span>
           </div>
+          <div class="toolbar-actions">
+            <button class="btn-custom-shelf" @click="openCustomShelfModal">
+              <span class="btn-icon">➕</span>
+              <span>自定义货架</span>
+            </button>
+          </div>
           <div class="filter-tags">
             <span
               v-for="tag in currentTags"
@@ -145,6 +151,169 @@
         <div class="preview-footer">
           <button class="btn-secondary" @click="closePreview">
             关闭
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 自定义货架弹窗 -->
+    <div v-if="showCustomShelfModal" class="modal-overlay" @click="closeCustomShelfModal">
+      <div class="modal-content custom-shelf-modal" @click.stop>
+        <div class="modal-header">
+          <h3>自定义横梁式货架</h3>
+          <button class="btn-close" @click="closeCustomShelfModal">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-section">
+            <h4>基础尺寸</h4>
+            <div class="form-row">
+              <div class="form-group">
+                <label>长度 (mm)</label>
+                <input
+                  v-model.number="customShelfParams.length"
+                  type="number"
+                  min="800"
+                  max="5000"
+                  step="100"
+                  class="form-input"
+                />
+                <input
+                  v-model.number="customShelfParams.length"
+                  type="range"
+                  min="800"
+                  max="5000"
+                  step="100"
+                  class="form-slider"
+                />
+              </div>
+              <div class="form-group">
+                <label>深度 (mm)</label>
+                <input
+                  v-model.number="customShelfParams.width"
+                  type="number"
+                  min="300"
+                  max="1500"
+                  step="50"
+                  class="form-input"
+                />
+                <input
+                  v-model.number="customShelfParams.width"
+                  type="range"
+                  min="300"
+                  max="1500"
+                  step="50"
+                  class="form-slider"
+                />
+              </div>
+              <div class="form-group">
+                <label>高度 (mm)</label>
+                <input
+                  v-model.number="customShelfParams.height"
+                  type="number"
+                  min="1500"
+                  max="12000"
+                  step="100"
+                  class="form-input"
+                />
+                <input
+                  v-model.number="customShelfParams.height"
+                  type="range"
+                  min="1500"
+                  max="12000"
+                  step="100"
+                  class="form-slider"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h4>结构参数</h4>
+            <div class="form-row">
+              <div class="form-group">
+                <label>层数</label>
+                <input
+                  v-model.number="customShelfParams.levels"
+                  type="number"
+                  min="2"
+                  max="10"
+                  class="form-input"
+                />
+              </div>
+              <div class="form-group">
+                <label>立柱截面宽 (mm)</label>
+                <input
+                  v-model.number="customShelfParams.uprightWidth"
+                  type="number"
+                  min="30"
+                  max="120"
+                  step="5"
+                  class="form-input"
+                />
+              </div>
+              <div class="form-group">
+                <label>立柱截面深 (mm)</label>
+                <input
+                  v-model.number="customShelfParams.uprightDepth"
+                  type="number"
+                  min="20"
+                  max="100"
+                  step="5"
+                  class="form-input"
+                />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>横梁高度 (mm)</label>
+                <input
+                  v-model.number="customShelfParams.beamHeight"
+                  type="number"
+                  min="30"
+                  max="150"
+                  step="5"
+                  class="form-input"
+                />
+              </div>
+              <div class="form-group">
+                <label>横梁宽度 (mm)</label>
+                <input
+                  v-model.number="customShelfParams.beamWidth"
+                  type="number"
+                  min="20"
+                  max="80"
+                  step="5"
+                  class="form-input"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h4>货架名称</h4>
+            <div class="form-group">
+              <input
+                v-model="customShelfParams.name"
+                type="text"
+                placeholder="输入自定义货架名称"
+                class="form-input name-input"
+              />
+            </div>
+          </div>
+
+          <!-- 实时预览 -->
+          <div class="preview-section">
+            <h4>实时预览</h4>
+            <div class="preview-info">
+              <span>类型: {{ getShelfTypeLabel }}</span>
+              <span>视觉特征: {{ getShelfFeatureLabel }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" @click="closeCustomShelfModal">取消</button>
+          <button class="btn-primary" @click="saveCustomShelf" :disabled="!customShelfParams.name">
+            保存到对象库
           </button>
         </div>
       </div>
@@ -379,6 +548,111 @@ const searchQuery = ref('');
 const selectedTags = ref([]);
 const showPreview = ref(false);
 const selectedModel = ref(null);
+const showCustomShelfModal = ref(false);
+
+// 自定义货架参数
+const customShelfParams = ref({
+  name: '',
+  length: 2000,
+  width: 600,
+  height: 2500,
+  levels: 4,
+  uprightWidth: 50,
+  uprightDepth: 30,
+  beamHeight: 80,
+  beamWidth: 40,
+});
+
+// 从localStorage加载自定义货架
+const loadCustomShelves = () => {
+  const saved = localStorage.getItem('customShelves');
+  if (saved) {
+    const customShelves = JSON.parse(saved);
+    models.value = [...models.value, ...customShelves];
+  }
+};
+
+// 计算货架类型标签
+const getShelfTypeLabel = computed(() => {
+  const { uprightWidth, beamHeight } = customShelfParams.value;
+  if (uprightWidth >= 80 || beamHeight >= 100) return '重型货架';
+  if (uprightWidth >= 50 || beamHeight >= 60) return '中型货架';
+  return '轻型货架';
+});
+
+// 计算视觉特征标签
+const getShelfFeatureLabel = computed(() => {
+  const { uprightWidth, uprightDepth, beamHeight, beamWidth } = customShelfParams.value;
+  const uprightArea = uprightWidth * uprightDepth;
+  const beamArea = beamHeight * beamWidth;
+  
+  if (uprightArea > 6000 || beamArea > 4000) return '粗壮，高承载';
+  if (uprightArea > 1500 || beamArea > 2000) return '标准，平衡型';
+  return '纤细，轻型';
+});
+
+// 打开自定义货架弹窗
+const openCustomShelfModal = () => {
+  showCustomShelfModal.value = true;
+  // 重置为默认值
+  customShelfParams.value = {
+    name: '',
+    length: 2000,
+    width: 600,
+    height: 2500,
+    levels: 4,
+    uprightWidth: 50,
+    uprightDepth: 30,
+    beamHeight: 80,
+    beamWidth: 40,
+  };
+};
+
+// 关闭自定义货架弹窗
+const closeCustomShelfModal = () => {
+  showCustomShelfModal.value = false;
+};
+
+// 保存自定义货架
+const saveCustomShelf = () => {
+  const params = customShelfParams.value;
+  const newShelf = {
+    id: `custom-shelf-${Date.now()}`,
+    name: params.name || `自定义货架-${params.length}×${params.width}×${params.height}`,
+    category: 'storage',
+    description: `自定义横梁式货架：立柱${params.uprightWidth}×${params.uprightDepth}mm，横梁${params.beamHeight}×${params.beamWidth}mm`,
+    tags: ['自定义', getShelfTypeLabel.value],
+    parameters: {
+      length: { type: 'number', min: 800, max: 5000, default: params.length, unit: 'mm' },
+      width: { type: 'number', min: 300, max: 1500, default: params.width, unit: 'mm' },
+      height: { type: 'number', min: 1500, max: 12000, default: params.height, unit: 'mm' },
+      levels: { type: 'number', min: 2, max: 10, default: params.levels },
+      uprightWidth: { type: 'number', min: 30, max: 120, default: params.uprightWidth, unit: 'mm' },
+      uprightDepth: { type: 'number', min: 20, max: 100, default: params.uprightDepth, unit: 'mm' },
+      beamHeight: { type: 'number', min: 30, max: 150, default: params.beamHeight, unit: 'mm' },
+      beamWidth: { type: 'number', min: 20, max: 80, default: params.beamWidth, unit: 'mm' },
+    },
+    modelUrl: '/assets/models/shelf-beam-medium.glb', // 使用中型货架作为基础模型
+    isCustom: true,
+    customParams: { ...params },
+  };
+  
+  // 添加到模型列表
+  models.value.push(newShelf);
+  
+  // 保存到localStorage
+  const customShelves = models.value.filter(m => m.isCustom);
+  localStorage.setItem('customShelves', JSON.stringify(customShelves));
+  
+  // 关闭弹窗
+  closeCustomShelfModal();
+  
+  // 显示成功提示（可以添加toast组件）
+  alert('自定义货架已保存到对象库！');
+};
+
+// 初始化时加载自定义货架
+loadCustomShelves();
 
 // 计算属性
 const currentTags = computed(() => {
@@ -673,6 +947,141 @@ const goUsage = () => {
 .filter-tag.active {
   background: #4361ee;
   border-color: #4361ee;
+}
+
+/* 自定义货架按钮 */
+.toolbar-actions {
+  margin-bottom: 1rem;
+}
+
+.btn-custom-shelf {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  background: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(67, 97, 238, 0.3);
+}
+
+.btn-custom-shelf:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(67, 97, 238, 0.4);
+}
+
+.btn-icon {
+  font-size: 1rem;
+}
+
+/* 自定义货架弹窗 */
+.custom-shelf-modal {
+  max-width: 700px;
+  width: 90%;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.form-section {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #e0e0e8;
+}
+
+.form-section:last-of-type {
+  border-bottom: none;
+}
+
+.form-section h4 {
+  font-size: 1rem;
+  color: #2d2d44;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  font-size: 0.85rem;
+  color: #4a4a68;
+  font-weight: 500;
+}
+
+.form-input {
+  padding: 0.625rem 0.875rem;
+  border: 1px solid #e0e0e8;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  transition: border-color 0.3s;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #4361ee;
+}
+
+.form-slider {
+  width: 100%;
+  margin-top: 0.25rem;
+}
+
+.name-input {
+  font-size: 1rem;
+  padding: 0.75rem 1rem;
+}
+
+.preview-section {
+  background: #f8f9ff;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.preview-section h4 {
+  margin-bottom: 0.75rem;
+}
+
+.preview-info {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.preview-info span {
+  font-size: 0.9rem;
+  color: #4a4a68;
+  background: white;
+  padding: 0.375rem 0.75rem;
+  border-radius: 4px;
+  border: 1px solid #e0e0e8;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e0e0e8;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
   color: white;
 }
 
