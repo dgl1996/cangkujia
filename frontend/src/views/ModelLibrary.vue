@@ -88,7 +88,10 @@
               </div>
             </div>
             <div class="model-info">
-              <h3 class="model-name">{{ model.name }}</h3>
+              <h3 class="model-name">
+                <span class="model-id">[{{ model.id }}]</span>
+                {{ model.name }}
+              </h3>
               <p class="model-desc">{{ model.description }}</p>
               <div class="model-tags">
                 <span v-for="tag in model.tags.slice(0, 2)" :key="tag" class="tag">
@@ -1302,6 +1305,19 @@ const goUsage = () => {
   font-weight: 600;
   color: #1a1a2e;
   margin-bottom: 0.375rem;
+  line-height: 1.4;
+}
+
+.model-id {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #4361ee;
+  background: #f0f3ff;
+  padding: 0.125rem 0.375rem;
+  border-radius: 4px;
+  margin-right: 0.5rem;
+  vertical-align: middle;
 }
 
 .model-desc {
