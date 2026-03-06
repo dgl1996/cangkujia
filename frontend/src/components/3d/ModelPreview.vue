@@ -115,7 +115,7 @@ const loadModel = () => {
       model.position.y = -box.min.y; // 放在地面上
       model.position.z = -center.z;
 
-      // 处理材质 - 使用顶点颜色
+      // 处理材质 - 使用顶点颜色（与测试页面相同）
       let meshCount = 0;
       model.traverse((child) => {
         if (child.isMesh) {
@@ -125,19 +125,13 @@ const loadModel = () => {
           
           // 检查是否有顶点颜色
           const hasVertexColors = child.geometry && child.geometry.attributes.color;
-          console.log(`Mesh ${meshCount}:`, child.name, '有顶点颜色:', !!hasVertexColors);
+          console.log(`Mesh ${meshCount}:`, child.name, '有顶点颜色:', !!hasVertexColors, '原材质:', child.material ? child.material.type : 'none');
           
+          // 强制替换为MeshBasicMaterial以正确显示顶点颜色
           if (hasVertexColors) {
-            // 有顶点颜色，使用MeshBasicMaterial显示
-            const basicMaterial = new THREE.MeshBasicMaterial({
-              vertexColors: true
-            });
-            child.material = basicMaterial;
-          } else if (child.material) {
-            // 没有顶点颜色，使用默认材质
-            child.material = new THREE.MeshBasicMaterial({
-              color: 0x888888
-            });
+            child.material = new THREE.MeshBasicMaterial({ vertexColors: true });
+          } else {
+            child.material = new THREE.MeshBasicMaterial({ color: 0x888888 });
           }
         }
       });
