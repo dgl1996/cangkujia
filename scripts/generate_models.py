@@ -2253,6 +2253,210 @@ def generate_put_wall(width=1600, depth=500, height=1800, rows=4, cols=4):
     return scene
 
 
+def generate_curve_conveyor(width=1200, height=800, inner_radius=400, belt_width=600):
+    """
+    生成90度皮带转弯机（Belt Curve Conveyor）
+    用于输送线在水平面内90度转向
+    
+    Args:
+        width: 整体宽度（外半径×2）
+        height: 机架高度
+        inner_radius: 内转弯半径
+        belt_width: 皮带宽度
+    """
+    meshes = []
+    
+    # 颜色定义
+    COLOR_STEEL = [0.75, 0.75, 0.75]      # 不锈钢银 #C0C0C0
+    COLOR_BELT = [0.9, 0.3, 0.3]          # PVC红色
+    COLOR_GUARD = [0.7, 0.7, 0.7]         # 护栏银灰
+    COLOR_MOTOR = [0.2, 0.2, 0.2]         # 电机黑色
+    
+    # 尺寸参数
+    outer_radius = inner_radius + belt_width
+    frame_thickness = 50
+    guard_height = 50
+    
+    # 1. 内侧弧形框架（90度扇形）
+    inner_angle = np.pi / 2  # 90度
+    
+    # 使用多个小立方体拼接弧形
+    num_segments = 20
+    for i in range(num_segments):
+        angle_start = i * inner_angle / num_segments
+        angle_end = (i + 1) * inner_angle / num_segments
+        angle_mid = (angle_start + angle_end) / 2
+        
+        # 内侧弧形板
+        segment_length = inner_radius * inner_angle / num_segments
+        inner_x = inner_radius * np.cos(angle_mid)
+        inner_y = inner_radius * np.sin(angle_mid)
+        
+        inner_plate = trimesh.creation.box(
+            extents=[segment_length + 5, frame_thickness, height - 100]
+        )
+        inner_plate.apply_transform(trimesh.transformations.rotation_matrix(
+            angle=angle_mid, direction=[0, 0, 1], point=[0, 0, 0]
+        ))
+        inner_plate.apply_translation([inner_x, inner_y, (height - 100)/2 + 50])
+        set_mesh_color(inner_plate, COLOR_STEEL)
+        meshes.append((f'inner_frame_{i}', inner_plate))
+    
+    # 2. 外侧弧形框架
+    for i in range(num_segments):
+        angle_start = i * inner_angle / num_segments
+        angle_end = (i + 1) * inner_angle / num_segments
+        angle_mid = (angle_start + angle_end) / 2
+        
+        segment_length = outer_radius * inner_angle / num_segments
+        outer_x = outer_radius * np.cos(angle_mid)
+        outer_y = outer_radius * np.sin(angle_mid)
+        
+        outer_plate = trimesh.creation.box(
+            extents=[segment_length + 5, frame_thickness, height - 100]
+        )
+        outer_plate.apply_transform(trimesh.transformations.rotation_matrix(
+            angle=angle_mid, direction=[0, 0, 1], point=[0, 0, 0]
+        ))
+        outer_plate.apply_translation([outer_x, outer_y, (height - 100)/2 + 50])
+        set_mesh_color(outer_plate, COLOR_STEEL)
+        meshes.append((f'outer_frame_{i}', outer_plate))
+    
+    # 3. 弧形皮带面（用多个小扇形拼接）
+    belt_z = height - 50  # 皮带高度
+    for i in range(num_segments):
+        angle_start = i * inner_angle / num_segments
+        angle_end = (i + 1) * inner_angle / num_segments
+        angle_mid = (angle_start + angle_end) / 2
+        
+        # 计算这一段皮带的中心半径和长度
+        mid_radius = (inner_radius + outer_radius) / 2
+        segment_arc_length = mid_radius * inner_angle / num_segments
+        segment_width = belt_width
+        
+        # 创建皮带段
+        belt_segment = trimesh.creation.box(
+            extents=[segment_arc_length, segment_width, 10]
+        )
+        belt_segment.apply_transform(trimesh.transformations.rotation_matrix(
+            angle=angle_mid, direction=[0, 0, 1], point=[0, 0, 0]
+        ))
+        belt_segment.apply_translation([
+            mid_radius * np.cos(angle_mid),
+            mid_radius * np.sin(angle_mid),
+            belt_z
+        ])
+        set_mesh_color(belt_segment, COLOR_BELT)
+        meshes.append((f'belt_{i}', belt_segment))
+    
+    # 4. 入口端直段（连接前段输送线）
+    entry_length = 200
+    entry_frame = trimesh.creation.box(
+        extents=[entry_length, frame_thickness * 2 + belt_width, height - 100]
+    )
+    entry_frame.apply_translation([-entry_length/2 - inner_radius, belt_width/2 + frame_thickness, (height - 100)/2 + 50])
+    set_mesh_color(entry_frame, COLOR_STEEL)
+    meshes.append(('entry_frame', entry_frame))
+    
+    # 入口皮带
+    entry_belt = trimesh.creation.box(extents=[entry_length, belt_width, 10])
+    entry_belt.apply_translation([-entry_length/2 - inner_radius, belt_width/2 + frame_thickness, belt_z])
+    set_mesh_color(entry_belt, COLOR_BELT)
+    meshes.append(('entry_belt', entry_belt))
+    
+    # 5. 出口端直段（连接后段输送线）
+    exit_length = 200
+    exit_frame = trimesh.creation.box(
+        extents=[frame_thickness * 2 + belt_width, exit_length, height - 100]
+    )
+    exit_frame.apply_translation([belt_width/2 + frame_thickness, entry_length/2 + inner_radius, (height - 100)/2 + 50])
+    set_mesh_color(exit_frame, COLOR_STEEL)
+    meshes.append(('exit_frame', exit_frame))
+    
+    # 出口皮带
+    exit_belt = trimesh.creation.box(extents=[belt_width, exit_length, 10])
+    exit_belt.apply_translation([belt_width/2 + frame_thickness, entry_length/2 + inner_radius, belt_z])
+    set_mesh_color(exit_belt, COLOR_BELT)
+    meshes.append(('exit_belt', exit_belt))
+    
+    # 6. 护栏（两侧弧形）
+    for i in range(num_segments):
+        angle_start = i * inner_angle / num_segments
+        angle_end = (i + 1) * inner_angle / num_segments
+        angle_mid = (angle_start + angle_end) / 2
+        
+        # 内侧护栏
+        inner_guard_radius = inner_radius - 20
+        segment_length = inner_guard_radius * inner_angle / num_segments
+        inner_x = inner_guard_radius * np.cos(angle_mid)
+        inner_y = inner_guard_radius * np.sin(angle_mid)
+        
+        inner_guard = trimesh.creation.box(extents=[segment_length, 10, guard_height])
+        inner_guard.apply_transform(trimesh.transformations.rotation_matrix(
+            angle=angle_mid, direction=[0, 0, 1], point=[0, 0, 0]
+        ))
+        inner_guard.apply_translation([inner_x, inner_y, belt_z + guard_height/2])
+        set_mesh_color(inner_guard, COLOR_GUARD)
+        meshes.append((f'inner_guard_{i}', inner_guard))
+        
+        # 外侧护栏
+        outer_guard_radius = outer_radius + 20
+        segment_length = outer_guard_radius * inner_angle / num_segments
+        outer_x = outer_guard_radius * np.cos(angle_mid)
+        outer_y = outer_guard_radius * np.sin(angle_mid)
+        
+        outer_guard = trimesh.creation.box(extents=[segment_length, 10, guard_height])
+        outer_guard.apply_transform(trimesh.transformations.rotation_matrix(
+            angle=angle_mid, direction=[0, 0, 1], point=[0, 0, 0]
+        ))
+        outer_guard.apply_translation([outer_x, outer_y, belt_z + guard_height/2])
+        set_mesh_color(outer_guard, COLOR_GUARD)
+        meshes.append((f'outer_guard_{i}', outer_guard))
+    
+    # 7. 支撑腿（4个）
+    leg_positions = [
+        [-inner_radius - 100, belt_width/2 + frame_thickness],
+        [belt_width/2 + frame_thickness, inner_radius + 100],
+        [-50, 50],
+        [outer_radius + 50, outer_radius + 50]
+    ]
+    
+    for i, (x, y) in enumerate(leg_positions):
+        leg = trimesh.creation.cylinder(radius=20, height=height - 50)
+        leg.apply_translation([x, y, (height - 50)/2])
+        set_mesh_color(leg, COLOR_STEEL)
+        meshes.append((f'leg_{i}', leg))
+        
+        # 地脚
+        foot = trimesh.creation.cylinder(radius=35, height=20)
+        foot.apply_translation([x, y, 10])
+        set_mesh_color(foot, [0.4, 0.4, 0.4])
+        meshes.append((f'foot_{i}', foot))
+    
+    # 8. 驱动电机（出口端）
+    motor = trimesh.creation.cylinder(radius=60, height=100)
+    motor.apply_transform(trimesh.transformations.rotation_matrix(
+        angle=np.pi/2, direction=[1, 0, 0], point=[0, 0, 0]
+    ))
+    motor.apply_translation([belt_width/2 + frame_thickness + 80, inner_radius + 150, height/2])
+    set_mesh_color(motor, COLOR_MOTOR)
+    meshes.append(('motor', motor))
+    
+    # 使用Scene并应用坐标转换
+    scene = trimesh.Scene()
+    rotation_matrix = trimesh.transformations.rotation_matrix(
+        angle=-np.pi / 2,
+        direction=[1, 0, 0],
+        point=[0, 0, 0]
+    )
+    
+    for name, mesh in meshes:
+        mesh.apply_transform(rotation_matrix)
+        scene.add_geometry(mesh, node_name=name)
+    
+    return scene
+
+
 def main():
     """主函数：生成所有模型"""
     print("=" * 50)
@@ -2707,6 +2911,25 @@ def main():
         }
     }
     metadata_list.append(save_model(put_wall, "putwall-standard-16cell.glb", meta_put_wall))
+    
+    # 生成90度皮带转弯机
+    print("\n📦 生成90度皮带转弯机...")
+    print("  - 带宽600mm转弯机...")
+    curve_conveyor = generate_curve_conveyor()
+    meta_curve_conveyor = {
+        "id": "conveyor-curve-90degree-600",
+        "name": "90度皮带转弯机-带宽600mm",
+        "category": "conveying",
+        "description": "用于输送线在水平面内90度转向，连接直段输送线形成闭环或改变输送方向",
+        "tags": ["转弯机", "90度", "皮带输送", "输送线"],
+        "parameters": {
+            "width": {"type": "number", "min": 1000, "max": 1500, "default": 1200, "unit": "mm"},
+            "height": {"type": "number", "min": 600, "max": 1000, "default": 800, "unit": "mm"},
+            "innerRadius": {"type": "number", "min": 300, "max": 500, "default": 400, "unit": "mm"},
+            "beltWidth": {"type": "number", "min": 400, "max": 800, "default": 600, "unit": "mm"}
+        }
+    }
+    metadata_list.append(save_model(curve_conveyor, "conveyor-curve-90degree-600.glb", meta_curve_conveyor))
     
     # 保存元数据
     print("\n📝 保存元数据...")

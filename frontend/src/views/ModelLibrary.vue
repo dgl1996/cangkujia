@@ -711,6 +711,20 @@ const models = ref([
     },
     modelUrl: '/assets/models/lift-cargo-hydraulic-3floor.glb',
   },
+  {
+    id: 'conveyor-curve-90degree-600',
+    name: '90度皮带转弯机-带宽600mm',
+    category: 'conveying',
+    description: '用于输送线在水平面内90度转向，连接直段输送线形成闭环或改变输送方向',
+    tags: ['转弯机', '90度', '皮带输送', '输送线'],
+    parameters: {
+      width: { type: 'number', min: 1000, max: 1500, default: 1200, unit: 'mm' },
+      height: { type: 'number', min: 600, max: 1000, default: 800, unit: 'mm' },
+      innerRadius: { type: 'number', min: 300, max: 500, default: 400, unit: 'mm' },
+      beltWidth: { type: 'number', min: 400, max: 800, default: 600, unit: 'mm' },
+    },
+    modelUrl: '/assets/models/conveyor-curve-90degree-600.glb',
+  },
   // 拣选设备 (E101-E199)
   {
     id: 'putwall-standard-16cell',
