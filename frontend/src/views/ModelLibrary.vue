@@ -387,6 +387,20 @@ const models = ref([
     modelUrl: '/assets/models/shelf-drive-in.glb',
   },
   {
+    id: 'shelf-flow-4level-1m8',
+    name: '流利式货架-4层拣选（L900*D450*H1800）',
+    category: 'storage',
+    description: '先进先出(FIFO)拣选作业，配送中心产线旁供料，带5度倾斜流利条',
+    tags: ['流利式', '4层', 'FIFO', '拣选', '薄荷绿'],
+    parameters: {
+      length: { type: 'number', min: 600, max: 1200, default: 900, unit: 'mm' },
+      width: { type: 'number', min: 300, max: 600, default: 450, unit: 'mm' },
+      height: { type: 'number', min: 1200, max: 2500, default: 1800, unit: 'mm' },
+      levels: { type: 'number', min: 2, max: 6, default: 4 },
+    },
+    modelUrl: '/assets/models/shelf-flow-4level.glb',
+  },
+  {
     id: 'shelf-light-v2',
     name: '横梁式货架-轻型4层（L1200*D400*H2000）',
     category: 'storage',

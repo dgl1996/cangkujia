@@ -794,6 +794,122 @@ def generate_light_shelf_v2_style(length=1200, width=400, height=2000, levels=4)
     return scene
 
 
+def generate_flow_shelf(length=900, width=450, height=1800, levels=4):
+    """
+    生成流利式货架 - 带倾斜流利条层板
+    
+    Args:
+        length: 货架长度 (mm)
+        width: 货架深度 (mm)  
+        height: 货架高度 (mm)
+        levels: 层数
+    """
+    meshes = []
+    
+    # 颜色定义 - 薄荷绿主题
+    COLOR_UPRIGHT = [0.31, 0.89, 0.76]   # 薄荷绿 #50E3C2
+    COLOR_BEAM = [0.9, 0.4, 0.1]         # 橙红色
+    COLOR_ROLLER = [0.75, 0.75, 0.75]    # 银灰色流利条
+    COLOR_FOOT = [0.3, 0.3, 0.3]         # 深灰色脚垫
+    
+    # 尺寸参数
+    upright_width = 40
+    upright_depth = 30
+    beam_height = 60
+    beam_width = 30
+    foot_height = 30
+    tilt_angle = 5  # 倾斜角度5度
+    
+    # 立柱位置（4根）
+    upright_positions = [
+        [-length/2 + upright_width/2, -width/2 + upright_depth/2],
+        [length/2 - upright_width/2, -width/2 + upright_depth/2],
+        [-length/2 + upright_width/2, width/2 - upright_depth/2],
+        [length/2 - upright_width/2, width/2 - upright_depth/2]
+    ]
+    
+    # 生成立柱和脚垫
+    for i, (x, y) in enumerate(upright_positions):
+        # 主立柱
+        upright = trimesh.creation.box(
+            extents=[upright_width, upright_depth, height - foot_height]
+        )
+        upright.apply_translation([x, y, (height - foot_height)/2 + foot_height])
+        set_mesh_color(upright, COLOR_UPRIGHT)
+        meshes.append((f'upright_{i}', upright))
+        
+        # 脚垫
+        foot = trimesh.creation.box(
+            extents=[upright_width + 10, upright_depth + 10, foot_height]
+        )
+        foot.apply_translation([x, y, foot_height/2])
+        set_mesh_color(foot, COLOR_FOOT)
+        meshes.append((f'foot_{i}', foot))
+    
+    # 计算层板高度 - 均匀分布
+    level_spacing = (height - 300) / (levels + 1)
+    
+    # 生成横梁和流利条层板
+    for level in range(1, levels + 1):
+        # 后端高度（较高）
+        z_back = 150 + level * level_spacing + 20
+        # 前端高度（较低，倾斜5度）
+        z_front = z_back - width * np.sin(np.radians(tilt_angle))
+        
+        # 后横梁（较高位置）
+        back_beam = trimesh.creation.box(
+            extents=[length - 2*upright_width, beam_width, beam_height]
+        )
+        back_beam.apply_translation([0, -width/2 + upright_depth/2, z_back])
+        set_mesh_color(back_beam, COLOR_BEAM)
+        meshes.append((f'beam_back_{level}', back_beam))
+        
+        # 前横梁（较低位置）
+        front_beam = trimesh.creation.box(
+            extents=[length - 2*upright_width, beam_width, beam_height]
+        )
+        front_beam.apply_translation([0, width/2 - upright_depth/2, z_front])
+        set_mesh_color(front_beam, COLOR_BEAM)
+        meshes.append((f'beam_front_{level}', front_beam))
+        
+        # 流利条（倾斜的圆柱体表示）
+        num_rollers = 8
+        roller_diameter = 15
+        roller_length = length - 2*upright_width - 20
+        
+        for i in range(num_rollers):
+            y_pos = -width/2 + upright_depth + (width - 2*upright_depth) * (i + 0.5) / num_rollers
+            # 根据Y位置计算Z高度（线性插值）
+            ratio = (y_pos - (-width/2 + upright_depth)) / (width - 2*upright_depth)
+            z_pos = z_back - (z_back - z_front) * ratio
+            
+            roller = trimesh.creation.cylinder(
+                radius=roller_diameter/2,
+                height=roller_length
+            )
+            # 旋转圆柱体使其沿X轴
+            roller.apply_transform(trimesh.transformations.rotation_matrix(
+                angle=np.pi/2, direction=[0, 1, 0], point=[0, 0, 0]
+            ))
+            roller.apply_translation([0, y_pos, z_pos])
+            set_mesh_color(roller, COLOR_ROLLER)
+            meshes.append((f'roller_{level}_{i}', roller))
+    
+    # 使用Scene并应用坐标转换
+    scene = trimesh.Scene()
+    rotation_matrix = trimesh.transformations.rotation_matrix(
+        angle=-np.pi / 2,
+        direction=[1, 0, 0],
+        point=[0, 0, 0]
+    )
+    
+    for name, mesh in meshes:
+        mesh.apply_transform(rotation_matrix)
+        scene.add_geometry(mesh, node_name=name)
+    
+    return scene
+
+
 def main():
     """主函数：生成所有模型"""
     print("=" * 50)
@@ -1023,6 +1139,30 @@ def main():
         }
     }
     metadata_list.append(save_model(shelf_light_5level, "shelf-beam-light-5level.glb", meta_light_5level))
+    
+    # 生成流利式货架
+    print("\n🏗️ 生成流利式货架...")
+    print("  - 流利式4层拣选货架...")
+    shelf_flow = generate_flow_shelf(
+        length=900, 
+        width=450, 
+        height=1800, 
+        levels=4
+    )
+    meta_flow = {
+        "id": "shelf-flow-4level-1m8",
+        "name": "流利式货架-4层拣选",
+        "category": "storage",
+        "description": "先进先出(FIFO)拣选作业，配送中心产线旁供料",
+        "tags": ["流利式", "4层", "FIFO", "拣选"],
+        "parameters": {
+            "length": {"type": "number", "min": 600, "max": 1200, "default": 900, "unit": "mm"},
+            "width": {"type": "number", "min": 300, "max": 600, "default": 450, "unit": "mm"},
+            "height": {"type": "number", "min": 1200, "max": 2500, "default": 1800, "unit": "mm"},
+            "levels": {"type": "number", "min": 2, "max": 6, "default": 4}
+        }
+    }
+    metadata_list.append(save_model(shelf_flow, "shelf-flow-4level.glb", meta_flow))
     
     # 保存元数据
     print("\n📝 保存元数据...")

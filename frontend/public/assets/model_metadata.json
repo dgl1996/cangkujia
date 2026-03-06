@@ -563,5 +563,47 @@
       }
     },
     "filename": "shelf-beam-light-5level.glb"
+  },
+  {
+    "id": "shelf-flow-4level-1m8",
+    "name": "流利式货架-4层拣选",
+    "category": "storage",
+    "description": "先进先出(FIFO)拣选作业，配送中心产线旁供料",
+    "tags": [
+      "流利式",
+      "4层",
+      "FIFO",
+      "拣选"
+    ],
+    "parameters": {
+      "length": {
+        "type": "number",
+        "min": 600,
+        "max": 1200,
+        "default": 900,
+        "unit": "mm"
+      },
+      "width": {
+        "type": "number",
+        "min": 300,
+        "max": 600,
+        "default": 450,
+        "unit": "mm"
+      },
+      "height": {
+        "type": "number",
+        "min": 1200,
+        "max": 2500,
+        "default": 1800,
+        "unit": "mm"
+      },
+      "levels": {
+        "type": "number",
+        "min": 2,
+        "max": 6,
+        "default": 4
+      }
+    },
+    "filename": "shelf-flow-4level.glb"
   }
 ]
