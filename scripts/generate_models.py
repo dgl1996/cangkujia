@@ -2457,6 +2457,134 @@ def generate_curve_conveyor(width=1200, height=800, inner_radius=400, belt_width
     return scene
 
 
+def generate_roller_conveyor(length=2000, width=600, height=800):
+    """
+    生成动力滚筒输送机（Powered Roller Conveyor）
+    红框银筒配色，与90度转弯机配套使用
+    
+    Args:
+        length: 输送机长度
+        width: 输送机宽度
+        height: 机架高度
+    """
+    meshes = []
+    
+    # 颜色定义 - 红框银筒
+    COLOR_FRAME = [0.86, 0.15, 0.15]      # 框架红 #DC2626
+    COLOR_ROLLER = [0.75, 0.75, 0.75]     # 滚筒银 #C0C0C0
+    COLOR_MOTOR = [0.2, 0.2, 0.2]         # 电机黑
+    COLOR_FOOT = [0.15, 0.15, 0.15]       # 地脚黑
+    
+    # 尺寸参数
+    frame_thickness = 40
+    roller_diameter = 50
+    roller_spacing = 75
+    roller_count = int(length / roller_spacing)
+    leg_count = max(4, int(length / 600))
+    
+    # 1. 侧框架（左右两侧，红色）
+    for side in [-1, 1]:
+        x_offset = side * (width/2 - frame_thickness/2)
+        side_frame = trimesh.creation.box(
+            extents=[frame_thickness, length, height - 100]
+        )
+        side_frame.apply_translation([x_offset, 0, (height - 100)/2 + 50])
+        set_mesh_color(side_frame, COLOR_FRAME)
+        meshes.append((f'side_frame_{"left" if side == -1 else "right"}', side_frame))
+    
+    # 2. 滚筒阵列（银色）
+    roller_z = height - 50  # 滚筒中心高度
+    for i in range(roller_count):
+        y_pos = -length/2 + roller_spacing/2 + i * roller_spacing
+        
+        # 滚筒
+        roller = trimesh.creation.cylinder(
+            radius=roller_diameter/2,
+            height=width - 2*frame_thickness - 10
+        )
+        roller.apply_transform(trimesh.transformations.rotation_matrix(
+            angle=np.pi/2, direction=[0, 1, 0], point=[0, 0, 0]
+        ))
+        roller.apply_translation([0, y_pos, roller_z])
+        set_mesh_color(roller, COLOR_ROLLER)
+        meshes.append((f'roller_{i}', roller))
+    
+    # 3. 支腿（红色方管）
+    leg_positions = []
+    for i in range(leg_count):
+        y_pos = -length/2 + length/(leg_count-1) * i if leg_count > 1 else 0
+        leg_positions.append(y_pos)
+        
+        # 左腿
+        left_leg = trimesh.creation.box(
+            extents=[40, 40, height - 50]
+        )
+        left_leg.apply_translation([-(width/2 - 60), y_pos, (height - 50)/2])
+        set_mesh_color(left_leg, COLOR_FRAME)
+        meshes.append((f'leg_left_{i}', left_leg))
+        
+        # 右腿
+        right_leg = trimesh.creation.box(
+            extents=[40, 40, height - 50]
+        )
+        right_leg.apply_translation([width/2 - 60, y_pos, (height - 50)/2])
+        set_mesh_color(right_leg, COLOR_FRAME)
+        meshes.append((f'leg_right_{i}', right_leg))
+        
+        # 地脚杯
+        for x_offset in [-(width/2 - 60), width/2 - 60]:
+            foot = trimesh.creation.cylinder(radius=30, height=20)
+            foot.apply_translation([x_offset, y_pos, 10])
+            set_mesh_color(foot, COLOR_FOOT)
+            meshes.append((f'foot_{i}_{"left" if x_offset < 0 else "right"}', foot))
+    
+    # 4. 底部横梁（红色，连接支腿）
+    for y_pos in leg_positions:
+        cross_beam = trimesh.creation.box(
+            extents=[width - 120, 30, 30]
+        )
+        cross_beam.apply_translation([0, y_pos, 100])
+        set_mesh_color(cross_beam, COLOR_FRAME)
+        meshes.append((f'cross_beam_{y_pos}', cross_beam))
+    
+    # 5. 驱动电机（出口端/末端）
+    motor = trimesh.creation.cylinder(radius=50, height=80)
+    motor.apply_transform(trimesh.transformations.rotation_matrix(
+        angle=np.pi/2, direction=[0, 1, 0], point=[0, 0, 0]
+    ))
+    motor.apply_translation([width/2 + 60, length/2 - 100, height/2])
+    set_mesh_color(motor, COLOR_MOTOR)
+    meshes.append(('motor', motor))
+    
+    # 6. 电机安装板
+    motor_plate = trimesh.creation.box(extents=[20, 100, 100])
+    motor_plate.apply_translation([width/2 + 20, length/2 - 100, height/2])
+    set_mesh_color(motor_plate, COLOR_FRAME)
+    meshes.append(('motor_plate', motor_plate))
+    
+    # 7. 传动链条罩（侧面）
+    chain_cover = trimesh.creation.box(
+        extents=[30, length - 200, 40]
+    )
+    chain_cover.apply_translation([width/2 + 15, 0, height - 80])
+    set_mesh_color(chain_cover, [0.3, 0.3, 0.3])
+    meshes.append(('chain_cover', chain_cover))
+    
+    # 使用Scene并应用坐标转换
+    scene = trimesh.Scene()
+    rotation_matrix = trimesh.transformations.rotation_matrix(
+        angle=-np.pi / 2,
+        direction=[1, 0, 0],
+        point=[0, 0, 0]
+    )
+    
+    for name, mesh in meshes:
+        mesh.apply_transform(rotation_matrix)
+        scene.add_geometry(mesh, node_name=name)
+    
+    return scene
+
+
 def main():
     """主函数：生成所有模型"""
     print("=" * 50)
@@ -2930,6 +3058,24 @@ def main():
         }
     }
     metadata_list.append(save_model(curve_conveyor, "conveyor-curve-90degree-600.glb", meta_curve_conveyor))
+    
+    # 生成动力滚筒输送机
+    print("\n📦 生成动力滚筒输送机...")
+    print("  - 红框银筒滚筒输送机...")
+    roller_conveyor = generate_roller_conveyor()
+    meta_roller_conveyor = {
+        "id": "conveyor-roller-straight-600-red",
+        "name": "动力滚筒输送机-直线段（红框银筒）",
+        "category": "conveying",
+        "description": "红框银筒配色，与90度转弯机配套使用，视觉对比强烈",
+        "tags": ["滚筒输送机", "红框银筒", "直线段", "输送线"],
+        "parameters": {
+            "length": {"type": "number", "min": 1000, "max": 4000, "default": 2000, "unit": "mm"},
+            "width": {"type": "number", "min": 400, "max": 800, "default": 600, "unit": "mm"},
+            "height": {"type": "number", "min": 600, "max": 1000, "default": 800, "unit": "mm"}
+        }
+    }
+    metadata_list.append(save_model(roller_conveyor, "conveyor-roller-straight-600-red.glb", meta_roller_conveyor))
     
     # 保存元数据
     print("\n📝 保存元数据...")

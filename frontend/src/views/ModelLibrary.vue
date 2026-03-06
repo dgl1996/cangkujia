@@ -725,6 +725,19 @@ const models = ref([
     },
     modelUrl: '/assets/models/conveyor-curve-90degree-600.glb',
   },
+  {
+    id: 'conveyor-roller-straight-600-red',
+    name: '动力滚筒输送机-直线段（红框银筒）',
+    category: 'conveying',
+    description: '红框银筒配色，与90度转弯机配套使用，视觉对比强烈',
+    tags: ['滚筒输送机', '红框银筒', '直线段', '输送线'],
+    parameters: {
+      length: { type: 'number', min: 1000, max: 4000, default: 2000, unit: 'mm' },
+      width: { type: 'number', min: 400, max: 800, default: 600, unit: 'mm' },
+      height: { type: 'number', min: 600, max: 1000, default: 800, unit: 'mm' },
+    },
+    modelUrl: '/assets/models/conveyor-roller-straight-600-red.glb',
+  },
   // 拣选设备 (E101-E199)
   {
     id: 'putwall-standard-16cell',
