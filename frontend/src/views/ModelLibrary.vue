@@ -342,6 +342,7 @@ const categories = [
   { id: 'sorting', name: '分拨设备', icon: '📍' },
   { id: 'picking', name: '拣选设备', icon: '🎯' },
   { id: 'others', name: '其他设备', icon: '⚙️' },
+  { id: 'personnel', name: '人物模型', icon: '👷' },
 ];
 
 // 模型数据（初始数据，后续从后端或JSON文件加载）
