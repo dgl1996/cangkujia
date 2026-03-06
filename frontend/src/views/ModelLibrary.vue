@@ -711,6 +711,22 @@ const models = ref([
     },
     modelUrl: '/assets/models/lift-cargo-hydraulic-3floor.glb',
   },
+  // 拣选设备 (E101-E199)
+  {
+    id: 'putwall-standard-16cell',
+    name: '电子标签播种墙-16格口',
+    category: 'picking',
+    description: '电商仓订单分拣核心设备，用于货到人后的订单播种作业',
+    tags: ['播种墙', '电子标签', '分拣', '16格口', '电商仓'],
+    parameters: {
+      width: { type: 'number', min: 1200, max: 2000, default: 1600, unit: 'mm' },
+      depth: { type: 'number', min: 400, max: 600, default: 500, unit: 'mm' },
+      height: { type: 'number', min: 1500, max: 2200, default: 1800, unit: 'mm' },
+      rows: { type: 'number', min: 2, max: 6, default: 4 },
+      cols: { type: 'number', min: 2, max: 6, default: 4 },
+    },
+    modelUrl: '/assets/models/putwall-standard-16cell.glb',
+  },
 ]);
 
 // 状态
@@ -750,6 +766,7 @@ const assignShortIds = () => {
     'handling': 101,   // B - 搬运设备
     'containers': 101, // C - 载具容器
     'conveying': 101,  // D - 输送设备
+    'picking': 101,    // E - 拣选设备
   };
 
   const categoryLetters = {
@@ -757,11 +774,12 @@ const assignShortIds = () => {
     'handling': 'B',
     'containers': 'C',
     'conveying': 'D',
+    'picking': 'E',
   };
 
   models.value.forEach((model) => {
     if (!model.shortId) {
-      const letter = categoryLetters[model.category] || 'E';
+      const letter = categoryLetters[model.category] || 'F';
       const counter = categoryCounters[model.category]++;
       model.shortId = `${letter}${counter}`;
     }

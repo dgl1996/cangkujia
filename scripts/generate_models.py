@@ -2120,6 +2120,139 @@ def generate_cargo_lift(cabin_length=1400, cabin_width=1200, total_height=6000):
     return scene
 
 
+def generate_put_wall(width=1600, depth=500, height=1800, rows=4, cols=4):
+    """
+    生成电子标签播种墙（Put Wall / Put-to-Light Wall）
+    电商仓订单分拣核心设备，用于"货到人"后的订单播种作业
+    
+    Args:
+        width: 总宽度
+        depth: 总深度
+        height: 总高度
+        rows: 行数
+        cols: 列数
+    """
+    meshes = []
+    
+    # 颜色定义
+    COLOR_ALUMINUM = [0.9, 0.9, 0.92]     # 铝型材银灰 #E5E7EB
+    COLOR_CELL = [0.29, 0.56, 0.89]       # 格口蓝色 #4A90E2
+    COLOR_PTL = [0.2, 0.2, 0.2]           # PTL标签黑色
+    COLOR_LED_GREEN = [0.2, 0.9, 0.3]     # LED绿灯
+    COLOR_CONTROL = [0.15, 0.15, 0.15]    # 控制箱黑色
+    COLOR_FOOT = [0.8, 0.7, 0.5]          # 地脚杯米色
+    
+    # 尺寸参数
+    frame_profile = 40                      # 铝型材截面40x40
+    cell_width = (width - 100) / cols       # 格口宽度
+    cell_depth = 400                        # 格口深度
+    cell_height = (height - 200) / rows     # 格口高度
+    tilt_angle = 15                         # 倾斜角度（度）
+    
+    # 1. 铝型材框架 - 四根立柱
+    corner_positions = [
+        [-width/2 + frame_profile/2, -depth/2 + frame_profile/2],
+        [width/2 - frame_profile/2, -depth/2 + frame_profile/2],
+        [-width/2 + frame_profile/2, depth/2 - frame_profile/2],
+        [width/2 - frame_profile/2, depth/2 - frame_profile/2]
+    ]
+    
+    for i, (x, y) in enumerate(corner_positions):
+        post = trimesh.creation.box(
+            extents=[frame_profile, frame_profile, height]
+        )
+        post.apply_translation([x, y, height/2])
+        set_mesh_color(post, COLOR_ALUMINUM)
+        meshes.append((f'post_{i}', post))
+        
+        # 地脚杯
+        foot = trimesh.creation.cylinder(radius=30, height=40)
+        foot.apply_translation([x, y, 20])
+        set_mesh_color(foot, COLOR_FOOT)
+        meshes.append((f'foot_{i}', foot))
+    
+    # 2. 水平横梁（每层）
+    for row in range(rows + 1):
+        z_pos = 100 + row * cell_height
+        # 前横梁
+        front_beam = trimesh.creation.box(
+            extents=[width, frame_profile, frame_profile]
+        )
+        front_beam.apply_translation([0, -depth/2 + frame_profile/2, z_pos])
+        set_mesh_color(front_beam, COLOR_ALUMINUM)
+        meshes.append((f'beam_front_{row}', front_beam))
+        
+        # 后横梁
+        back_beam = trimesh.creation.box(
+            extents=[width, frame_profile, frame_profile]
+        )
+        back_beam.apply_translation([0, depth/2 - frame_profile/2, z_pos])
+        set_mesh_color(back_beam, COLOR_ALUMINUM)
+        meshes.append((f'beam_back_{row}', back_beam))
+    
+    # 3. 格口（倾斜的塑料箱）
+    for row in range(rows):
+        for col in range(cols):
+            x_pos = -width/2 + 50 + cell_width/2 + col * cell_width
+            z_pos = 100 + row * cell_height + cell_height/2
+            
+            # 格口箱体（倾斜）
+            cell = trimesh.creation.box(
+                extents=[cell_width - 10, cell_depth, cell_height - 10]
+            )
+            
+            # 应用倾斜（绕X轴旋转）
+            tilt_rad = np.radians(tilt_angle)
+            cell.apply_transform(trimesh.transformations.rotation_matrix(
+                angle=tilt_rad, direction=[1, 0, 0], point=[0, 0, 0]
+            ))
+            
+            # 定位（前低后高）
+            y_offset = -depth/2 + cell_depth/2 + 50
+            z_offset = z_pos - cell_height/2 * np.sin(tilt_rad)
+            cell.apply_translation([x_pos, y_offset, z_pos])
+            set_mesh_color(cell, COLOR_CELL)
+            meshes.append((f'cell_{row}_{col}', cell))
+            
+            # 4. PTL电子标签（每个格口前面）
+            ptl = trimesh.creation.box(extents=[cell_width - 20, 5, 25])
+            ptl.apply_translation([x_pos, -depth/2 + 10, z_pos + cell_height/2 - 30])
+            set_mesh_color(ptl, COLOR_PTL)
+            meshes.append((f'ptl_{row}_{col}', ptl))
+            
+            # LED指示灯（绿色圆点）
+            led = trimesh.creation.cylinder(radius=6, height=3)
+            led.apply_translation([x_pos - cell_width/3, -depth/2 + 8, z_pos + cell_height/2 - 30])
+            set_mesh_color(led, COLOR_LED_GREEN)
+            meshes.append((f'led_{row}_{col}', led))
+    
+    # 5. 顶部控制箱
+    control_box = trimesh.creation.box(extents=[300, 150, 80])
+    control_box.apply_translation([0, 0, height + 40])
+    set_mesh_color(control_box, COLOR_CONTROL)
+    meshes.append(('control_box', control_box))
+    
+    # 6. 侧面显示屏
+    screen = trimesh.creation.box(extents=[10, 200, 150])
+    screen.apply_translation([width/2 + 5, 0, height/2])
+    set_mesh_color(screen, [0.1, 0.1, 0.1])
+    meshes.append(('screen', screen))
+    
+    # 使用Scene并应用坐标转换
+    scene = trimesh.Scene()
+    rotation_matrix = trimesh.transformations.rotation_matrix(
+        angle=-np.pi / 2,
+        direction=[1, 0, 0],
+        point=[0, 0, 0]
+    )
+    
+    for name, mesh in meshes:
+        mesh.apply_transform(rotation_matrix)
+        scene.add_geometry(mesh, node_name=name)
+    
+    return scene
+
+
 def main():
     """主函数：生成所有模型"""
     print("=" * 50)
@@ -2554,6 +2687,26 @@ def main():
         }
     }
     metadata_list.append(save_model(cargo_lift, "lift-cargo-hydraulic-3floor.glb", meta_cargo_lift))
+    
+    # 生成播种墙
+    print("\n🧱 生成播种墙...")
+    print("  - 电子标签播种墙 16格口...")
+    put_wall = generate_put_wall()
+    meta_put_wall = {
+        "id": "putwall-standard-16cell",
+        "name": "电子标签播种墙-16格口",
+        "category": "picking",
+        "description": "电商仓订单分拣核心设备，用于货到人后的订单播种作业",
+        "tags": ["播种墙", "电子标签", "分拣", "16格口", "电商仓"],
+        "parameters": {
+            "width": {"type": "number", "min": 1200, "max": 2000, "default": 1600, "unit": "mm"},
+            "depth": {"type": "number", "min": 400, "max": 600, "default": 500, "unit": "mm"},
+            "height": {"type": "number", "min": 1500, "max": 2200, "default": 1800, "unit": "mm"},
+            "rows": {"type": "number", "min": 2, "max": 6, "default": 4},
+            "cols": {"type": "number", "min": 2, "max": 6, "default": 4}
+        }
+    }
+    metadata_list.append(save_model(put_wall, "putwall-standard-16cell.glb", meta_put_wall))
     
     # 保存元数据
     print("\n📝 保存元数据...")
