@@ -25,7 +25,7 @@
             :class="{ active: currentCategory === category.id }"
             @click="selectCategory(category.id)"
           >
-            <span class="category-icon">{{ category.icon }}</span>
+            <component :is="category.icon" class="category-icon" :size="20" />
             <span class="category-name">{{ category.name }}</span>
             <span class="category-count">{{ getModelCount(category.id) }}</span>
           </div>
@@ -37,17 +37,17 @@
         <!-- 搜索和筛选 -->
         <div class="toolbar">
           <div class="search-box">
+            <Search class="search-icon" :size="18" />
             <input
               v-model="searchQuery"
               type="text"
               placeholder="搜索模型..."
               class="search-input"
             />
-            <span class="search-icon">🔍</span>
           </div>
           <div class="toolbar-actions">
             <button class="btn-custom-shelf" @click="openCustomShelfModal">
-              <span class="btn-icon">➕</span>
+              <Plus class="btn-icon" :size="18" />
               <span>自定义货架</span>
             </button>
           </div>
@@ -81,7 +81,7 @@
                   :alt="model.name"
                   class="model-thumbnail"
                 />
-                <span v-else class="preview-icon">{{ getCategoryIcon(model.category) }}</span>
+                <component v-else :is="getCategoryIcon(model.category)" class="preview-icon" :size="48" />
                 <div class="preview-overlay">
                   <span class="preview-text">点击预览</span>
                 </div>
@@ -109,7 +109,9 @@
       <div class="preview-content" @click.stop>
         <div class="preview-header">
           <h3>{{ selectedModel?.name }}</h3>
-          <button class="btn-close" @click="closePreview">×</button>
+          <button class="btn-close" @click="closePreview">
+            <X :size="20" />
+          </button>
         </div>
         <div class="preview-body">
           <div class="preview-3d">
@@ -120,7 +122,7 @@
               :customColors="selectedModel?.customColors"
             />
             <div class="preview-hint">
-              <span class="hint-icon">🖱️</span>
+              <Eye class="hint-icon" :size="16" />
               <span class="hint-text">滚轮放大 / 左键旋转查看</span>
             </div>
           </div>
@@ -165,7 +167,9 @@
       <div class="preview-content custom-shelf-modal" @click.stop>
         <div class="preview-header">
           <h3>自定义横梁式货架</h3>
-          <button class="btn-close" @click="closeCustomShelfModal">×</button>
+          <button class="btn-close" @click="closeCustomShelfModal">
+            <X :size="20" />
+          </button>
         </div>
         <div class="preview-body">
           <div class="form-section">
@@ -329,20 +333,48 @@
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import ModelPreview from '../components/3d/ModelPreview.vue';
+import {
+  LayoutGrid,
+  Warehouse,
+  Forklift,
+  Package,
+  MoveRight,
+  ArrowLeftRight,
+  Target,
+  Settings,
+  Users,
+  Search,
+  Plus,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  Trash2,
+  Save,
+  RotateCcw,
+  Box,
+  Layers,
+  Container,
+  ConveyerBelt,
+  ScanLine,
+  UserCog,
+  Shield,
+  AlertTriangle
+} from 'lucide-vue-next';
 
 const router = useRouter();
 
-// 分类数据
+// 分类数据（使用 Lucide 图标组件）
 const categories = [
-  { id: 'all', name: '全部模型', icon: '📦' },
-  { id: 'storage', name: '货架系统', icon: '🏗️' },
-  { id: 'handling', name: '搬运设备', icon: '🚛' },
-  { id: 'containers', name: '载具容器', icon: '📦' },
-  { id: 'conveying', name: '输送设备', icon: '🔄' },
-  { id: 'sorting', name: '分拨设备', icon: '📍' },
-  { id: 'picking', name: '拣选设备', icon: '🎯' },
-  { id: 'others', name: '其他设备', icon: '⚙️' },
-  { id: 'personnel', name: '人物模型', icon: '👷' },
+  { id: 'all', name: '全部模型', icon: LayoutGrid },
+  { id: 'storage', name: '货架系统', icon: Warehouse },
+  { id: 'handling', name: '搬运设备', icon: Forklift },
+  { id: 'containers', name: '载具容器', icon: Package },
+  { id: 'conveying', name: '输送设备', icon: MoveRight },
+  { id: 'sorting', name: '分拨设备', icon: ArrowLeftRight },
+  { id: 'picking', name: '拣选设备', icon: Target },
+  { id: 'others', name: '其他设备', icon: Settings },
+  { id: 'personnel', name: '人物模型', icon: Users },
 ];
 
 // 模型数据（初始数据，后续从后端或JSON文件加载）
@@ -1101,7 +1133,7 @@ const getModelCount = (categoryId) => {
 
 const getCategoryIcon = (categoryId) => {
   const category = categories.find(c => c.id === categoryId);
-  return category?.icon || '📦';
+  return category?.icon || LayoutGrid;
 };
 
 const getParamLabel = (key) => {
