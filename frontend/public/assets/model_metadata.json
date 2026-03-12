@@ -107,7 +107,7 @@
   {
     "id": "shelf-beam-heavy",
     "name": "重型横梁式货架",
-    "category": "storage",
+    "category": "heavy-shelf",
     "description": "适用于重型货物存储，单层承重2000kg",
     "tags": [
       "重型",
@@ -148,7 +148,7 @@
   {
     "id": "shelf-beam-medium",
     "name": "中型横梁式货架",
-    "category": "storage",
+    "category": "medium-shelf",
     "description": "适用于中型货物存储，单层承重500kg",
     "tags": [
       "中型",
@@ -189,7 +189,7 @@
   {
     "id": "shelf-drive-in",
     "name": "驶入式货架",
-    "category": "storage",
+    "category": "other-shelf",
     "description": "高密度存储，适合大批量同类型货物",
     "tags": [
       "高密度",
@@ -229,51 +229,114 @@
     "filename": "shelf-drive-in.glb"
   },
   {
-    "id": "shelf-light-v2",
-    "name": "轻型货架 V2",
-    "category": "storage",
-    "description": "基于参考图片改进的轻型货架，蓝色立柱配橙色横梁",
-    "tags": [
-      "轻型",
-      "横梁式",
-      "蓝色立柱",
-      "橙色横梁"
-    ],
+    "id": "light-duty-A15-4",
+    "name": "4层轻型货架-L1.5xD0.4xH2.0",
+    "category": "light-shelf",
+    "description": "标准4层轻型搁板式货架，适合3米以下仓库，人工存取轻型货物，单层层载300-800kg，层高600mm，顶层配5cm挡板",
+    "tags": ["轻型货架", "搁板式", "人工存取", "A15系列"],
     "parameters": {
-      "length": {
-        "type": "number",
-        "min": 800,
-        "max": 2000,
-        "default": 1200,
-        "unit": "mm"
-      },
-      "width": {
-        "type": "number",
-        "min": 300,
-        "max": 600,
-        "default": 400,
-        "unit": "mm"
-      },
-      "height": {
-        "type": "number",
-        "min": 1500,
-        "max": 3000,
-        "default": 2000,
-        "unit": "mm"
-      },
-      "levels": {
-        "type": "number",
-        "min": 2,
-        "max": 6,
-        "default": 4
-      }
+      "长度": { "type": "number", "min": 1500, "max": 1500, "default": 1500, "unit": "mm" },
+      "深度": { "type": "number", "min": 400, "max": 400, "default": 400, "unit": "mm" },
+      "高度": { "type": "number", "min": 2000, "max": 2000, "default": 2000, "unit": "mm" },
+      "层数": { "type": "number", "min": 4, "max": 4, "default": 4, "unit": "层" },
+      "层载重": { "type": "number", "min": 300, "max": 800, "default": 500, "unit": "kg" },
+      "标准层高": { "type": "number", "min": 600, "max": 600, "default": 600, "unit": "mm" },
+      "层板厚度": { "type": "number", "min": 20, "max": 20, "default": 20, "unit": "mm" },
+      "适配净高": { "type": "string", "default": "3米以下" },
+      "立柱颜色": { "type": "color", "default": "#B0C4DE" },
+      "横梁颜色": { "type": "color", "default": "#FF4500" },
+      "层板颜色": { "type": "color", "default": "#FFFFFF" }
     },
-    "filename": "shelf-light-v2.glb"
+    "filename": "light-duty-A15-4.glb"
+  },
+  {
+    "id": "light-duty-A15-5",
+    "name": "5层轻型货架-L1.5xD0.4xH2.0",
+    "category": "light-shelf",
+    "description": "标准5层轻型搁板式货架，适合3米以下仓库，1-4层标准层高600mm，顶层5cm挡板设计，总高2米空间利用率高",
+    "tags": ["轻型货架", "搁板式", "人工存取", "A15系列", "高密度"],
+    "parameters": {
+      "长度": { "type": "number", "min": 1500, "max": 1500, "default": 1500, "unit": "mm" },
+      "深度": { "type": "number", "min": 400, "max": 400, "default": 400, "unit": "mm" },
+      "高度": { "type": "number", "min": 2000, "max": 2000, "default": 2000, "unit": "mm" },
+      "层数": { "type": "number", "min": 5, "max": 5, "default": 5, "unit": "层" },
+      "层载重": { "type": "number", "min": 300, "max": 800, "default": 500, "unit": "kg" },
+      "标准层高": { "type": "number", "min": 600, "max": 600, "default": 600, "unit": "mm" },
+      "层板厚度": { "type": "number", "min": 20, "max": 20, "default": 20, "unit": "mm" },
+      "适配净高": { "type": "string", "default": "3米以下" },
+      "立柱颜色": { "type": "color", "default": "#B0C4DE" },
+      "横梁颜色": { "type": "color", "default": "#FF4500" },
+      "层板颜色": { "type": "color", "default": "#FFFFFF" }
+    },
+    "filename": "light-duty-A15-5.glb"
+  },
+  {
+    "id": "light-duty-A20-4",
+    "name": "4层轻型货架-L2.0xD0.6xH2.0",
+    "category": "light-shelf",
+    "description": "加宽型4层轻型货架，长度2米深度600mm，适合存放较大周转箱，3米以下仓库适用，单排或背靠背摆放",
+    "tags": ["轻型货架", "搁板式", "人工存取", "A20系列", "宽型"],
+    "parameters": {
+      "长度": { "type": "number", "min": 2000, "max": 2000, "default": 2000, "unit": "mm" },
+      "深度": { "type": "number", "min": 600, "max": 600, "default": 600, "unit": "mm" },
+      "高度": { "type": "number", "min": 2000, "max": 2000, "default": 2000, "unit": "mm" },
+      "层数": { "type": "number", "min": 4, "max": 4, "default": 4, "unit": "层" },
+      "层载重": { "type": "number", "min": 300, "max": 800, "default": 500, "unit": "kg" },
+      "标准层高": { "type": "number", "min": 600, "max": 600, "default": 600, "unit": "mm" },
+      "层板厚度": { "type": "number", "min": 20, "max": 20, "default": 20, "unit": "mm" },
+      "适配净高": { "type": "string", "default": "3米以下" },
+      "立柱颜色": { "type": "color", "default": "#B0C4DE" },
+      "横梁颜色": { "type": "color", "default": "#FF4500" },
+      "层板颜色": { "type": "color", "default": "#FFFFFF" }
+    },
+    "filename": "light-duty-A20-4.glb"
+  },
+  {
+    "id": "light-duty-A20-5",
+    "name": "5层轻型货架-L2.0xD0.6xH2.5",
+    "category": "light-shelf",
+    "description": "加高加宽5层轻型货架，总高2.5米，适合存放更多SKU，1-4层标准层高600mm，适合3米以下仓库使用",
+    "tags": ["轻型货架", "搁板式", "人工存取", "A20系列", "加高型"],
+    "parameters": {
+      "长度": { "type": "number", "min": 2000, "max": 2000, "default": 2000, "unit": "mm" },
+      "深度": { "type": "number", "min": 600, "max": 600, "default": 600, "unit": "mm" },
+      "高度": { "type": "number", "min": 2500, "max": 2500, "default": 2500, "unit": "mm" },
+      "层数": { "type": "number", "min": 5, "max": 5, "default": 5, "unit": "层" },
+      "层载重": { "type": "number", "min": 300, "max": 800, "default": 500, "unit": "kg" },
+      "标准层高": { "type": "number", "min": 600, "max": 600, "default": 600, "unit": "mm" },
+      "层板厚度": { "type": "number", "min": 20, "max": 20, "default": 20, "unit": "mm" },
+      "适配净高": { "type": "string", "default": "3米以下" },
+      "立柱颜色": { "type": "color", "default": "#B0C4DE" },
+      "横梁颜色": { "type": "color", "default": "#FF4500" },
+      "层板颜色": { "type": "color", "default": "#FFFFFF" }
+    },
+    "filename": "light-duty-A20-5.glb"
+  },
+  {
+    "id": "light-duty-A20-6",
+    "name": "6层轻型货架-L2.0xD0.6xH3.0",
+    "category": "light-shelf",
+    "description": "超高密度6层轻型货架，总高3米，1-5层标准层高600mm，顶层5cm挡板，适合4米以下仓库，最大化存储密度",
+    "tags": ["轻型货架", "搁板式", "人工存取", "A20系列", "高密度", "6层"],
+    "parameters": {
+      "长度": { "type": "number", "min": 2000, "max": 2000, "default": 2000, "unit": "mm" },
+      "深度": { "type": "number", "min": 600, "max": 600, "default": 600, "unit": "mm" },
+      "高度": { "type": "number", "min": 3000, "max": 3000, "default": 3000, "unit": "mm" },
+      "层数": { "type": "number", "min": 6, "max": 6, "default": 6, "unit": "层" },
+      "层载重": { "type": "number", "min": 300, "max": 800, "default": 500, "unit": "kg" },
+      "标准层高": { "type": "number", "min": 600, "max": 600, "default": 600, "unit": "mm" },
+      "层板厚度": { "type": "number", "min": 20, "max": 20, "default": 20, "unit": "mm" },
+      "适配净高": { "type": "string", "default": "4米以下" },
+      "立柱颜色": { "type": "color", "default": "#B0C4DE" },
+      "横梁颜色": { "type": "color", "default": "#FF4500" },
+      "层板颜色": { "type": "color", "default": "#FFFFFF" }
+    },
+    "filename": "light-duty-A20-6.glb"
   },
   {
     "id": "shelf-beam-heavy-3level-5m",
     "name": "重型横梁式货架-3层中高位",
-    "category": "storage",
+    "category": "heavy-shelf",
     "description": "适配净空5.5m仓库，单层高承重2吨，适合重货存储",
     "tags": [
       "重型",
@@ -315,7 +378,7 @@
   {
     "id": "shelf-beam-heavy-4level-6m",
     "name": "重型横梁式货架-4层标准库",
-    "category": "storage",
+    "category": "heavy-shelf",
     "description": "适配净空7m仓库，电商仓最常用规格，平衡型设计",
     "tags": [
       "重型",
@@ -357,7 +420,7 @@
   {
     "id": "shelf-beam-heavy-5level-8m",
     "name": "重型横梁式货架-5层高位立体库",
-    "category": "storage",
+    "category": "heavy-shelf",
     "description": "适配净空9m仓库，高位立体库专用，需要前移式叉车",
     "tags": [
       "重型",
@@ -399,7 +462,7 @@
   {
     "id": "shelf-beam-medium-4level-2m",
     "name": "中型横梁式货架-4层人工拣选",
-    "category": "storage",
+    "category": "medium-shelf",
     "description": "人工存取极限（配合2步登高梯），适配层高2.5m仓库",
     "tags": [
       "中型",
@@ -441,7 +504,7 @@
   {
     "id": "shelf-beam-medium-5level-2m",
     "name": "中型横梁式货架-5层高密度拣选",
-    "category": "storage",
+    "category": "medium-shelf",
     "description": "高密度人工仓，层高2.5m极限，适合小件拣选",
     "tags": [
       "中型",
@@ -480,94 +543,12 @@
     },
     "filename": "shelf-beam-medium-5level-2m.glb"
   },
-  {
-    "id": "shelf-beam-light-4level-2m",
-    "name": "轻型横梁式货架-4层标准",
-    "category": "storage",
-    "description": "便利店后仓、办公室文件、轻型商品存储",
-    "tags": [
-      "轻型",
-      "4层",
-      "标准",
-      "人工存取"
-    ],
-    "parameters": {
-      "length": {
-        "type": "number",
-        "min": 800,
-        "max": 1500,
-        "default": 1200,
-        "unit": "mm"
-      },
-      "width": {
-        "type": "number",
-        "min": 300,
-        "max": 500,
-        "default": 400,
-        "unit": "mm"
-      },
-      "height": {
-        "type": "number",
-        "min": 1500,
-        "max": 2500,
-        "default": 2000,
-        "unit": "mm"
-      },
-      "levels": {
-        "type": "number",
-        "min": 2,
-        "max": 5,
-        "default": 4
-      }
-    },
-    "filename": "shelf-beam-light-4level.glb"
-  },
-  {
-    "id": "shelf-beam-light-5level-2m",
-    "name": "轻型横梁式货架-5层宽型",
-    "category": "storage",
-    "description": "电商小件仓、配件仓、图书档案、多SKU轻货",
-    "tags": [
-      "轻型",
-      "5层",
-      "宽型",
-      "高密度"
-    ],
-    "parameters": {
-      "length": {
-        "type": "number",
-        "min": 800,
-        "max": 1500,
-        "default": 1200,
-        "unit": "mm"
-      },
-      "width": {
-        "type": "number",
-        "min": 400,
-        "max": 600,
-        "default": 500,
-        "unit": "mm"
-      },
-      "height": {
-        "type": "number",
-        "min": 1500,
-        "max": 2500,
-        "default": 2000,
-        "unit": "mm"
-      },
-      "levels": {
-        "type": "number",
-        "min": 3,
-        "max": 6,
-        "default": 5
-      }
-    },
-    "filename": "shelf-beam-light-5level.glb"
-  },
+
+
   {
     "id": "shelf-flow-4level-1m8",
     "name": "流利式货架-4层拣选",
-    "category": "storage",
+    "category": "other-shelf",
     "description": "先进先出(FIFO)拣选作业，配送中心产线旁供料",
     "tags": [
       "流利式",

@@ -50,18 +50,12 @@
               <Plus class="btn-icon" :size="18" />
               <span>自定义货架</span>
             </button>
+            <button class="btn-custom-wall" @click="openCustomWallModal">
+              <Plus class="btn-icon" :size="18" />
+              <span>自定义墙体</span>
+            </button>
           </div>
-          <div class="filter-tags">
-            <span
-              v-for="tag in currentTags"
-              :key="tag"
-              class="filter-tag"
-              :class="{ active: selectedTags.includes(tag) }"
-              @click="toggleTag(tag)"
-            >
-              {{ tag }}
-            </span>
-          </div>
+
         </div>
 
         <!-- 模型网格 -->
@@ -326,6 +320,94 @@
         </div>
       </div>
     </div>
+
+    <!-- 自定义墙体弹窗 -->
+    <div v-if="showCustomWallModal" class="preview-modal" @click="closeCustomWallModal">
+      <div class="preview-content custom-wall-modal" @click.stop>
+        <div class="preview-header">
+          <h3>自定义半透明墙体</h3>
+          <button class="btn-close" @click="closeCustomWallModal">
+            <X :size="20" />
+          </button>
+        </div>
+        <div class="preview-body">
+          <div class="form-section">
+            <h4>墙体尺寸</h4>
+            <div class="form-row">
+              <div class="form-group">
+                <label>长度 (mm)</label>
+                <input
+                  v-model.number="customWallParams.length"
+                  type="number"
+                  min="1000"
+                  max="50000"
+                  step="1000"
+                  class="form-input"
+                />
+                <input
+                  v-model.number="customWallParams.length"
+                  type="range"
+                  min="1000"
+                  max="50000"
+                  step="1000"
+                  class="form-slider"
+                />
+                <span class="form-hint">{{ customWallParams.length / 1000 }}米</span>
+              </div>
+              <div class="form-group">
+                <label>高度 (mm)</label>
+                <input
+                  v-model.number="customWallParams.height"
+                  type="number"
+                  min="2000"
+                  max="15000"
+                  step="500"
+                  class="form-input"
+                />
+                <input
+                  v-model.number="customWallParams.height"
+                  type="range"
+                  min="2000"
+                  max="15000"
+                  step="500"
+                  class="form-slider"
+                />
+                <span class="form-hint">{{ customWallParams.height / 1000 }}米</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h4>墙体名称</h4>
+            <div class="form-group">
+              <input
+                v-model="customWallParams.name"
+                type="text"
+                placeholder="输入自定义墙体名称"
+                class="form-input name-input"
+              />
+            </div>
+          </div>
+
+          <!-- 实时预览 -->
+          <div class="preview-section">
+            <h4>实时预览</h4>
+            <div class="preview-info">
+              <span>尺寸: {{ customWallParams.length }}×200×{{ customWallParams.height }}mm</span>
+              <span>颜色: 淡青灰色调 (#E0F2F1)</span>
+              <span>透明度: 70%通透</span>
+              <span>风格: 草图大师纯色描边</span>
+            </div>
+          </div>
+        </div>
+        <div class="preview-footer">
+          <button class="btn-secondary" @click="closeCustomWallModal">取消</button>
+          <button class="btn-primary" @click="saveCustomWall" :disabled="!customWallParams.name">
+            保存到对象库
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -354,7 +436,11 @@ const router = useRouter();
 // 分类数据（使用 Lucide 图标组件）
 const categories = [
   { id: 'all', name: '全部模型', icon: LayoutGrid },
-  { id: 'storage', name: '货架系统', icon: Warehouse },
+  { id: 'facility', name: '仓库附属设施', icon: Warehouse },
+  { id: 'light-shelf', name: '轻型货架', icon: Warehouse },
+  { id: 'medium-shelf', name: '中型货架', icon: Warehouse },
+  { id: 'heavy-shelf', name: '高位货架', icon: Warehouse },
+  { id: 'other-shelf', name: '其他货架', icon: Warehouse },
   { id: 'handling', name: '搬运设备', icon: Forklift },
   { id: 'containers', name: '载具容器', icon: Package },
   { id: 'conveying', name: '输送设备', icon: MoveRight },
@@ -366,12 +452,80 @@ const categories = [
 
 // 模型数据（初始数据，后续从后端或JSON文件加载）
 const models = ref([
+  // 仓库附属设施 (F001-F099)
+  {
+    id: 'door-warehouse-standard',
+    shortId: 'F001',
+    name: '仓库标准门',
+    category: 'facility',
+    description: '仓库常用标准门，适用于人员进出和货物搬运',
+    tags: ['门', '标准', '仓库设施'],
+    parameters: {
+      width: { type: 'number', min: 800, max: 2000, default: 1200, unit: 'mm' },
+      height: { type: 'number', min: 2000, max: 3000, default: 2400, unit: 'mm' },
+    },
+    modelUrl: '/assets/models/door-warehouse-standard.glb',
+  },
+  {
+    id: 'window-warehouse-standard',
+    shortId: 'F002',
+    name: '仓库标准窗',
+    category: 'facility',
+    description: '仓库采光标准窗，提供自然光照',
+    tags: ['窗', '标准', '仓库设施'],
+    parameters: {
+      width: { type: 'number', min: 600, max: 1500, default: 1000, unit: 'mm' },
+      height: { type: 'number', min: 600, max: 1500, default: 1000, unit: 'mm' },
+    },
+    modelUrl: '/assets/models/window-warehouse-standard.glb',
+  },
+  {
+    id: 'wall-warehouse-perimeter-glass',
+    shortId: 'F003',
+    name: '仓库外围墙体-半透明',
+    category: 'facility',
+    description: '长10m标准段，厚200mm，高8m',
+    tags: ['墙体', '玻璃幕墙', '半透明', '仓库设施', '草图风格', '边界界定'],
+    parameters: {
+      length: { type: 'number', min: 5000, max: 20000, default: 10000, unit: 'mm' },
+      width: { type: 'number', min: 100, max: 500, default: 200, unit: 'mm' },
+      height: { type: 'number', min: 3000, max: 12000, default: 8000, unit: 'mm' },
+    },
+    modelUrl: '/assets/models/wall-warehouse-perimeter-glass.glb',
+  },
+  {
+    id: 'door-industrial-sectional-4m',
+    shortId: 'F004',
+    name: '工业滑升门-标准4米',
+    category: 'facility',
+    description: '4米宽、4.2米高',
+    tags: ['门', '滑升门', '工业门', '仓库设施', '装卸月台'],
+    parameters: {
+      openingWidth: { type: 'number', min: 3000, max: 6000, default: 4000, unit: 'mm' },
+      openingHeight: { type: 'number', min: 3000, max: 6000, default: 4200, unit: 'mm' },
+    },
+    modelUrl: '/assets/models/door-industrial-sectional-4m.glb',
+  },
+  {
+    id: 'window-industrial-awning-2m',
+    shortId: 'F005',
+    name: '工业采光窗-上悬式',
+    category: 'facility',
+    description: '宽2m×高1.2m、离地2m',
+    tags: ['窗', '采光窗', '上悬窗', '仓库设施', '通风'],
+    parameters: {
+      frameWidth: { type: 'number', min: 1000, max: 3000, default: 2000, unit: 'mm' },
+      frameHeight: { type: 'number', min: 600, max: 2000, default: 1200, unit: 'mm' },
+      installationHeight: { type: 'number', min: 800, max: 4000, default: 2000, unit: 'mm' },
+    },
+    modelUrl: '/assets/models/window-industrial-awning-2m.glb',
+  },
   // 货架系统 (A101-A199)
   {
     id: 'shelf-beam-heavy',
     shortId: 'A101',
     name: '重型横梁式货架',
-    category: 'storage',
+    category: 'heavy-shelf',
     description: '适用于重型货物存储，单层承重2000kg',
     tags: ['重型', '横梁式', '可调节'],
     parameters: {
@@ -386,7 +540,7 @@ const models = ref([
     id: 'shelf-beam-medium',
     shortId: 'A102',
     name: '横梁式货架-中型4层（L2000*D800*H3500）',
-    category: 'storage',
+    category: 'medium-shelf',
     description: '适用于中型货物存储，单层承重500kg',
     tags: ['中型', '横梁式', '标准'],
     parameters: {
@@ -401,7 +555,7 @@ const models = ref([
     id: 'shelf-drive-in',
     shortId: 'A103',
     name: '驶入式货架-重型（L3600*D1500*H6000）',
-    category: 'storage',
+    category: 'other-shelf',
     description: '高密度存储，适合大批量同类型货物',
     tags: ['高密度', '驶入式', '冷链'],
     parameters: {
@@ -416,7 +570,7 @@ const models = ref([
     id: 'shelf-flow-4level-1m8',
     shortId: 'A104',
     name: '流利式货架-4层拣选（L900*D450*H1800）',
-    category: 'storage',
+    category: 'other-shelf',
     description: '先进先出(FIFO)拣选作业，配送中心产线旁供料，带5度倾斜流利条',
     tags: ['流利式', '4层', 'FIFO', '拣选', '薄荷绿'],
     parameters: {
@@ -427,27 +581,124 @@ const models = ref([
     },
     modelUrl: '/assets/models/shelf-flow-4level.glb',
   },
+  // A15系列轻型货架
   {
-    id: 'shelf-light-v2',
-    shortId: 'A105',
-    name: '横梁式货架-轻型4层（L1200*D400*H2000）',
-    category: 'storage',
-    description: '基于参考图片改进的轻型货架，蓝色立柱配橙色横梁',
-    tags: ['轻型', '横梁式', '蓝色立柱', '橙色横梁'],
+    id: 'light-duty-A15-4',
+    shortId: 'A104',
+    name: '4层轻型货架-L1.5xD0.4xH2.0',
+    category: 'light-shelf',
+    description: '标准4层轻型搁板式货架，适合3米以下仓库，人工存取轻型货物，单层层载300-800kg，层高600mm，顶层配5cm挡板',
+    tags: ['轻型货架', '搁板式', '人工存取', 'A15系列'],
     parameters: {
-      length: { type: 'number', min: 800, max: 2000, default: 1200, unit: 'mm' },
-      width: { type: 'number', min: 300, max: 600, default: 400, unit: 'mm' },
-      height: { type: 'number', min: 1500, max: 3000, default: 2000, unit: 'mm' },
-      levels: { type: 'number', min: 2, max: 6, default: 4 },
+      长度: { type: 'number', min: 1500, max: 1500, default: 1500, unit: 'mm' },
+      深度: { type: 'number', min: 400, max: 400, default: 400, unit: 'mm' },
+      高度: { type: 'number', min: 2000, max: 2000, default: 2000, unit: 'mm' },
+      层数: { type: 'number', min: 4, max: 4, default: 4, unit: '层' },
+      层载重: { type: 'number', min: 300, max: 800, default: 500, unit: 'kg' },
+      标准层高: { type: 'number', min: 600, max: 600, default: 600, unit: 'mm' },
+      层板厚度: { type: 'number', min: 20, max: 20, default: 20, unit: 'mm' },
+      适配净高: { type: 'string', default: '3米以下' },
+      立柱颜色: { type: 'color', default: '#B0C4DE' },
+      横梁颜色: { type: 'color', default: '#FF4500' },
+      层板颜色: { type: 'color', default: '#FFFFFF' },
     },
-    modelUrl: '/assets/models/shelf-light-v2.glb',
+    modelUrl: '/assets/models/light-duty-A15-4.glb',
+  },
+  {
+    id: 'light-duty-A15-5',
+    shortId: 'A105',
+    name: '5层轻型货架-L1.5xD0.4xH2.0',
+    category: 'light-shelf',
+    description: '标准5层轻型搁板式货架，适合3米以下仓库，1-4层标准层高600mm，顶层5cm挡板设计，总高2米空间利用率高',
+    tags: ['轻型货架', '搁板式', '人工存取', 'A15系列', '高密度'],
+    parameters: {
+      长度: { type: 'number', min: 1500, max: 1500, default: 1500, unit: 'mm' },
+      深度: { type: 'number', min: 400, max: 400, default: 400, unit: 'mm' },
+      高度: { type: 'number', min: 2000, max: 2000, default: 2000, unit: 'mm' },
+      层数: { type: 'number', min: 5, max: 5, default: 5, unit: '层' },
+      层载重: { type: 'number', min: 300, max: 800, default: 500, unit: 'kg' },
+      标准层高: { type: 'number', min: 600, max: 600, default: 600, unit: 'mm' },
+      层板厚度: { type: 'number', min: 20, max: 20, default: 20, unit: 'mm' },
+      适配净高: { type: 'string', default: '3米以下' },
+      立柱颜色: { type: 'color', default: '#B0C4DE' },
+      横梁颜色: { type: 'color', default: '#FF4500' },
+      层板颜色: { type: 'color', default: '#FFFFFF' },
+    },
+    modelUrl: '/assets/models/light-duty-A15-5.glb',
+  },
+  // A20系列轻型货架（加宽型）
+  {
+    id: 'light-duty-A20-4',
+    shortId: 'A106',
+    name: '4层轻型货架-L2.0xD0.6xH2.0',
+    category: 'light-shelf',
+    description: '加宽型4层轻型货架，长度2米深度600mm，适合存放较大周转箱，3米以下仓库适用，单排或背靠背摆放',
+    tags: ['轻型货架', '搁板式', '人工存取', 'A20系列', '宽型'],
+    parameters: {
+      长度: { type: 'number', min: 2000, max: 2000, default: 2000, unit: 'mm' },
+      深度: { type: 'number', min: 600, max: 600, default: 600, unit: 'mm' },
+      高度: { type: 'number', min: 2000, max: 2000, default: 2000, unit: 'mm' },
+      层数: { type: 'number', min: 4, max: 4, default: 4, unit: '层' },
+      层载重: { type: 'number', min: 300, max: 800, default: 500, unit: 'kg' },
+      标准层高: { type: 'number', min: 600, max: 600, default: 600, unit: 'mm' },
+      层板厚度: { type: 'number', min: 20, max: 20, default: 20, unit: 'mm' },
+      适配净高: { type: 'string', default: '3米以下' },
+      立柱颜色: { type: 'color', default: '#B0C4DE' },
+      横梁颜色: { type: 'color', default: '#FF4500' },
+      层板颜色: { type: 'color', default: '#FFFFFF' },
+    },
+    modelUrl: '/assets/models/light-duty-A20-4.glb',
+  },
+  {
+    id: 'light-duty-A20-5',
+    shortId: 'A107',
+    name: '5层轻型货架-L2.0xD0.6xH2.5',
+    category: 'light-shelf',
+    description: '加高加宽5层轻型货架，总高2.5米，适合存放更多SKU，1-4层标准层高600mm，适合3米以下仓库使用',
+    tags: ['轻型货架', '搁板式', '人工存取', 'A20系列', '加高型'],
+    parameters: {
+      长度: { type: 'number', min: 2000, max: 2000, default: 2000, unit: 'mm' },
+      深度: { type: 'number', min: 600, max: 600, default: 600, unit: 'mm' },
+      高度: { type: 'number', min: 2500, max: 2500, default: 2500, unit: 'mm' },
+      层数: { type: 'number', min: 5, max: 5, default: 5, unit: '层' },
+      层载重: { type: 'number', min: 300, max: 800, default: 500, unit: 'kg' },
+      标准层高: { type: 'number', min: 600, max: 600, default: 600, unit: 'mm' },
+      层板厚度: { type: 'number', min: 20, max: 20, default: 20, unit: 'mm' },
+      适配净高: { type: 'string', default: '3米以下' },
+      立柱颜色: { type: 'color', default: '#B0C4DE' },
+      横梁颜色: { type: 'color', default: '#FF4500' },
+      层板颜色: { type: 'color', default: '#FFFFFF' },
+    },
+    modelUrl: '/assets/models/light-duty-A20-5.glb',
+  },
+  {
+    id: 'light-duty-A20-6',
+    shortId: 'A108',
+    name: '6层轻型货架-L2.0xD0.6xH3.0',
+    category: 'light-shelf',
+    description: '超高密度6层轻型货架，总高3米，1-5层标准层高600mm，顶层5cm挡板，适合4米以下仓库，最大化存储密度',
+    tags: ['轻型货架', '搁板式', '人工存取', 'A20系列', '高密度', '6层'],
+    parameters: {
+      长度: { type: 'number', min: 2000, max: 2000, default: 2000, unit: 'mm' },
+      深度: { type: 'number', min: 600, max: 600, default: 600, unit: 'mm' },
+      高度: { type: 'number', min: 3000, max: 3000, default: 3000, unit: 'mm' },
+      层数: { type: 'number', min: 6, max: 6, default: 6, unit: '层' },
+      层载重: { type: 'number', min: 300, max: 800, default: 500, unit: 'kg' },
+      标准层高: { type: 'number', min: 600, max: 600, default: 600, unit: 'mm' },
+      层板厚度: { type: 'number', min: 20, max: 20, default: 20, unit: 'mm' },
+      适配净高: { type: 'string', default: '4米以下' },
+      立柱颜色: { type: 'color', default: '#B0C4DE' },
+      横梁颜色: { type: 'color', default: '#FF4500' },
+      层板颜色: { type: 'color', default: '#FFFFFF' },
+    },
+    modelUrl: '/assets/models/light-duty-A20-6.glb',
   },
   // 行业标准重型货架
   {
     id: 'shelf-beam-heavy-3level-5m',
     shortId: 'A106',
     name: '横梁式货架-重型3层（L2300*D1000*H4500）',
-    category: 'storage',
+    category: 'heavy-shelf',
     description: '适配净空5.5m仓库，单层高承重2吨，适合重货存储',
     tags: ['重型', '3层', '中高位', '2吨承重'],
     parameters: {
@@ -462,7 +713,7 @@ const models = ref([
     id: 'shelf-beam-heavy-4level-6m',
     shortId: 'A107',
     name: '横梁式货架-重型4层（L2300*D1000*H6500）',
-    category: 'storage',
+    category: 'heavy-shelf',
     description: '适配净空7m仓库，电商仓最常用规格，平衡型设计',
     tags: ['重型', '4层', '标准', '电商仓常用'],
     parameters: {
@@ -477,7 +728,7 @@ const models = ref([
     id: 'shelf-beam-heavy-5level-8m',
     shortId: 'A108',
     name: '横梁式货架-重型5层（L2700*D1000*H8200）',
-    category: 'storage',
+    category: 'heavy-shelf',
     description: '适配净空9m仓库，高位立体库专用，需要前移式叉车',
     tags: ['重型', '5层', '高位', '立体库'],
     parameters: {
@@ -493,7 +744,7 @@ const models = ref([
     id: 'shelf-beam-medium-4level-2m',
     shortId: 'A109',
     name: '横梁式货架-中型4层（L2000*D600*H2500）',
-    category: 'storage',
+    category: 'medium-shelf',
     description: '人工存取极限（配合2步登高梯），适配层高2.5m仓库',
     tags: ['中型', '4层', '人工拣选', '登高梯'],
     parameters: {
@@ -508,7 +759,7 @@ const models = ref([
     id: 'shelf-beam-medium-5level-2m',
     shortId: 'A110',
     name: '横梁式货架-中型5层（L1500*D600*H2500）',
-    category: 'storage',
+    category: 'medium-shelf',
     description: '高密度人工仓，层高2.5m极限，适合小件拣选',
     tags: ['中型', '5层', '高密度', '人工仓'],
     parameters: {
@@ -518,37 +769,6 @@ const models = ref([
       levels: { type: 'number', min: 3, max: 6, default: 5 },
     },
     modelUrl: '/assets/models/shelf-beam-medium-5level-2m.glb',
-  },
-  // 轻型货架
-  {
-    id: 'shelf-beam-light-4level-2m',
-    shortId: 'A111',
-    name: '横梁式货架-轻型4层（L1200*D400*H2000）',
-    category: 'storage',
-    description: '便利店后仓、办公室文件、轻型商品存储',
-    tags: ['轻型', '4层', '标准', '人工存取'],
-    parameters: {
-      length: { type: 'number', min: 800, max: 1500, default: 1200, unit: 'mm' },
-      width: { type: 'number', min: 300, max: 500, default: 400, unit: 'mm' },
-      height: { type: 'number', min: 1500, max: 2500, default: 2000, unit: 'mm' },
-      levels: { type: 'number', min: 2, max: 5, default: 4 },
-    },
-    modelUrl: '/assets/models/shelf-beam-light-4level.glb',
-  },
-  {
-    id: 'shelf-beam-light-5level-2m',
-    shortId: 'A112',
-    name: '横梁式货架-轻型5层（L1200*D500*H2000）',
-    category: 'storage',
-    description: '电商小件仓、配件仓、图书档案、多SKU轻货',
-    tags: ['轻型', '5层', '宽型', '高密度'],
-    parameters: {
-      length: { type: 'number', min: 800, max: 1500, default: 1200, unit: 'mm' },
-      width: { type: 'number', min: 400, max: 600, default: 500, unit: 'mm' },
-      height: { type: 'number', min: 1500, max: 2500, default: 2000, unit: 'mm' },
-      levels: { type: 'number', min: 3, max: 6, default: 5 },
-    },
-    modelUrl: '/assets/models/shelf-beam-light-5level.glb',
   },
   // 载具容器 (C101-C199)
   {
@@ -910,6 +1130,16 @@ const customShelfParams = ref({
   beamWidth: 40,
 });
 
+// 自定义墙体弹窗显示状态
+const showCustomWallModal = ref(false);
+
+// 自定义墙体参数
+const customWallParams = ref({
+  name: '',
+  length: 10000,
+  height: 8000,
+});
+
 // 从localStorage加载自定义货架
 const loadCustomShelves = () => {
   const saved = localStorage.getItem('customShelves');
@@ -922,12 +1152,14 @@ const loadCustomShelves = () => {
 // 为模型分配短ID（用户识别ID）
 const assignShortIds = () => {
   const categoryLetters = {
+    'facility': 'F',
     'storage': 'A',
     'handling': 'B',
     'containers': 'C',
     'conveying': 'D',
     'picking': 'E',
-    'others': 'F',
+    'sorting': 'H',
+    'others': 'I',
     'personnel': 'G',
   };
 
@@ -1031,7 +1263,7 @@ const saveCustomShelf = () => {
   const newShelf = {
     id: `custom-shelf-${Date.now()}`,
     name: params.name || `自定义货架-${params.length}×${params.width}×${params.height}`,
-    category: 'storage',
+    category: 'other-shelf',
     description: `自定义${shelfType}：${colorDesc}，立柱${params.uprightWidth}×${params.uprightDepth}mm，横梁${params.beamHeight}×${params.beamWidth}mm`,
     tags: ['自定义', shelfType],
     parameters: {
@@ -1061,8 +1293,8 @@ const saveCustomShelf = () => {
   // 分配短ID
   assignShortIds();
   
-  // 保存到localStorage
-  const customShelves = models.value.filter(m => m.isCustom);
+  // 保存到localStorage（自定义货架使用other-shelf分类）
+  const customShelves = models.value.filter(m => m.isCustom && (m.category === 'other-shelf' || m.category === 'light-shelf' || m.category === 'medium-shelf' || m.category === 'heavy-shelf'));
   localStorage.setItem('customShelves', JSON.stringify(customShelves));
   
   // 关闭弹窗
@@ -1072,8 +1304,69 @@ const saveCustomShelf = () => {
   alert('自定义货架已保存到对象库！');
 };
 
+// 打开自定义墙体弹窗
+const openCustomWallModal = () => {
+  console.log('openCustomWallModal called');
+  showCustomWallModal.value = true;
+};
+
+// 关闭自定义墙体弹窗
+const closeCustomWallModal = () => {
+  showCustomWallModal.value = false;
+};
+
+// 保存自定义墙体
+const saveCustomWall = () => {
+  const params = customWallParams.value;
+  
+  const newWall = {
+    id: `custom-wall-${Date.now()}`,
+    name: params.name || `自定义墙体-${params.length/1000}×${params.height/1000}m`,
+    category: 'facility',
+    description: `长${params.length/1000}m×厚0.2m×高${params.height/1000}m`,
+    tags: ['自定义', '墙体', '半透明', '玻璃幕墙'],
+    parameters: {
+      length: { type: 'number', min: 1000, max: 50000, default: params.length, unit: 'mm' },
+      width: { type: 'number', min: 200, max: 200, default: 200, unit: 'mm' },
+      height: { type: 'number', min: 2000, max: 15000, default: params.height, unit: 'mm' },
+    },
+    modelUrl: '/assets/models/wall-warehouse-perimeter-glass.glb', // 使用现有墙体模型作为基础
+    isCustom: true,
+    customParams: { ...params },
+    customType: 'wall'
+  };
+  
+  // 添加到模型列表
+  models.value.push(newWall);
+  
+  // 分配短ID
+  assignShortIds();
+  
+  // 保存到localStorage
+  const customWalls = models.value.filter(m => m.isCustom && m.category === 'facility');
+  localStorage.setItem('customWalls', JSON.stringify(customWalls));
+  
+  // 关闭弹窗
+  closeCustomWallModal();
+  
+  // 显示成功提示
+  alert('自定义墙体已保存到对象库！');
+};
+
+// 从localStorage加载自定义墙体
+const loadCustomWalls = () => {
+  const saved = localStorage.getItem('customWalls');
+  if (saved) {
+    const customWalls = JSON.parse(saved);
+    models.value = [...models.value, ...customWalls];
+  }
+};
+
 // 初始化时加载自定义货架
 loadCustomShelves();
+
+// 初始化时加载自定义墙体
+loadCustomWalls();
 
 // 加载自定义货架后，再次分配短ID
 assignShortIds();
@@ -1375,6 +1668,8 @@ const goUsage = () => {
 
 /* 自定义货架按钮 */
 .toolbar-actions {
+  display: flex;
+  gap: 0.75rem;
   margin-bottom: 1rem;
 }
 
@@ -1399,6 +1694,27 @@ const goUsage = () => {
   box-shadow: 0 4px 12px rgba(67, 97, 238, 0.4);
 }
 
+.btn-custom-wall {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(79, 172, 254, 0.3);
+}
+
+.btn-custom-wall:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(79, 172, 254, 0.4);
+}
+
 .btn-icon {
   font-size: 1rem;
 }
@@ -1406,6 +1722,14 @@ const goUsage = () => {
 /* 自定义货架弹窗 */
 .custom-shelf-modal {
   max-width: 700px;
+  width: 90%;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+/* 自定义墙体弹窗 */
+.custom-wall-modal {
+  max-width: 600px;
   width: 90%;
   max-height: 85vh;
   overflow-y: auto;
@@ -1725,20 +2049,24 @@ const goUsage = () => {
 
 .preview-body {
   display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 1.5rem;
-  padding: 1.5rem;
-  overflow: auto;
+  grid-template-columns: 3fr 1fr;
+  gap: 1rem;
+  padding: 1rem;
+  overflow: hidden;
+  height: 600px;
 }
 
 .preview-3d {
-  aspect-ratio: 4/3;
+  width: 100%;
+  height: 100%;
+  min-height: 500px;
   background: linear-gradient(135deg, #f8f9ff 0%, #e8ecff 100%);
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
+  overflow: hidden;
 }
 
 .preview-hint {
@@ -1772,9 +2100,11 @@ const goUsage = () => {
 }
 
 .preview-params {
-  padding: 1rem;
+  padding: 0.75rem;
   background: #f8f9ff;
   border-radius: 12px;
+  overflow-y: auto;
+  max-height: 100%;
 }
 
 .preview-params h4 {
@@ -1784,23 +2114,23 @@ const goUsage = () => {
 }
 
 .param-item {
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
 }
 
 .param-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
 }
 
 .param-header label {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   color: #4a4a68;
 }
 
 .param-value {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: #4361ee;
 }

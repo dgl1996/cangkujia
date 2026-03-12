@@ -1,0 +1,79 @@
+{
+  "id": "light-duty-A15-4",
+  "name": "4层轻型货架-L1.5xD0.4xH2.0",
+  "category": "light-shelf",
+  "description": "标准4层轻型搁板式货架，适合3米以下仓库，人工存取轻型货物，单层层载500kg，层高600mm，顶层配50cm挡板",
+  "tags": [
+    "轻型货架",
+    "搁板式",
+    "人工存取",
+    "A15系列"
+  ],
+  "parameters": {
+    "长度": {
+      "type": "number",
+      "min": 1500,
+      "max": 1500,
+      "default": 1500,
+      "unit": "mm"
+    },
+    "深度": {
+      "type": "number",
+      "min": 400,
+      "max": 400,
+      "default": 400,
+      "unit": "mm"
+    },
+    "高度": {
+      "type": "number",
+      "min": 2000,
+      "max": 2000,
+      "default": 2000,
+      "unit": "mm"
+    },
+    "层数": {
+      "type": "number",
+      "min": 4,
+      "max": 4,
+      "default": 4,
+      "unit": "层"
+    },
+    "层载重": {
+      "type": "number",
+      "min": 300,
+      "max": 800,
+      "default": 500,
+      "unit": "kg"
+    },
+    "标准层高": {
+      "type": "number",
+      "min": 600,
+      "max": 600,
+      "default": 600,
+      "unit": "mm"
+    },
+    "层板厚度": {
+      "type": "number",
+      "min": 20,
+      "max": 20,
+      "default": 20,
+      "unit": "mm"
+    },
+    "适配净高": {
+      "type": "string",
+      "default": "3米以下"
+    },
+    "立柱颜色": {
+      "type": "color",
+      "default": "#B0C4DE"
+    },
+    "横梁颜色": {
+      "type": "color",
+      "default": "#FF4500"
+    },
+    "层板颜色": {
+      "type": "color",
+      "default": "#FFFFFF"
+    }
+  }
+}

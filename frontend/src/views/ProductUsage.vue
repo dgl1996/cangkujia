@@ -22,33 +22,26 @@
 
       <!-- 功能模块网格 -->
       <div class="modules-grid">
-        <!-- P1 核心功能 -->
+        <!-- P1 设计工作台 -->
         <div class="module-card primary" @click="goTo('/editor')">
           <div class="module-icon">🎨</div>
-          <h3>P1 设计工作台</h3>
-          <p>3D仓库布局设计核心功能</p>
+          <h3>设计工作台</h3>
+          <p>3D仓库布局设计核心功能，包含模型库和仓库对象</p>
           <div class="module-badge">核心</div>
         </div>
 
-        <!-- P2 物流对象库 -->
+        <!-- P2 3D物流对象库 -->
         <div class="module-card" @click="goTo('/models')">
           <div class="module-icon">📦</div>
-          <h3>P2 物流对象库</h3>
-          <p>货架、叉车、托盘等3D模型</p>
-        </div>
-
-        <!-- P3 仓库对象库 -->
-        <div class="module-card" @click="goTo('/warehouse-models')">
-          <div class="module-icon">🏭</div>
-          <h3>P3 仓库对象库</h3>
-          <p>仓库背景、平面图模板</p>
-          <div class="module-badge soon">即将上线</div>
+          <h3>3D物流对象库</h3>
+          <p>40+物流设备模型，支持自定义货架参数</p>
+          <div class="module-badge">可用</div>
         </div>
 
         <!-- P4 仓库案例库 -->
         <div class="module-card" @click="goTo('/cases')">
           <div class="module-icon">📚</div>
-          <h3>P4 仓库案例库</h3>
+          <h3>仓库案例库</h3>
           <p>优秀仓库设计案例展示</p>
           <div class="module-badge soon">即将上线</div>
         </div>
@@ -56,7 +49,7 @@
         <!-- P5 物流规范库 -->
         <div class="module-card" @click="goTo('/standards')">
           <div class="module-icon">📋</div>
-          <h3>P5 物流规范库</h3>
+          <h3>物流规范库</h3>
           <p>物流行业标准与规范</p>
           <div class="module-badge soon">即将上线</div>
         </div>
@@ -64,7 +57,7 @@
         <!-- P6 我的作品 -->
         <div class="module-card" @click="goTo('/my-works')">
           <div class="module-icon">💼</div>
-          <h3>P6 我的作品</h3>
+          <h3>我的作品</h3>
           <p>管理您的仓库设计方案</p>
           <div class="module-badge soon">即将上线</div>
         </div>
@@ -72,7 +65,7 @@
         <!-- P7 标准案例 -->
         <div class="module-card" @click="goTo('/standard-cases')">
           <div class="module-icon">⭐</div>
-          <h3>P7 标准案例</h3>
+          <h3>标准案例</h3>
           <p>电商仓、冷链仓等标准模板</p>
           <div class="module-badge soon">即将上线</div>
         </div>
@@ -80,7 +73,7 @@
         <!-- P8 本周热门 -->
         <div class="module-card" @click="goTo('/hot')">
           <div class="module-icon">🔥</div>
-          <h3>P8 本周热门</h3>
+          <h3>本周热门</h3>
           <p>热门仓库设计作品展示</p>
           <div class="module-badge soon">即将上线</div>
         </div>
@@ -88,7 +81,7 @@
         <!-- P9 用户中心 -->
         <div class="module-card" @click="goTo('/user')">
           <div class="module-icon">👤</div>
-          <h3>P9 用户中心</h3>
+          <h3>用户中心</h3>
           <p>账户管理、订阅服务</p>
           <div class="module-badge soon">即将上线</div>
         </div>
