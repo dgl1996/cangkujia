@@ -2,50 +2,62 @@
   <div class="core-function">
     <!-- 顶部项目栏 -->
     <div class="top-project-bar">
+      <!-- 左侧：项目操作按钮 -->
       <div class="top-bar-left">
-        <button @click="goToUsage" class="top-bar-btn home-btn">
-          <span class="btn-icon">🏠</span>返回首页
+        <button @click="goToUsage" class="top-bar-btn home-btn" title="返回首页">
+          <span class="btn-icon">🏠</span>首页
         </button>
-        <div class="view-toggle">
-          <button 
-            :class="{ active: currentView === '2d' }" 
-            @click="switchTo2D"
-          >2D</button>
-          <button 
-            :class="{ active: currentView === '3d' }" 
-            @click="switchTo3D"
-            :disabled="!is3DGenerated"
-          >3D</button>
-        </div>
+        <button @click="importProject" class="top-bar-btn" title="导入项目">
+          <span class="btn-icon">📂</span>导入
+        </button>
+        <button @click="saveProject" class="top-bar-btn" title="保存项目">
+          <span class="btn-icon">💾</span>保存
+        </button>
+        <button @click="exportImage" :disabled="currentView !== '3d'" class="top-bar-btn" title="导出3D效果图">
+          <span class="btn-icon">📷</span>效果图
+        </button>
+        <button @click="exportReport" :disabled="warehouseShape.length < 3" class="top-bar-btn" title="导出项目报告">
+          <span class="btn-icon">📄</span>报告
+        </button>
+        <button @click="closeProject" class="top-bar-btn close-btn" title="关闭项目">
+          <span class="btn-icon">❌</span>关闭
+        </button>
       </div>
+      
+      <!-- 中间：项目名称 -->
       <div class="top-bar-center">
         <span class="project-name">{{ projectName || '未命名项目' }}</span>
       </div>
+      
+      <!-- 右侧：工具按钮 -->
       <div class="top-bar-right">
-        <!-- 面板折叠/展开按钮 -->
-        <button @click="toggleLeftPanel" class="top-bar-btn panel-toggle-btn" :title="isLeftPanelExpanded ? '隐藏左侧面板' : '显示左侧面板'">
+        <!-- 面板折叠/展开按钮（简化显示） -->
+        <button @click="toggleLeftPanel" class="top-bar-btn icon-btn" :title="isLeftPanelExpanded ? '隐藏左侧面板' : '显示左侧面板'">
           <span class="btn-icon">{{ isLeftPanelExpanded ? '◀' : '▶' }}</span>
-          {{ isLeftPanelExpanded ? '隐藏左侧面板' : '显示左侧面板' }}
         </button>
-        <button @click="toggleRightPanel" class="top-bar-btn panel-toggle-btn" :title="isRightPanelExpanded ? '隐藏右侧面板' : '显示右侧面板'">
+        <button @click="toggleRightPanel" class="top-bar-btn icon-btn" :title="isRightPanelExpanded ? '隐藏右侧面板' : '显示右侧面板'">
           <span class="btn-icon">{{ isRightPanelExpanded ? '▶' : '◀' }}</span>
-          {{ isRightPanelExpanded ? '隐藏右侧面板' : '显示右侧面板' }}
         </button>
         <div class="top-bar-divider"></div>
-        <button @click="importProject" class="top-bar-btn">
-          <span class="btn-icon">📂</span>导入项目
+        <!-- 选择模式按钮 -->
+        <button @click="setSelectMode" :class="{ active: !isAddingText && !isMeasuring && !isAlignLineMode }" class="top-bar-btn" title="选择模式">
+          <span class="btn-icon">🖱️</span>选择
         </button>
-        <button @click="saveProject" class="top-bar-btn">
-          <span class="btn-icon">💾</span>保存项目
+        <!-- 测量工具按钮（占位） -->
+        <button @click="startMeasure" :class="{ active: isMeasuring }" class="top-bar-btn" title="测量工具">
+          <span class="btn-icon">📏</span>测量
         </button>
-        <button @click="exportImage" :disabled="currentView !== '3d'" class="top-bar-btn">
-          <span class="btn-icon">🖼️</span>导出效果图
+        <!-- 对齐线按钮（占位） -->
+        <button @click="addAlignLine" :class="{ active: isAlignLineMode }" class="top-bar-btn" title="添加对齐线">
+          <span class="btn-icon">➕</span>对齐线
         </button>
-        <button @click="exportReport" :disabled="warehouseShape.length < 3" class="top-bar-btn">
-          <span class="btn-icon">📄</span>导出报告
+        <!-- 自定义货架按钮 -->
+        <button @click="openCustomShelf" class="top-bar-btn" title="创建自定义货架">
+          <span class="btn-icon">➕📦</span>
         </button>
-        <button @click="closeProject" class="top-bar-btn close-btn">
-          <span class="btn-icon">❌</span>关闭项目
+        <!-- 对齐工具按钮（MVP禁用） -->
+        <button class="top-bar-btn disabled-btn" disabled title="对齐工具（待多选功能上线后启用）">
+          <span class="btn-icon">📐</span>对齐工具▼
         </button>
       </div>
     </div>
@@ -80,6 +92,16 @@
             >
               <div class="step-card-icon">📦</div>
               <div class="step-card-title">放置3D对象</div>
+            </div>
+            
+            <!-- 卡片3: 对齐线 -->
+            <div 
+              class="step-card" 
+              :class="{ active: currentStep === 'align-lines', completed: completedSteps.includes('align-lines') }"
+              @click="toggleStepMenu('align-lines')"
+            >
+              <div class="step-card-icon">📏</div>
+              <div class="step-card-title">对齐线</div>
             </div>
           </div>
           
@@ -390,6 +412,30 @@
                   </div>
                 </div>
                 
+              </div>
+            </div>
+            
+            <!-- 步骤3: 对齐线 -->
+            <div class="process-step-wrapper" v-show="expandedStep === 'align-lines'">
+              <div v-if="expandedStep === 'align-lines'" class="sub-menu">
+                <div class="sub-menu-section">
+                  <p class="sub-menu-section-title">对齐线列表</p>
+                  <div class="align-line-list">
+                    <div v-if="alignLines.length === 0" class="empty-hint">
+                      暂无对齐线
+                    </div>
+                    <div v-for="(line, index) in alignLines" :key="index" class="align-line-item">
+                      <span class="line-name">对齐线 {{ index + 1 }}</span>
+                      <button @click="deleteAlignLine(index)" class="delete-btn" title="删除">🗑️</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="sub-menu-section">
+                  <div class="sub-menu-divider"></div>
+                  <button @click="clearAllAlignLines" class="btn-primary warning-btn" style="width: 100%;">
+                    <span class="btn-icon">🗑️</span>清空全部
+                  </button>
+                </div>
               </div>
             </div>
             
@@ -885,28 +931,6 @@
               <p class="batch-hint-compact" v-if="isBatchPreview">ESC取消预览</p>
             </div>
             
-            <!-- 对齐工具 -->
-            <div class="operation-section" v-if="selectedObject">
-              <div class="operation-divider"></div>
-              <h4 class="operation-subtitle">对齐工具</h4>
-              <div class="align-grid">
-                <button @click="alignObjects('left')" :disabled="!selectedObject" class="align-btn">
-                  <span class="btn-icon">⬅️</span>左对齐
-                </button>
-                <button @click="alignObjects('center')" :disabled="!selectedObject" class="align-btn">
-                  <span class="btn-icon">⏺️</span>居中
-                </button>
-                <button @click="alignObjects('right')" :disabled="!selectedObject" class="align-btn">
-                  <span class="btn-icon">➡️</span>右对齐
-                </button>
-                <button @click="alignObjects('h-distribute')" :disabled="!selectedObject" class="align-btn">
-                  <span class="btn-icon">↔️</span>水平等距
-                </button>
-                <button @click="alignObjects('v-distribute')" :disabled="!selectedObject" class="align-btn">
-                  <span class="btn-icon">↕️</span>垂直等距
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -1150,6 +1174,13 @@ const selectedObjectCount = ref(0);
 const isRotating = ref(false);
 const isMoving = ref(false);
 const showBatchPanel = ref(false);
+
+// 顶部工具栏工具状态
+const isMeasuring = ref(false);
+const isAlignLineMode = ref(false);
+
+// 对齐线数据
+const alignLines = ref([]);
 
 // 精确旋转角度输入对话框状态
 const showRotationDialog = ref(false);
@@ -3368,6 +3399,61 @@ function goToUsage() {
   router.push('/usage');
 }
 
+// 设置选择模式
+function setSelectMode() {
+  isAddingText.value = false;
+  isMeasuring.value = false;
+  isAlignLineMode.value = false;
+  console.log('切换到选择模式');
+}
+
+// 开始测量（占位功能）
+function startMeasure() {
+  isMeasuring.value = !isMeasuring.value;
+  isAddingText.value = false;
+  isAlignLineMode.value = false;
+  if (isMeasuring.value) {
+    alert('测量功能开发中...');
+    isMeasuring.value = false;
+  }
+}
+
+// 添加对齐线（占位功能）
+function addAlignLine() {
+  isAlignLineMode.value = !isAlignLineMode.value;
+  isAddingText.value = false;
+  isMeasuring.value = false;
+  if (isAlignLineMode.value) {
+    alert('对齐线功能开发中...');
+    isAlignLineMode.value = false;
+  }
+}
+
+// 删除单条对齐线
+function deleteAlignLine(index) {
+  alignLines.value.splice(index, 1);
+  console.log('删除对齐线:', index);
+}
+
+// 清空所有对齐线
+function clearAllAlignLines() {
+  if (alignLines.value.length === 0) {
+    alert('暂无对齐线');
+    return;
+  }
+  if (confirm(`确定要清空全部 ${alignLines.value.length} 条对齐线吗？`)) {
+    alignLines.value = [];
+    console.log('清空所有对齐线');
+  }
+}
+
+// 打开自定义货架页面（P2）
+function openCustomShelf() {
+  // 在新标签页打开P2页面
+  window.open('/models', '_blank');
+  console.log('打开自定义货架页面');
+}
+
 // 格式化位置显示
 function formatPosition(value) {
   if (value === undefined || value === null) return '0.00';
@@ -4079,6 +4165,14 @@ defineExpose({
   cursor: not-allowed;
 }
 
+/* 顶部栏左侧按钮间距调整 */
+.top-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 .project-name {
   font-size: 14px;
   font-weight: 600;
@@ -4120,6 +4214,27 @@ defineExpose({
   background: #ffebee;
   border-color: #f44336;
   color: #f44336;
+}
+
+/* 图标按钮（简化显示的面板切换按钮） */
+.top-bar-btn.icon-btn {
+  padding: 4px 6px;
+  font-size: 14px;
+}
+
+/* 禁用按钮样式 */
+.top-bar-btn.disabled-btn {
+  background: #f5f5f5;
+  color: #999;
+  cursor: not-allowed;
+  border-color: #ddd;
+  opacity: 0.7;
+}
+
+.top-bar-btn.disabled-btn:hover {
+  background: #f5f5f5;
+  border-color: #ddd;
+  color: #999;
 }
 
 /* 顶部工具栏 */
@@ -6136,6 +6251,41 @@ defineExpose({
   padding: 20px;
   color: #999;
   font-size: 13px;
+}
+
+/* 对齐线列表样式 */
+.align-line-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.align-line-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #f5f5f5;
+  border-radius: 4px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.align-line-item .line-name {
+  color: #333;
+}
+
+.align-line-item .delete-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 14px;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.align-line-item .delete-btn:hover {
+  opacity: 1;
 }
 
 /* 信息区域 */
