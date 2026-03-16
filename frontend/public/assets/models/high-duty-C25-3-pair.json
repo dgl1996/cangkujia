@@ -1,0 +1,88 @@
+{
+  "id": "high-duty-C25-3-pair",
+  "name": "3层高位货架-L2.5xD1.0xH3.0-配组",
+  "category": "high-shelf",
+  "description": "标准3层轻型搁板式货架，适合3米以下仓库，人工存取轻型货物，单层层载1500kg，层高1350mm，顶层配300mm挡板（背靠背配组）",
+  "tags": [
+    "轻型货架",
+    "搁板式",
+    "人工存取",
+    "A25系列"
+  ],
+  "operationDirection": "+Z",
+  "isPairSecondGroup": false,
+  "parameters": {
+    "长度": {
+      "type": "number",
+      "min": 2500,
+      "max": 2500,
+      "default": 2500,
+      "unit": "mm"
+    },
+    "深度": {
+      "type": "number",
+      "min": 1000,
+      "max": 1000,
+      "default": 1000,
+      "unit": "mm"
+    },
+    "高度": {
+      "type": "number",
+      "min": 3000,
+      "max": 3000,
+      "default": 3000,
+      "unit": "mm"
+    },
+    "层数": {
+      "type": "number",
+      "min": 3,
+      "max": 3,
+      "default": 3,
+      "unit": "层"
+    },
+    "层载重": {
+      "type": "number",
+      "min": 300,
+      "max": 800,
+      "default": 1500,
+      "unit": "kg"
+    },
+    "标准层高": {
+      "type": "number",
+      "min": 1350,
+      "max": 1350,
+      "default": 1350,
+      "unit": "mm"
+    },
+    "层板厚度": {
+      "type": "number",
+      "min": 20,
+      "max": 20,
+      "default": 20,
+      "unit": "mm"
+    },
+    "适配净高": {
+      "type": "string",
+      "default": "3米以下"
+    },
+    "立柱颜色": {
+      "type": "color",
+      "default": "#FF4500"
+    },
+    "横梁颜色": {
+      "type": "color",
+      "default": "#00008B"
+    },
+    "层板颜色": {
+      "type": "color",
+      "default": null
+    }
+  },
+  "is_pair": true,
+  "pair_spacing": 200,
+  "dimensions": {
+    "深度": 2200,
+    "width": 2200
+  },
+  "prebuilt": false
+}

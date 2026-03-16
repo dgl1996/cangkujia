@@ -154,13 +154,55 @@ const modelFileMap = {
   'shelf-drive-in': 'shelf-drive-in.glb',
   'shelf-flow-4level': 'shelf-flow-4level.glb',
   'shelf-light-v2': 'shelf-light-v2.glb',
-  'shelf-beam-heavy-3level': 'shelf-beam-heavy-3level.glb',
-  'shelf-beam-heavy-4level': 'shelf-beam-heavy-4level.glb',
-  'shelf-beam-heavy-5level': 'shelf-beam-heavy-5level.glb',
-  'shelf-beam-medium-4level-2m': 'shelf-beam-medium-4level-2m.glb',
-  'shelf-beam-medium-5level-2m': 'shelf-beam-medium-5level-2m.glb',
-  'shelf-beam-light-4level-2m': 'shelf-beam-light-4level.glb',
-  'shelf-beam-light-5level-2m': 'shelf-beam-light-5level.glb',
+  
+  // ========== 轻型货架（10个）==========
+  'light-duty-A15-4': 'light-duty-A15-4.glb',
+  'light-duty-A15-4-pair': 'light-duty-A15-4-pair.glb',
+  'light-duty-A15-5': 'light-duty-A15-5.glb',
+  'light-duty-A15-5-pair': 'light-duty-A15-5-pair.glb',
+  'light-duty-A20-4': 'light-duty-A20-4.glb',
+  'light-duty-A20-4-pair': 'light-duty-A20-4-pair.glb',
+  'light-duty-A20-5': 'light-duty-A20-5.glb',
+  'light-duty-A20-5-pair': 'light-duty-A20-5-pair.glb',
+  'light-duty-A20-6': 'light-duty-A20-6.glb',
+  'light-duty-A20-6-pair': 'light-duty-A20-6-pair.glb',
+  
+  // ========== 中型货架（6个）==========
+  'medium-duty-B20-4': 'medium-duty-B20-4.glb',
+  'medium-duty-B20-4-pair': 'medium-duty-B20-4-pair.glb',
+  'medium-duty-B20-5': 'medium-duty-B20-5.glb',
+  'medium-duty-B20-5-pair': 'medium-duty-B20-5-pair.glb',
+  'medium-duty-B20-6': 'medium-duty-B20-6.glb',
+  'medium-duty-B20-6-pair': 'medium-duty-B20-6-pair.glb',
+  
+  // ========== 高位货架（24个）==========
+  // C23系列
+  'high-duty-C23-3': 'high-duty-C23-3.glb',
+  'high-duty-C23-3-pair': 'high-duty-C23-3-pair.glb',
+  'high-duty-C23-4': 'high-duty-C23-4.glb',
+  'high-duty-C23-4-pair': 'high-duty-C23-4-pair.glb',
+  'high-duty-C23-5': 'high-duty-C23-5.glb',
+  'high-duty-C23-5-pair': 'high-duty-C23-5-pair.glb',
+  'high-duty-C23-6': 'high-duty-C23-6.glb',
+  'high-duty-C23-6-pair': 'high-duty-C23-6-pair.glb',
+  // C25系列
+  'high-duty-C25-3': 'high-duty-C25-3.glb',
+  'high-duty-C25-3-pair': 'high-duty-C25-3-pair.glb',
+  'high-duty-C25-4': 'high-duty-C25-4.glb',
+  'high-duty-C25-4-pair': 'high-duty-C25-4-pair.glb',
+  'high-duty-C25-5': 'high-duty-C25-5.glb',
+  'high-duty-C25-5-pair': 'high-duty-C25-5-pair.glb',
+  'high-duty-C25-6': 'high-duty-C25-6.glb',
+  'high-duty-C25-6-pair': 'high-duty-C25-6-pair.glb',
+  // C27系列
+  'high-duty-C27-3': 'high-duty-C27-3.glb',
+  'high-duty-C27-3-pair': 'high-duty-C27-3-pair.glb',
+  'high-duty-C27-4': 'high-duty-C27-4.glb',
+  'high-duty-C27-4-pair': 'high-duty-C27-4-pair.glb',
+  'high-duty-C27-5': 'high-duty-C27-5.glb',
+  'high-duty-C27-5-pair': 'high-duty-C27-5-pair.glb',
+  'high-duty-C27-6': 'high-duty-C27-6.glb',
+  'high-duty-C27-6-pair': 'high-duty-C27-6-pair.glb',
   // 载具容器
   'pallet-wooden-1200': 'pallet-wooden-1200.glb',
   'pallet-plastic-1200': 'pallet-plastic-1200.glb',
@@ -208,8 +250,10 @@ function loadModel(modelId, fileName) {
     return models[modelId];
   }
 
+  // 添加时间戳清除缓存
+  const cacheBuster = `?t=${Date.now()}`;
   loader.load(
-    `/assets/models/${fileName}`,
+    `/assets/models/${fileName}${cacheBuster}`,
     (gltf) => {
       const model = gltf.scene;
       
@@ -229,15 +273,23 @@ function loadModel(modelId, fileName) {
         }
       });
       
-      // 计算模型的边界框
+      // 缩放模型（GLB导出时使用mm单位，Three.js使用米单位，需要缩小100倍）
+      model.scale.set(0.1, 0.1, 0.1);
+      
+      // 【关键修复】强制更新所有几何体的边界框
+      model.traverse((child) => {
+        if (child.isMesh && child.geometry) {
+          child.geometry.computeBoundingBox();
+          child.geometry.computeBoundingSphere();
+        }
+      });
+      
+      // 缩放后重新计算模型的边界框
       const box = new THREE.Box3().setFromObject(model);
       
       // 调整模型位置，使底部与地面平齐（Y=0）
       const offsetY = -box.min.y;
       model.position.y = offsetY;
-      
-      // 缩放模型（GLB导出时使用mm单位，Three.js使用cm单位，需要缩小10倍）
-      model.scale.set(0.1, 0.1, 0.1);
       
       // 存储模型
       models[modelId] = model;
@@ -639,6 +691,20 @@ function onClick(event) {
   
   console.log('点击检测:', intersects.length, '个对象', 'sceneObjects数量:', sceneObjects.length);
   
+  // 输出所有相交对象的信息
+  intersects.forEach((intersect, index) => {
+    const obj = intersect.object;
+    let rootObj = obj;
+    while (rootObj.parent && rootObj.parent !== scene) {
+      rootObj = rootObj.parent;
+    }
+    console.log(`相交对象[${index}]:`, 
+                '距离:', intersect.distance, 
+                '类型:', obj.userData.type || '未知',
+                '根对象类型:', rootObj.userData.type || '未知',
+                '根对象modelType:', rootObj.userData.modelType || 'N/A');
+  });
+  
   if (intersects.length > 0) {
     const closestObject = intersects[0].object;
     console.log('最近对象:', closestObject.uuid, '类型:', closestObject.userData.type || '未知');
@@ -1035,8 +1101,23 @@ function onDrop(event) {
 
 // 内部使用的添加模型方法
 function addModelInternal(modelName, position = null) {
+  console.log('尝试添加模型:', modelName, 'models中是否存在:', !!models[modelName]);
+  
   if (models[modelName]) {
     const newModel = models[modelName].clone();
+    
+    // 确保克隆后的模型保持原始缩放
+    console.log('克隆模型，原始缩放:', models[modelName].scale.x, models[modelName].scale.y, models[modelName].scale.z);
+    console.log('克隆后缩放:', newModel.scale.x, newModel.scale.y, newModel.scale.z);
+    
+    // 【关键修复】强制计算几何体边界框，解决"幽灵模型"问题
+    // 注意：必须总是重新计算，因为克隆后的模型缩放可能改变
+    newModel.traverse((child) => {
+      if (child.isMesh && child.geometry) {
+        child.geometry.computeBoundingBox();
+        child.geometry.computeBoundingSphere();
+      }
+    });
     
     newModel.traverse((child) => {
       if (child.material) {
@@ -1047,23 +1128,45 @@ function addModelInternal(modelName, position = null) {
     // 记录对象类型
     newModel.userData.modelType = modelName;
     newModel.userData.modelId = 'shelf_001';
+    newModel.userData.type = 'shelf'; // 添加类型标识，用于射线检测
     
     // 设置位置，考虑仓库基准高度
-    let yPosition = 0;
+    // 注意：模型在loadModel中已经设置了offsetY使底部与Y=0平齐
+    // 这里只需要加上仓库基准高度
+    let yOffset = 0;
     if (warehouseConfig) {
-      yPosition = warehouseConfig.baseHeight;
+      yOffset = warehouseConfig.baseHeight;
     }
     
     if (position) {
-      newModel.position.set(position.x, yPosition, position.z);
-    } else {
-      newModel.position.set(0, yPosition, 0);
+      newModel.position.x = position.x;
+      newModel.position.z = position.z;
+      // Y位置：使用传入的position.y（如果有），否则保持原始offsetY
+      // 再加上仓库基准高度和2.0确保在区域平面(baseHeight+1)上方
+      const baseY = position.y !== undefined ? position.y : 0;
+      newModel.position.y = baseY + yOffset + 2.0;
     }
     
     scene.add(newModel);
     sceneObjects.push(newModel);
     
-    console.log('模型添加到场景:', newModel.uuid, '类型:', modelName, 'sceneObjects数量:', sceneObjects.length);
+    // 调试信息：输出模型的实际位置和尺寸
+    const box = new THREE.Box3().setFromObject(newModel);
+    const size = box.getSize(new THREE.Vector3());
+    
+    // 检查模型的材质和可见性
+    let materialInfo = '';
+    newModel.traverse((child) => {
+      if (child.isMesh) {
+        materialInfo += `${child.name}: visible=${child.visible}, opacity=${child.material?.opacity || 'N/A'}, color=${child.material?.color?.getHexString?.() || 'N/A'}; `;
+      }
+    });
+    
+    console.log('模型添加到场景:', newModel.uuid, '类型:', modelName, 
+                '位置:', newModel.position.x, newModel.position.y, newModel.position.z, 
+                '尺寸:', size.x, size.y, size.z,
+                'sceneObjects数量:', sceneObjects.length,
+                '材质:', materialInfo);
     emit('model-added', newModel);
     
     return newModel;
@@ -1086,6 +1189,10 @@ const objectLibraryParams = {
   'shelf-beam-medium-5level-2m': { length: 2000, width: 600, height: 4000, levels: 5, type: 'shelf', color: 0x4169E1 },
   'shelf-beam-light-4level-2m': { length: 2000, width: 500, height: 2500, levels: 4, type: 'shelf', color: 0x87CEEB },
   'shelf-beam-light-5level-2m': { length: 2000, width: 500, height: 3000, levels: 5, type: 'shelf', color: 0x87CEEB },
+  // 轻型货架（A15系列）
+  // 轻型货架（A15系列）- 只保留A15-4和配组
+  'light-duty-A15-4': { length: 1520, width: 402, height: 2020, levels: 4, type: 'shelf', color: 0x4169E1 },
+  'light-duty-A15-4-pair': { length: 1520, width: 802, height: 2020, levels: 4, type: 'shelf', color: 0x4169E1 },
   // 载具容器
   'pallet-wooden-1200': { length: 1200, width: 1000, height: 150, type: 'pallet', color: 0xD2691E },
   'pallet-plastic-1200': { length: 1200, width: 1000, height: 150, type: 'pallet', color: 0x4169E1 },
@@ -1102,6 +1209,12 @@ const objectLibraryParams = {
   'forklift-pallet-jack-manual': { length: 1200, width: 550, height: 1200, type: 'forklift', color: 0xFFD700 },
   'cart-picking-3tier': { length: 800, width: 600, height: 1000, type: 'cart', color: 0x32CD32 },
   'cart-cage-logistics-2tier': { length: 800, width: 600, height: 1500, type: 'cart', color: 0x32CD32 },
+  // 中型货架（B20系列）- 立柱深蓝色
+  'medium-duty-B20-4': { length: 2020, width: 602, height: 2020, levels: 4, type: 'shelf', color: 0x00008B },
+  'medium-duty-B20-4-pair': { length: 2020, width: 1202, height: 2020, levels: 4, type: 'shelf', color: 0x00008B },
+  // 高位货架（C23系列）- 立柱橙红色
+  'high-duty-C23-3': { length: 2320, width: 1002, height: 3020, levels: 3, type: 'shelf', color: 0xFF4500 },
+  'high-duty-C23-3-pair': { length: 2320, width: 2202, height: 3020, levels: 3, type: 'shelf', color: 0xFF4500 },
   // 输送设备
   'lift-cargo-hydraulic-3floor': { length: 2000, width: 1500, height: 8000, type: 'conveyor', color: 0xFF6347 },
   'conveyor-curve-90degree-600': { length: 1500, width: 1500, height: 800, type: 'conveyor', color: 0xFF6347 },
@@ -2700,6 +2813,35 @@ function endRotate() {
   console.log('结束旋转模式');
 }
 
+// 预览旋转角度（实时）
+// angle: 旋转角度（弧度），顺时针为正，以白线方向（+Z）为0°基准
+function previewRotation(angle) {
+  if (selectedObjects.length === 0) return;
+  
+  const obj = selectedObjects[0];
+  // 白线方向为+Z，对应Three.js中Y轴旋转为0
+  // 顺时针旋转为正，所以直接使用angle
+  obj.rotation.y = angle;
+  
+  console.log('预览旋转角度:', angle * 180 / Math.PI, '度');
+}
+
+// 应用旋转角度
+function applyRotation(angle) {
+  if (selectedObjects.length === 0) return;
+  
+  const obj = selectedObjects[0];
+  // 应用旋转
+  obj.rotation.y = angle;
+  
+  // 保存旋转角度到对象数据
+  if (obj.userData) {
+    obj.userData.rotationY = angle;
+  }
+  
+  console.log('应用旋转角度:', angle * 180 / Math.PI, '度');
+}
+
 // 清空场景
 function clearScene() {
   // 清除选中状态
@@ -2841,18 +2983,28 @@ function startBatchPreview(config) {
         }
       });
       
-      // 计算位置偏移
-      const offsetX = c * (getObjectWidth(originalObj) + colSpacing * 100); // cm
-      const offsetZ = r * (getObjectDepth(originalObj) + rowSpacing * 100); // cm
+      // 计算方向向量（基于原始对象的旋转角度）
+      const objRotation = originalObj.rotation.y;
+      const { rowDirection = 'forward', colDirection = 'left' } = config;
+      
+      // 获取方向向量（考虑对象当前旋转）
+      const rowDirVector = getDirectionVector(rowDirection, objRotation);
+      const colDirVector = getDirectionVector(colDirection, objRotation);
+      
+      // 计算位置偏移（cm转three.js单位）
+      const rowOffset = r * (getObjectDepth(originalObj) + rowSpacing * 100);
+      const colOffset = c * (getObjectWidth(originalObj) + colSpacing * 100);
+      
+      // 应用方向向量计算实际偏移
+      const offsetX = colOffset * colDirVector.x + rowOffset * rowDirVector.x;
+      const offsetZ = colOffset * colDirVector.z + rowOffset * rowDirVector.z;
       
       previewObj.position.x = originalObj.position.x + offsetX;
       previewObj.position.z = originalObj.position.z + offsetZ;
       previewObj.position.y = originalObj.position.y;
       
-      // 应用旋转
-      if (rotation) {
-        previewObj.rotation.y = originalObj.rotation.y + (rotation * Math.PI / 180);
-      }
+      // 应用旋转（保持与原始对象相同朝向）
+      previewObj.rotation.y = originalObj.rotation.y;
       
       previewObj.userData.isPreview = true;
       scene.add(previewObj);
@@ -2873,6 +3025,40 @@ function getObjectWidth(obj) {
 function getObjectDepth(obj) {
   const box = new THREE.Box3().setFromObject(obj);
   return box.max.z - box.min.z;
+}
+
+// 根据方向和对象旋转计算方向向量
+// direction: 'forward' | 'backward' | 'left' | 'right'
+// objRotation: 对象的Y轴旋转角度（弧度）
+// 返回: { x, z } 单位方向向量
+function getDirectionVector(direction, objRotation) {
+  // 基础方向向量（对象朝向+Z方向时的方向）
+  let baseVector;
+  switch (direction) {
+    case 'forward':
+      baseVector = { x: 0, z: 1 };  // +Z方向
+      break;
+    case 'backward':
+      baseVector = { x: 0, z: -1 }; // -Z方向
+      break;
+    case 'left':
+      baseVector = { x: -1, z: 0 }; // -X方向
+      break;
+    case 'right':
+      baseVector = { x: 1, z: 0 };  // +X方向
+      break;
+    default:
+      baseVector = { x: 0, z: 1 };
+  }
+  
+  // 应用对象旋转（逆时针旋转坐标系）
+  const cos = Math.cos(objRotation);
+  const sin = Math.sin(objRotation);
+  
+  return {
+    x: baseVector.x * cos - baseVector.z * sin,
+    z: baseVector.x * sin + baseVector.z * cos
+  };
 }
 
 function confirmBatchPlace() {
@@ -3052,6 +3238,10 @@ function resetView() {
 
 // 暴露方法
 defineExpose({
+  // 暴露获取相机的方法
+  getCamera: () => camera,
+  // 暴露控制器
+  getControls: () => controls,
   createWarehouse,
   createWarehouseFromShape,
   createDoor,
@@ -3074,6 +3264,8 @@ defineExpose({
   moveObject,
   startRotate,
   endRotate,
+  previewRotation,
+  applyRotation,
   deleteSelectedObjects,
   copySelectedObject,
   startBatchPreview,

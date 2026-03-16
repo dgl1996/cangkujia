@@ -1,0 +1,88 @@
+{
+  "id": "high-duty-C27-5-pair",
+  "name": "5层高位货架-L2.7xD1.0xH6.0-配组",
+  "category": "high-shelf",
+  "description": "标准5层轻型搁板式货架，适合3米以下仓库，人工存取轻型货物，单层层载1500kg，层高1500mm，顶层配500mm挡板（背靠背配组）",
+  "tags": [
+    "轻型货架",
+    "搁板式",
+    "人工存取",
+    "A27系列"
+  ],
+  "operationDirection": "+Z",
+  "isPairSecondGroup": false,
+  "parameters": {
+    "长度": {
+      "type": "number",
+      "min": 2700,
+      "max": 2700,
+      "default": 2700,
+      "unit": "mm"
+    },
+    "深度": {
+      "type": "number",
+      "min": 1000,
+      "max": 1000,
+      "default": 1000,
+      "unit": "mm"
+    },
+    "高度": {
+      "type": "number",
+      "min": 6000,
+      "max": 6000,
+      "default": 6000,
+      "unit": "mm"
+    },
+    "层数": {
+      "type": "number",
+      "min": 5,
+      "max": 5,
+      "default": 5,
+      "unit": "层"
+    },
+    "层载重": {
+      "type": "number",
+      "min": 300,
+      "max": 800,
+      "default": 1500,
+      "unit": "kg"
+    },
+    "标准层高": {
+      "type": "number",
+      "min": 1500,
+      "max": 1500,
+      "default": 1500,
+      "unit": "mm"
+    },
+    "层板厚度": {
+      "type": "number",
+      "min": 20,
+      "max": 20,
+      "default": 20,
+      "unit": "mm"
+    },
+    "适配净高": {
+      "type": "string",
+      "default": "3米以下"
+    },
+    "立柱颜色": {
+      "type": "color",
+      "default": "#FF4500"
+    },
+    "横梁颜色": {
+      "type": "color",
+      "default": "#00008B"
+    },
+    "层板颜色": {
+      "type": "color",
+      "default": null
+    }
+  },
+  "is_pair": true,
+  "pair_spacing": 200,
+  "dimensions": {
+    "深度": 2200,
+    "width": 2200
+  },
+  "prebuilt": false
+}

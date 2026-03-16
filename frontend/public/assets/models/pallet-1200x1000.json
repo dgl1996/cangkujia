@@ -1,0 +1,33 @@
+{
+  "id": "pallet-1200x1000",
+  "name": "托盘-1200x1000mm",
+  "category": "containers",
+  "description": "标准托盘，尺寸1200x1000mm",
+  "tags": [
+    "托盘",
+    "木质"
+  ],
+  "parameters": {
+    "length": {
+      "type": "number",
+      "min": 800,
+      "max": 2000,
+      "default": 1200,
+      "unit": "mm"
+    },
+    "width": {
+      "type": "number",
+      "min": 600,
+      "max": 1500,
+      "default": 1000,
+      "unit": "mm"
+    },
+    "height": {
+      "type": "number",
+      "min": 100,
+      "max": 200,
+      "default": 150,
+      "unit": "mm"
+    }
+  }
+}

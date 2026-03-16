@@ -189,10 +189,26 @@
                     </div>
                   </div>
                   
+                  <!-- 我的模型 -->
+                  <div class="object-category-compact">
+                    <div class="category-title-compact" @click="toggleObjectCategory('my-models')">
+                      <span>👤 我的模型({{ myModels.length }})</span>
+                      <span class="toggle-icon" :class="{ expanded: expandedObjectCategories['my-models'] }">▼</span>
+                    </div>
+                    <div v-show="expandedObjectCategories['my-models']" class="category-items-compact">
+                      <div v-for="model in myModels" :key="model.id" class="sub-menu-row-compact">
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onCustomModelDragStart($event, model)" :class="{ disabled: currentView !== '3d' }" :title="model.name">{{ model.shortId || model.id }} {{ model.name }}</div>
+                      </div>
+                      <div v-if="myModels.length === 0" class="sub-menu-row-compact">
+                        <div class="draggable-item-compact disabled">暂无自定义模型，请在P2页创建</div>
+                      </div>
+                    </div>
+                  </div>
+
                   <!-- 轻型货架 -->
                   <div class="object-category-compact">
                     <div class="category-title-compact" @click="toggleObjectCategory('light-shelf')">
-                      <span>📦 轻型货架(5)</span>
+                      <span>📦 轻型货架(2)</span>
                       <span class="toggle-icon" :class="{ expanded: expandedObjectCategories['light-shelf'] }">▼</span>
                     </div>
                     <div v-show="expandedObjectCategories['light-shelf']" class="category-items-compact">
@@ -200,16 +216,7 @@
                         <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'light-duty-A15-4')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('light-duty-A15-4')">A104 4层轻型货架-L1.5xD0.4xH2.0</div>
                       </div>
                       <div class="sub-menu-row-compact">
-                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'light-duty-A15-5')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('light-duty-A15-5')">A105 5层轻型货架-L1.5xD0.4xH2.0</div>
-                      </div>
-                      <div class="sub-menu-row-compact">
-                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'light-duty-A20-4')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('light-duty-A20-4')">A106 4层轻型货架-L2.0xD0.6xH2.0</div>
-                      </div>
-                      <div class="sub-menu-row-compact">
-                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'light-duty-A20-5')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('light-duty-A20-5')">A107 5层轻型货架-L2.0xD0.6xH2.5</div>
-                      </div>
-                      <div class="sub-menu-row-compact">
-                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'light-duty-A20-6')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('light-duty-A20-6')">A108 6层轻型货架-L2.0xD0.6xH3.0</div>
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'light-duty-A15-4-pair')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('light-duty-A15-4-pair')">A104P 4层轻型货架-L1.5xD0.8xH2.0配组</div>
                       </div>
                     </div>
                   </div>
@@ -217,18 +224,15 @@
                   <!-- 中型货架 -->
                   <div class="object-category-compact">
                     <div class="category-title-compact" @click="toggleObjectCategory('medium-shelf')">
-                      <span>📦 中型货架(3)</span>
+                      <span>📦 中型货架(2)</span>
                       <span class="toggle-icon" :class="{ expanded: expandedObjectCategories['medium-shelf'] }">▼</span>
                     </div>
                     <div v-show="expandedObjectCategories['medium-shelf']" class="category-items-compact">
                       <div class="sub-menu-row-compact">
-                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'shelf-beam-medium')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('shelf-beam-medium')">A102 横梁式货架-中型4层</div>
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'medium-duty-B20-4')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('medium-duty-B20-4')">B204 4层中型货架-L2.0xD0.6xH2.0</div>
                       </div>
                       <div class="sub-menu-row-compact">
-                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'shelf-beam-medium-4level-2m')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('shelf-beam-medium-4level-2m')">A109 横梁式货架-中型4层</div>
-                      </div>
-                      <div class="sub-menu-row-compact">
-                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'shelf-beam-medium-5level-2m')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('shelf-beam-medium-5level-2m')">A110 横梁式货架-中型5层</div>
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'medium-duty-B20-4-pair')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('medium-duty-B20-4-pair')">B204P 4层中型货架-L2.0xD1.2xH2.0配组</div>
                       </div>
                     </div>
                   </div>
@@ -236,21 +240,15 @@
                   <!-- 高位货架 -->
                   <div class="object-category-compact">
                     <div class="category-title-compact" @click="toggleObjectCategory('heavy-shelf')">
-                      <span>📦 高位货架(4)</span>
+                      <span>📦 高位货架(2)</span>
                       <span class="toggle-icon" :class="{ expanded: expandedObjectCategories['heavy-shelf'] }">▼</span>
                     </div>
                     <div v-show="expandedObjectCategories['heavy-shelf']" class="category-items-compact">
                       <div class="sub-menu-row-compact">
-                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'shelf-beam-heavy')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('shelf-beam-heavy')">A101 重型横梁式货架</div>
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'high-duty-C23-3')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('high-duty-C23-3')">C233 3层高位货架-L2.3xD1.0xH3.0</div>
                       </div>
                       <div class="sub-menu-row-compact">
-                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'shelf-beam-heavy-3level')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('shelf-beam-heavy-3level')">A106 横梁式货架-重型3层</div>
-                      </div>
-                      <div class="sub-menu-row-compact">
-                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'shelf-beam-heavy-4level')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('shelf-beam-heavy-4level')">A107 横梁式货架-重型4层</div>
-                      </div>
-                      <div class="sub-menu-row-compact">
-                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'shelf-beam-heavy-5level')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('shelf-beam-heavy-5level')">A108 横梁式货架-重型5层</div>
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'high-duty-C23-3-pair')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('high-duty-C23-3-pair')">C233P 3层高位货架-L2.3xD2.0xH3.0配组</div>
                       </div>
                     </div>
                   </div>
@@ -851,11 +849,27 @@
                   <input type="number" v-model.number="batchColSpacing" min="0" max="5" step="0.1" :disabled="!selectedObject || isBatchPreview">
                   <span>m</span>
                 </div>
-                <div class="control-row">
-                  <label>旋转:</label>
-                  <input type="number" v-model.number="batchRotation" min="0" max="360" step="15" :disabled="!selectedObject || isBatchPreview">
-                  <span>°</span>
+                <div class="control-row direction-row">
+                  <label>行向:</label>
+                  <select v-model="batchRowDirection" :disabled="!selectedObject || isBatchPreview" class="direction-select">
+                    <option value="forward">向前</option>
+                    <option value="backward">向后</option>
+                    <option value="left">向左</option>
+                    <option value="right">向右</option>
+                  </select>
                 </div>
+                <div class="control-row direction-row">
+                  <label>列向:</label>
+                  <select v-model="batchColDirection" :disabled="!selectedObject || isBatchPreview" class="direction-select">
+                    <option value="forward">向前</option>
+                    <option value="backward">向后</option>
+                    <option value="left">向左</option>
+                    <option value="right">向右</option>
+                  </select>
+                </div>
+              </div>
+              <div class="direction-legend">
+                <small>白线标记 = 前方（操作侧）</small>
               </div>
               <div class="batch-actions-compact">
                 <button @click.stop="startBatchPreview" :disabled="!selectedObject || isBatchPreview" class="batch-btn preview-btn">
@@ -949,6 +963,43 @@
       </div>
     </div>
     
+    <!-- 旋转角度输入对话框 -->
+    <div class="modal-overlay" v-if="showRotationDialog" @click.self="cancelRotation">
+      <div class="modal-dialog rotation-dialog">
+        <h3 class="modal-title">精确旋转</h3>
+        <div class="modal-content">
+          <div class="form-group">
+            <label>旋转角度（度）：</label>
+            <input 
+              type="number" 
+              v-model.number="rotationAngle" 
+              min="-360" 
+              max="360"
+              step="1"
+              placeholder="请输入角度"
+              @input="onRotationAngleChange"
+              @keyup.enter="confirmRotation"
+            >
+          </div>
+          <p class="hint-text">
+            以白线标记方向为0°，顺时针为正方向<br>
+            例如：90° = 顺时针旋转90°，-90° = 逆时针旋转90°
+          </p>
+          <div class="rotation-presets">
+            <button @click="rotationAngle = 0; onRotationAngleChange()" class="preset-btn">0°</button>
+            <button @click="rotationAngle = 90; onRotationAngleChange()" class="preset-btn">90°</button>
+            <button @click="rotationAngle = 180; onRotationAngleChange()" class="preset-btn">180°</button>
+            <button @click="rotationAngle = 270; onRotationAngleChange()" class="preset-btn">270°</button>
+            <button @click="rotationAngle = -90; onRotationAngleChange()" class="preset-btn">-90°</button>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button @click="confirmRotation" class="confirm-btn">确认</button>
+          <button @click="cancelRotation" class="cancel-btn">取消</button>
+        </div>
+      </div>
+    </div>
+    
     <!-- 区域列表对话框 -->
     <div class="modal-overlay" v-if="showZoneListDialog" @click.self="showZoneListDialog = false">
       <div class="modal-dialog zone-list-dialog">
@@ -1029,11 +1080,64 @@
         </div>
       </div>
     </div>
+
+    <!-- 自定义轻型货架弹窗 -->
+    <div v-if="showCustomLightShelfModal" class="modal-overlay" @click.self="closeCustomLightShelfModal">
+      <div class="modal-content custom-shelf-modal">
+        <h3>自定义轻型货架</h3>
+        <div class="modal-body">
+          <!-- 规格选择 -->
+          <div class="form-group">
+            <label>选择规格:</label>
+            <select v-model="selectedLightShelfSpec" class="spec-select">
+              <option value="">请选择尺寸规格</option>
+              <option value="A15-5">1500x400x2000（5层）- A15-5</option>
+              <option value="A20-4">2000x600x2000（4层）- A20-4</option>
+              <option value="A20-5">2000x600x2500（5层）- A20-5</option>
+              <option value="A20-6">2000x600x3000（6层）- A20-6</option>
+            </select>
+          </div>
+          
+          <!-- 规格详情展示 -->
+          <div v-if="selectedLightShelfSpec" class="spec-details">
+            <div class="detail-item">
+              <span class="detail-label">中文名称:</span>
+              <span class="detail-value">{{ lightShelfSpecs[selectedLightShelfSpec].name }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">层数:</span>
+              <span class="detail-value">{{ lightShelfSpecs[selectedLightShelfSpec].levels }}层</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">承重:</span>
+              <span class="detail-value">{{ lightShelfSpecs[selectedLightShelfSpec].load }}kg</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">每层空间高度:</span>
+              <span class="detail-value">{{ lightShelfSpecs[selectedLightShelfSpec].layerHeight }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">最佳适配仓库净高:</span>
+              <span class="detail-value">{{ lightShelfSpecs[selectedLightShelfSpec].warehouseHeight }}</span>
+            </div>
+          </div>
+          
+          <!-- 空状态提示 -->
+          <div v-else class="spec-empty">
+            <p>请从上方下拉菜单选择一个规格</p>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button @click="closeCustomLightShelfModal" class="cancel-btn">取消</button>
+          <button @click="confirmAddCustomLightShelf" class="confirm-btn" :disabled="!selectedLightShelfSpec">确认添加</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, nextTick } from 'vue';
+import { ref, computed, nextTick, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import * as THREE from 'three';
 import ThreeScene from '../components/3d/ThreeScene.vue';
@@ -1046,6 +1150,12 @@ const selectedObjectCount = ref(0);
 const isRotating = ref(false);
 const isMoving = ref(false);
 const showBatchPanel = ref(false);
+
+// 精确旋转角度输入对话框状态
+const showRotationDialog = ref(false);
+const rotationAngle = ref(0);
+const rotationOriginalAngle = ref(0);
+const isRotationPreview = ref(false);
 const isProjectSaved = ref(false);
 const projectReport = ref(null);
 const showSaveDialog = ref(false);
@@ -1064,9 +1174,22 @@ const windowConfig = ref({ width: 1.5, height: 1.2, sillHeight: 1 });
 // 3D生成加载状态
 const isGenerating3D = ref(false);
 
+// 我的模型列表（从 localStorage 加载）
+const myModels = ref([]);
+
+// 从 localStorage 加载我的模型
+const loadMyModels = () => {
+  const saved = localStorage.getItem('myModels');
+  if (saved) {
+    myModels.value = JSON.parse(saved);
+    console.log('从 localStorage 加载我的模型:', myModels.value.length, '个');
+  }
+};
+
 // 对象分类展开状态
 const expandedObjectCategories = ref({
   facility: true,
+  'my-models': false,
   'light-shelf': false,
   'medium-shelf': false,
   'heavy-shelf': false,
@@ -1092,6 +1215,8 @@ const batchCols = ref(3);
 const batchRowSpacing = ref(3);
 const batchColSpacing = ref(0);
 const batchRotation = ref(0);
+const batchRowDirection = ref('forward'); // 行延伸方向：forward/backward/left/right
+const batchColDirection = ref('left');    // 列延伸方向：forward/backward/left/right
 const isBatchPreview = ref(false);
 // isRotating 已在前面定义
 
@@ -1307,8 +1432,16 @@ const placedObjectsCount = computed(() => {
 // 判断选中的对象是否是货架（批量复制仅对货架有效）
 const isSelectedObjectShelf = computed(() => {
   if (!selectedObject.value) return false;
-  const type = selectedObject.value.type || selectedObject.value.modelType || '';
-  return type.startsWith('shelf-');
+  const type = selectedObject.value.type || '';
+  const modelType = selectedObject.value.modelType || '';
+  const category = selectedObject.value.category || '';
+  // 检查 type 是否为 'shelf' 或 modelType 包含货架关键词 或 category 是货架类型
+  return type === 'shelf' || 
+         modelType.includes('shelf') || 
+         modelType.includes('light-duty') ||
+         modelType.includes('medium-duty') ||
+         modelType.includes('high-duty') ||
+         category.includes('shelf');
 });
 
 // 2D仓库绘制
@@ -1361,6 +1494,58 @@ const textInputSize = ref(14);
 const tempTextPosition = ref({ x: 0, y: 0 });
 const selectedTextLabel = ref(null);
 const isEditingText = ref(false);
+
+// 自定义轻型货架功能
+const showCustomLightShelfModal = ref(false);
+const selectedLightShelfSpec = ref('');
+
+// 轻型货架规格定义
+const lightShelfSpecs = {
+  'A15-5': {
+    id: 'light-duty-A15-5',
+    name: '5层轻型货架-L1.5xD0.4xH2.0',
+    levels: 5,
+    load: '300-800',
+    layerHeight: '1-4层每层0.6米，顶层5CM',
+    warehouseHeight: '3米以下',
+    length: 1500,
+    width: 400,
+    height: 2000
+  },
+  'A20-4': {
+    id: 'light-duty-A20-4',
+    name: '4层轻型货架-L2.0xD0.6xH2.0',
+    levels: 4,
+    load: '300-800',
+    layerHeight: '1-3层每层0.6米，顶层5CM',
+    warehouseHeight: '3米以下',
+    length: 2000,
+    width: 600,
+    height: 2000
+  },
+  'A20-5': {
+    id: 'light-duty-A20-5',
+    name: '5层轻型货架-L2.0xD0.6xH2.5',
+    levels: 5,
+    load: '300-800',
+    layerHeight: '1-4层每层0.6米，顶层5CM',
+    warehouseHeight: '3米以下',
+    length: 2000,
+    width: 600,
+    height: 2500
+  },
+  'A20-6': {
+    id: 'light-duty-A20-6',
+    name: '6层轻型货架-L2.0xD0.6xH3.0',
+    levels: 6,
+    load: '300-800',
+    layerHeight: '1-5层每层0.6米，顶层5CM',
+    warehouseHeight: '4米以下',
+    length: 2000,
+    width: 600,
+    height: 3000
+  }
+};
 
 // 区域类型定义
 const zoneTypes = [
@@ -2226,6 +2411,48 @@ function cancelAddText() {
   console.log('取消添加文字');
 }
 
+// 自定义轻型货架功能
+function openCustomLightShelfModal() {
+  if (currentView.value !== '3d') {
+    alert('请先切换到3D视图！');
+    return;
+  }
+  selectedLightShelfSpec.value = '';
+  showCustomLightShelfModal.value = true;
+  console.log('打开自定义轻型货架弹窗');
+}
+
+function closeCustomLightShelfModal() {
+  showCustomLightShelfModal.value = false;
+  selectedLightShelfSpec.value = '';
+  console.log('关闭自定义轻型货架弹窗');
+}
+
+function confirmAddCustomLightShelf() {
+  if (!selectedLightShelfSpec.value) {
+    alert('请选择一个规格！');
+    return;
+  }
+  
+  const spec = lightShelfSpecs[selectedLightShelfSpec.value];
+  console.log('添加自定义轻型货架:', spec);
+  
+  // 添加到3D场景 - 使用addModel方法（与预置货架相同）
+  if (threeScene.value) {
+    console.log('使用addModel方法添加模型:', spec.id);
+    
+    // 直接调用addModel，让ThreeScene处理位置
+    threeScene.value.addModel(spec.id);
+    
+    console.log('addModel调用完成');
+  } else {
+    console.log('threeScene不存在！');
+  }
+  
+  // 关闭弹窗
+  closeCustomLightShelfModal();
+}
+
 // 编辑文字标注
 function editTextLabel(labelId) {
   const label = textLabels.value.find(l => l.id === labelId);
@@ -2335,6 +2562,24 @@ function onZoneDragStart(event, zoneType) {
   draggedZoneType.value = zoneType;
   event.dataTransfer.setData('zoneType', JSON.stringify(zoneType));
   event.dataTransfer.effectAllowed = 'copy';
+  
+  // 【优化】创建简单的拖拽图像，提高性能
+  const dragImage = document.createElement('div');
+  dragImage.style.width = '60px';
+  dragImage.style.height = '40px';
+  dragImage.style.backgroundColor = zoneType.color;
+  dragImage.style.opacity = '0.8';
+  dragImage.style.position = 'fixed';
+  dragImage.style.top = '-100px';
+  dragImage.style.left = '-100px';
+  document.body.appendChild(dragImage);
+  event.dataTransfer.setDragImage(dragImage, 30, 20);
+  
+  // 拖拽结束后清理
+  setTimeout(() => {
+    document.body.removeChild(dragImage);
+  }, 0);
+  
   console.log('开始拖拽功能区:', zoneType.label);
 }
 
@@ -2348,8 +2593,11 @@ function onZoneDrop(event) {
   if (!canvas) return;
 
   const rect = canvas.getBoundingClientRect();
-  const x = event.clientX - rect.left;
-  const y = event.clientY - rect.top;
+  // 【修复】考虑画布缩放和平移，将鼠标坐标转换为实际画布坐标
+  const mouseX = event.clientX - rect.left;
+  const mouseY = event.clientY - rect.top;
+  const x = (mouseX - canvasOffset.value.x) / canvasScale.value;
+  const y = (mouseY - canvasOffset.value.y) / canvasScale.value;
 
   // 创建默认大小的矩形功能区（100x60像素，对应10x6米）
   const width = 100;
@@ -3192,15 +3440,70 @@ function toggleRotateMode() {
     alert('请先切换到3D视图！');
     return;
   }
-  if (threeScene.value) {
-    if (isRotating.value) {
-      isRotating.value = false;
-      threeScene.value.endRotate();
-    } else {
-      isRotating.value = true;
-      threeScene.value.startRotate();
-    }
+  if (!selectedObject.value) {
+    alert('请先选中要旋转的对象！');
+    return;
   }
+  // 打开精确旋转角度输入对话框
+  openRotationDialog();
+}
+
+// 打开旋转角度输入对话框
+function openRotationDialog() {
+  if (!selectedObject.value) return;
+  
+  // 获取当前对象的旋转角度（转换为度数）
+  const currentRotation = selectedObject.value.rotationY || 0;
+  rotationAngle.value = Math.round(currentRotation * 180 / Math.PI);
+  rotationOriginalAngle.value = rotationAngle.value;
+  isRotationPreview.value = false;
+  showRotationDialog.value = true;
+  
+  console.log('打开旋转对话框，当前角度:', rotationAngle.value);
+}
+
+// 关闭旋转对话框
+function closeRotationDialog() {
+  showRotationDialog.value = false;
+  rotationAngle.value = 0;
+  rotationOriginalAngle.value = 0;
+  isRotationPreview.value = false;
+}
+
+// 旋转角度输入变化时实时预览
+function onRotationAngleChange() {
+  if (!threeScene.value || !selectedObject.value) return;
+  
+  isRotationPreview.value = true;
+  // 将角度转换为弧度，顺时针为正
+  const angleRad = rotationAngle.value * Math.PI / 180;
+  threeScene.value.previewRotation(angleRad);
+}
+
+// 确认旋转角度
+function confirmRotation() {
+  if (!threeScene.value || !selectedObject.value) return;
+  
+  // 应用旋转
+  const angleRad = rotationAngle.value * Math.PI / 180;
+  threeScene.value.applyRotation(angleRad);
+  
+  console.log('确认旋转角度:', rotationAngle.value);
+  closeRotationDialog();
+}
+
+// 取消旋转
+function cancelRotation() {
+  if (!threeScene.value || !selectedObject.value) return;
+  
+  // 恢复原始角度
+  if (isRotationPreview.value) {
+    const originalRad = rotationOriginalAngle.value * Math.PI / 180;
+    threeScene.value.applyRotation(originalRad);
+  }
+  
+  console.log('取消旋转，恢复原角度:', rotationOriginalAngle.value);
+  closeRotationDialog();
 }
 
 function deleteSelectedObject() {
@@ -3309,13 +3612,16 @@ function startBatchPreview() {
   }
   isBatchPreview.value = true;
   console.log('开始批量复制预览:', batchRows.value, '行', batchCols.value, '列');
+  console.log('方向设置 - 行:', batchRowDirection.value, '列:', batchColDirection.value);
   if (threeScene.value) {
     threeScene.value.startBatchPreview({
       rows: batchRows.value,
       cols: batchCols.value,
       rowSpacing: batchRowSpacing.value,
       colSpacing: batchColSpacing.value,
-      rotation: batchRotation.value
+      rotation: batchRotation.value,
+      rowDirection: batchRowDirection.value,
+      colDirection: batchColDirection.value
     });
   }
 }
@@ -3433,6 +3739,23 @@ function onDragStart(event, modelName) {
   console.log('开始拖动模型:', modelName);
 }
 
+// 自定义模型拖拽（使用 modelUrl 提取模型ID）
+function onCustomModelDragStart(event, model) {
+  // 从 modelUrl 提取模型ID（如 /assets/models/shelf-beam-medium.glb -> shelf-beam-medium）
+  let modelIdentifier = model.id;
+  if (model.modelUrl) {
+    const match = model.modelUrl.match(/\/([^\/]+)\.glb$/);
+    if (match) {
+      modelIdentifier = match[1];
+    }
+  }
+  event.dataTransfer.setData('modelName', modelIdentifier);
+  event.dataTransfer.setData('isCustomModel', 'true');
+  event.dataTransfer.setData('customModelId', model.id);
+  event.dataTransfer.effectAllowed = 'copy';
+  console.log('开始拖动自定义模型:', model.name, 'ID:', modelIdentifier);
+}
+
 // 创建拖拽预览图像
 function createDragPreview(width, height, color, type) {
   const canvas = document.createElement('canvas');
@@ -3528,6 +3851,11 @@ function onAddWindow(wallIndex, position) {
 function toggleCategory(category) {
   expandedCategories.value[category] = !expandedCategories.value[category];
 }
+
+// 组件挂载时加载我的模型
+onMounted(() => {
+  loadMyModels();
+});
 
 // 暴露给模板使用的变量和函数
 defineExpose({
@@ -3642,7 +3970,10 @@ defineExpose({
   alignObjects,
   distributeObjects,
   saveProjectFromZone,
-  calculateWarehouseArea
+  calculateWarehouseArea,
+  myModels,
+  loadMyModels,
+  onCustomModelDragStart
 });
 </script>
 
@@ -3997,6 +4328,84 @@ defineExpose({
   color: #555;
 }
 
+/* 自定义轻型货架弹窗样式 */
+.custom-shelf-modal {
+  min-width: 400px;
+  max-width: 500px;
+}
+
+.custom-shelf-modal .spec-select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+}
+
+.custom-shelf-modal .spec-select:focus {
+  outline: none;
+  border-color: #4361ee;
+}
+
+.custom-shelf-modal .spec-details {
+  margin-top: 20px;
+  padding: 16px;
+  background: #f8f9ff;
+  border-radius: 8px;
+  border: 1px solid #e8ecff;
+}
+
+.custom-shelf-modal .detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #e0e0e8;
+}
+
+.custom-shelf-modal .detail-item:last-child {
+  border-bottom: none;
+}
+
+.custom-shelf-modal .detail-label {
+  font-size: 13px;
+  color: #666;
+  font-weight: 500;
+}
+
+.custom-shelf-modal .detail-value {
+  font-size: 13px;
+  color: #333;
+  font-weight: 600;
+  text-align: right;
+  max-width: 60%;
+}
+
+.custom-shelf-modal .spec-empty {
+  margin-top: 20px;
+  padding: 30px;
+  text-align: center;
+  color: #999;
+  background: #f5f5f5;
+  border-radius: 8px;
+  border: 1px dashed #ddd;
+}
+
+/* 自定义货架按钮样式 */
+.custom-shelf-btn {
+  background: linear-gradient(135deg, #f8f9ff 0%, #e8ecff 100%);
+  border: 1px dashed #4361ee;
+  color: #4361ee;
+  font-weight: 500;
+  cursor: pointer !important; /* 覆盖拖拽光标 */
+}
+
+.custom-shelf-btn:hover {
+  background: linear-gradient(135deg, #e8ecff 0%, #d4d9ff 100%);
+}
+
 /* 批量复制控制 */
 .batch-controls-compact {
   display: flex;
@@ -4026,6 +4435,38 @@ defineExpose({
 
 .control-row span {
   color: #999;
+  font-size: 10px;
+}
+
+.control-row.direction-row label {
+  width: 40px;
+}
+
+.direction-select {
+  flex: 1;
+  padding: 4px 6px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 11px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.direction-select:disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.direction-legend {
+  margin: 4px 0;
+  padding: 4px 6px;
+  background: #f5f5f5;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.direction-legend small {
+  color: #666;
   font-size: 10px;
 }
 
@@ -5574,6 +6015,65 @@ defineExpose({
 .cancel-btn {
   background: #ef5350;
   color: white;
+}
+
+/* 旋转对话框样式 */
+.rotation-dialog {
+  width: 360px;
+}
+
+.rotation-dialog .form-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.rotation-dialog .form-group label {
+  font-size: 14px;
+  color: #333;
+  white-space: nowrap;
+}
+
+.rotation-dialog .form-group input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+  text-align: center;
+}
+
+.rotation-dialog .hint-text {
+  font-size: 12px;
+  color: #666;
+  margin: 12px 0;
+  line-height: 1.5;
+}
+
+.rotation-presets {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #eee;
+}
+
+.preset-btn {
+  padding: 6px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #f5f5f5;
+  color: #333;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.preset-btn:hover {
+  background: #e0e0e0;
+  border-color: #bbb;
 }
 
 /* 区域列表 */

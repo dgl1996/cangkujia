@@ -26,6 +26,51 @@
 import numpy as np
 import trimesh
 
+# ==================== 颜色常量定义 ====================
+# 轻型货架颜色方案：立柱蓝色，横梁橙红色，层板白色
+LIGHT_SHELF_COLORS = {
+    'upright': '#0066CC',    # 立柱：蓝色
+    'beam': '#FF4500',       # 横梁：橙红色
+    'deck': '#FFFFFF',       # 层板：白色
+    'back': '#E0E0E0',       # 背板：浅灰色
+}
+
+# 中型货架颜色方案：立柱深蓝色，横梁橙红色，层板白色
+MEDIUM_SHELF_COLORS = {
+    'upright': '#00008B',    # 立柱：深蓝色
+    'beam': '#FF4500',       # 横梁：橙红色
+    'deck': '#FFFFFF',       # 层板：白色
+}
+
+# 高位货架颜色方案：立柱橙红色，横梁深蓝色，层板透明
+HIGH_SHELF_COLORS = {
+    'upright': '#FF4500',    # 立柱：橙红色
+    'beam': '#00008B',       # 横梁：深蓝色
+    'deck': None,            # 层板：透明（不生成层板几何体）
+}
+
+# ==================== 尺寸常量定义 ====================
+# 轻型货架：立柱50x40x1.5，横梁50x30x1.2，层板20
+LIGHT_SHELF_SIZES = {
+    'upright': (50, 40),     # 立柱截面：宽度x深度
+    'beam': (50, 30),        # 横梁截面：高度x宽度
+    'deck_thickness': 20,    # 层板厚度
+}
+
+# 中型货架：立柱80x60x2.0，横梁80x50x1.5，层板20
+MEDIUM_SHELF_SIZES = {
+    'upright': (80, 60),     # 立柱截面：宽度x深度
+    'beam': (80, 50),        # 横梁截面：高度x宽度
+    'deck_thickness': 20,    # 层板厚度
+}
+
+# 高位货架：立柱100x80x3.0，横梁120x60x2.5，层板20
+HIGH_SHELF_SIZES = {
+    'upright': (100, 80),    # 立柱截面：宽度x深度
+    'beam': (120, 60),       # 横梁截面：高度x宽度
+    'deck_thickness': 20,    # 层板厚度
+}
+
 
 def set_mesh_color(mesh, color):
     """
@@ -428,8 +473,20 @@ def generate_pallet(length=1200, width=1000, height=150, colors=None):
 
 def generate_light_duty_shelf(长度=1500, 深度=400, 高度=2000, 层数=4,
                                层载重=500, 标准层高=600, 层板厚度=20,
-                               立柱颜色="#B0C4DE", 横梁颜色="#FF4500", 层板颜色="#FFFFFF",
-                               顶层挡板高度=50):
+                               立柱颜色=LIGHT_SHELF_COLORS['upright'],
+                               横梁颜色=LIGHT_SHELF_COLORS['beam'],
+                               层板颜色=LIGHT_SHELF_COLORS['deck'],
+                               顶层挡板高度=50,
+                               立柱尺寸=(40, 40),  # (宽度, 深度)
+                               横梁尺寸=(40, 30),  # (高度, 宽度)
+                               底脚高度=30,
+                               侧拉梁尺寸=(40, 25),  # (高度, 宽度)，高位货架专用
+                               侧拉梁位置=(0.2, 0.8),  # (下部比例, 上部比例)，相对于高度
+                               生成侧拉梁=True,  # 是否生成侧拉梁
+                               背靠背侧拉梁=False,  # 是否生成背靠背侧拉梁
+                               背靠背间距=0,  # 背靠背间距(mm)
+                               添加方向标记=True,  # 是否添加操作方向白线标记
+                               是配组第二组=False):  # 是否是配组货架的第二组（第二组不添加标记）
     """
     生成轻型货架模型（增强版）- 支持中文参数和Hex颜色
     
@@ -441,10 +498,18 @@ def generate_light_duty_shelf(长度=1500, 深度=400, 高度=2000, 层数=4,
         层载重: 单层承载重量(kg)，默认500
         标准层高: 标准层高度(mm)，默认600
         层板厚度: 层板厚度(mm)，默认20
-        立柱颜色: 立柱颜色(Hex格式)，默认"#B0C4DE"(浅钢蓝)
+        立柱颜色: 立柱颜色(Hex格式)，默认蓝色(LIGHT_SHELF_COLORS['upright'])
         横梁颜色: 横梁颜色(Hex格式)，默认"#FF4500"(橙红)
         层板颜色: 层板颜色(Hex格式)，默认"#FFFFFF"(白色)
         顶层挡板高度: 顶层后侧挡板高度(mm)，默认50
+        立柱尺寸: 立柱截面尺寸(宽度, 深度)，默认(40, 40)
+        横梁尺寸: 横梁截面尺寸(高度, 宽度)，默认(40, 30)
+        底脚高度: 底脚高度(mm)，默认30
+        侧拉梁尺寸: 侧拉梁截面尺寸(高度, 宽度)，高位货架专用，默认(40, 25)
+        侧拉梁位置: 侧拉梁位置比例(下部, 上部)，默认(0.2, 0.8)
+        生成侧拉梁: 是否生成侧拉梁，默认True
+        背靠背侧拉梁: 是否生成背靠背侧拉梁，默认False
+        背靠背间距: 背靠背间距(mm)，默认0
     
     Returns:
         scene: trimesh.Scene 对象
@@ -452,12 +517,12 @@ def generate_light_duty_shelf(长度=1500, 深度=400, 高度=2000, 层数=4,
     """
     meshes = []
     
-    # 立柱尺寸
-    立柱宽度 = 40
-    立柱深度 = 40
-    横梁高度 = 40
-    横梁宽度 = 30
-    底脚高度 = 30
+    # 保持毫米单位（与旧模型保持一致）
+    # 注意：ThreeScene.vue中使用0.1缩放，所以1500mm -> 150（Three.js单位）
+    
+    # 立柱尺寸（mm）
+    立柱宽度, 立柱深度 = 立柱尺寸
+    横梁高度, 横梁宽度 = 横梁尺寸
     
     # 计算层高度（均匀分布）
     底层高度 = 100
@@ -498,7 +563,12 @@ def generate_light_duty_shelf(长度=1500, 深度=400, 高度=2000, 层数=4,
         当前高度 += 层高
         
         # 横梁（前后各一根）
-        for y偏移 in [-深度/2 + 立柱深度/2, 深度/2 - 立柱深度/2]:
+        # 前横梁（Y坐标为负，操作侧）
+        y前 = -深度/2 + 立柱深度/2
+        # 后横梁（Y坐标为正）
+        y后 = 深度/2 - 立柱深度/2
+        
+        for y偏移 in [y前, y后]:
             # 横梁上部分
             横梁上 = trimesh.creation.box(
                 extents=[长度 - 2*立柱宽度 - 10, 横梁宽度, 横梁高度/2]
@@ -516,16 +586,32 @@ def generate_light_duty_shelf(长度=1500, 深度=400, 高度=2000, 层数=4,
             meshes.append(横梁上)
             meshes.append(横梁下)
         
-        # 层板（白色平面，厚度20mm）
-        层板 = trimesh.creation.box(
-            extents=[长度 - 2*立柱宽度 - 20, 深度 - 2*立柱深度 - 10, 层板厚度]
-        )
-        层板.apply_translation([0, 0, 当前高度])
-        set_mesh_color(层板, 层板颜色)
-        meshes.append(层板)
+        # 添加操作方向白线标记（仅在前横梁中央，且不是配组第二组）
+        if 添加方向标记 and not 是配组第二组:
+            # 白线参数：10cm粗，横跨横梁宽度
+            白线粗细 = 100  # 100mm = 10cm
+            白线长度 = 横梁宽度 + 20  # 比横梁稍宽一点
+            白线高度 = 横梁高度 + 10  # 比横梁稍高一点，确保可见
+            
+            # 在前横梁（操作侧）中央位置添加白线
+            白线 = trimesh.creation.box(
+                extents=[白线粗细, 白线长度, 白线高度]
+            )
+            白线.apply_translation([0, y前, 当前高度])
+            set_mesh_color(白线, '#FFFFFF')  # 纯白色
+            meshes.append(白线)
         
-        # 顶层挡板（只有顶层添加）
-        if 层索引 == 层数 - 1 and 顶层挡板高度 > 0:
+        # 层板（当层板颜色不为None时生成）
+        if 层板颜色 is not None:
+            层板 = trimesh.creation.box(
+                extents=[长度 - 2*立柱宽度 - 20, 深度 - 2*立柱深度 - 10, 层板厚度]
+            )
+            层板.apply_translation([0, 0, 当前高度])
+            set_mesh_color(层板, 层板颜色)
+            meshes.append(层板)
+        
+        # 顶层挡板（只有顶层添加，且层板颜色不为None时）
+        if 层索引 == 层数 - 1 and 顶层挡板高度 > 0 and 层板颜色 is not None:
             挡板 = trimesh.creation.box(
                 extents=[长度 - 2*立柱宽度 - 20, 20, 顶层挡板高度]
             )
@@ -533,16 +619,57 @@ def generate_light_duty_shelf(长度=1500, 深度=400, 高度=2000, 层数=4,
             set_mesh_color(挡板, 层板颜色)
             meshes.append(挡板)
     
+    # 生成侧拉梁（高位货架专用）
+    # 【修正】先定义变量，供两侧侧拉梁和背靠背侧拉梁共用
+    侧拉梁高度, 侧拉梁宽度 = 侧拉梁尺寸
+    下部比例, 上部比例 = 侧拉梁位置
+    
+    if 生成侧拉梁:
+        # 【修正】左右两侧侧拉梁（各2根：上下各1根）
+        # 沿深度方向（Y轴），连接前后立柱
+        for x偏移 in [-长度/2 + 立柱宽度/2, 长度/2 - 立柱宽度/2]:
+            for 高度比例 in [下部比例, 上部比例]:
+                侧拉梁z = 底脚高度 + (高度 - 底脚高度) * 高度比例
+                侧拉梁 = trimesh.creation.box(
+                    extents=[侧拉梁宽度, 深度 - 2*立柱深度 - 10, 侧拉梁高度]
+                )
+                侧拉梁.apply_translation([x偏移, 0, 侧拉梁z])
+                set_mesh_color(侧拉梁, 横梁颜色)
+                meshes.append(侧拉梁)
+    
+    # 背靠背侧拉梁（配组时生成，左右各2根）
+    # 【修正】位置改为靠近第一组的一侧（Y坐标为负）
+    if 背靠背侧拉梁 and 背靠背间距 > 0:
+        for 高度比例 in [下部比例, 上部比例]:
+            侧拉梁z = 底脚高度 + (高度 - 底脚高度) * 高度比例
+            # 左侧背靠背侧拉梁（靠近第一组）
+            侧拉梁左 = trimesh.creation.box(
+                extents=[侧拉梁宽度, 背靠背间距, 侧拉梁高度]
+            )
+            侧拉梁左.apply_translation([-长度/2 + 立柱宽度/2, -深度/2 - 背靠背间距/2, 侧拉梁z])
+            set_mesh_color(侧拉梁左, 横梁颜色)
+            meshes.append(侧拉梁左)
+            
+            # 右侧背靠背侧拉梁（靠近第一组）
+            侧拉梁右 = trimesh.creation.box(
+                extents=[侧拉梁宽度, 背靠背间距, 侧拉梁高度]
+            )
+            侧拉梁右.apply_translation([长度/2 - 立柱宽度/2, -深度/2 - 背靠背间距/2, 侧拉梁z])
+            set_mesh_color(侧拉梁右, 横梁颜色)
+            meshes.append(侧拉梁右)
+    
     # 创建Scene
     scene = create_scene(meshes)
     
-    # 元数据（中文参数格式）
+    # 元数据（中文参数格式）- 参数已经是毫米单位
     metadata = {
         "id": f"light-duty-A{int(长度/100)}-{层数}",
         "name": f"{层数}层轻型货架-L{长度/1000:.1f}xD{深度/1000:.1f}xH{高度/1000:.1f}",
         "category": "light-shelf",
-        "description": f"标准{层数}层轻型搁板式货架，适合3米以下仓库，人工存取轻型货物，单层层载{层载重}kg，层高{标准层高}mm，顶层配{顶层挡板高度}cm挡板",
+        "description": f"标准{层数}层轻型搁板式货架，适合3米以下仓库，人工存取轻型货物，单层层载{层载重}kg，层高{标准层高}mm，顶层配{顶层挡板高度:.0f}mm挡板",
         "tags": ["轻型货架", "搁板式", "人工存取", f"A{int(长度/100)}系列"],
+        "operationDirection": "+Z",  # 操作方向：白线标记朝向+Z方向
+        "isPairSecondGroup": 是配组第二组,  # 是否是配组第二组
         "parameters": {
             "长度": {"type": "number", "min": 长度, "max": 长度, "default": 长度, "unit": "mm"},
             "深度": {"type": "number", "min": 深度, "max": 深度, "default": 深度, "unit": "mm"},
@@ -576,6 +703,75 @@ COLORS = {
 }
 
 
+def generate_pair_shelf(shelf_generator_func, spacing=0, **kwargs):
+    """
+    生成配组货架（背靠背两组货架）
+    
+    Args:
+        shelf_generator_func: 单组货架生成函数
+        spacing: 背靠背间距(mm)，轻型/中型货架为0，高位货架为200
+        **kwargs: 传递给单组货架生成函数的参数
+    
+    Returns:
+        scene: trimesh.Scene 对象（包含两组货架）
+        metadata: 元数据字典
+    """
+    # 【修正】生成第一组货架（保留侧拉梁，生成背靠背侧拉梁，添加方向标记）
+    kwargs_first = kwargs.copy()
+    kwargs_first['背靠背侧拉梁'] = True  # 生成背靠背侧拉梁
+    kwargs_first['背靠背间距'] = spacing
+    kwargs_first['添加方向标记'] = True  # 第一组添加方向标记
+    kwargs_first['是配组第二组'] = False
+    scene1, metadata1 = shelf_generator_func(**kwargs_first)
+    
+    # 获取第一组货架的深度（用于计算第二组位置）
+    depth = kwargs.get('深度', kwargs.get('width', 400))
+    
+    # 创建新的场景
+    pair_scene = trimesh.Scene()
+    
+    # 【修复】scene1 中的几何体已经通过 create_scene 进行了坐标转换
+    # 直接使用，不需要再次旋转
+    
+    # 添加第一组货架（位置不变）
+    for name, geom in scene1.geometry.items():
+        geom_copy = geom.copy()
+        pair_scene.add_geometry(geom_copy, node_name=f'group1_{name}')
+    
+    # 【修正】生成第二组货架（完整保留，不生成背靠背侧拉梁，不添加方向标记）
+    kwargs_second = kwargs.copy()
+    kwargs_second['背靠背侧拉梁'] = False  # 不生成背靠背侧拉梁
+    kwargs_second['添加方向标记'] = True  # 仍然添加标记参数，但标记为第二组
+    kwargs_second['是配组第二组'] = True   # 标记为第二组，不添加白线
+    scene2, metadata2 = shelf_generator_func(**kwargs_second)
+    
+    # 添加第二组货架（沿Z轴平移：深度 + 间距）
+    # 【修复】在Three.js坐标系中，Z轴是深度方向（前后）
+    offset = depth + spacing
+    translation_matrix = trimesh.transformations.translation_matrix([0, 0, offset])
+    
+    for name, geom in scene2.geometry.items():
+        geom_copy = geom.copy()
+        # 直接平移，不需要再次旋转
+        geom_copy.apply_transform(translation_matrix)
+        pair_scene.add_geometry(geom_copy, node_name=f'group2_{name}')
+    
+    # 更新元数据
+    pair_metadata = metadata1.copy()
+    pair_metadata['name'] = pair_metadata['name'] + '配组'
+    pair_metadata['description'] = pair_metadata.get('description', '') + '（背靠背配组）'
+    pair_metadata['is_pair'] = True
+    pair_metadata['pair_spacing'] = spacing
+    
+    # 确保 dimensions 存在
+    if 'dimensions' not in pair_metadata:
+        pair_metadata['dimensions'] = {}
+    pair_metadata['dimensions']['深度'] = depth * 2 + spacing
+    pair_metadata['dimensions']['width'] = depth * 2 + spacing
+    
+    return pair_scene, pair_metadata
+
+
 if __name__ == "__main__":
     # 测试代码
     print("测试生成标准货架...")
@@ -586,9 +782,11 @@ if __name__ == "__main__":
     print("\n测试生成轻型货架（增强版）- 4层...")
     scene, metadata = generate_light_duty_shelf(
         长度=1500, 深度=400, 高度=2000, 层数=4,
-        层载重=500, 标准层高=600, 层板厚度=20,
-        立柱颜色="#B0C4DE", 横梁颜色="#FF4500", 层板颜色="#FFFFFF",
-        顶层挡板高度=50
+        层载重=500, 标准层高=600, 层板厚度=LIGHT_SHELF_SIZES['deck_thickness'],
+        顶层挡板高度=50,
+        立柱尺寸=LIGHT_SHELF_SIZES['upright'],
+        横梁尺寸=LIGHT_SHELF_SIZES['beam'],
+        生成侧拉梁=False
     )
     print(f"生成成功: {metadata['name']}")
     print(f"几何体数量: {len(scene.geometry)}")
@@ -599,11 +797,28 @@ if __name__ == "__main__":
     export_glb(scene, output_path, metadata)
     print(f"已导出: {output_path}")
     
+    print("\n测试生成轻型货架配组（A15-4）...")
+    pair_scene, pair_metadata = generate_pair_shelf(
+        generate_light_duty_shelf,
+        spacing=0,  # 轻型货架背靠背间距为0
+        长度=1500, 深度=400, 高度=2000, 层数=4,
+        层载重=500, 标准层高=600, 层板厚度=20,
+        顶层挡板高度=50,
+        生成侧拉梁=False
+    )
+    print(f"生成成功: {pair_metadata['name']}")
+    print(f"几何体数量: {len(pair_scene.geometry)}")
+    print(f"总深度: {pair_metadata['dimensions']['深度']}mm")
+    
+    # 导出配组GLB文件
+    pair_output_path = "../frontend/public/assets/models/light-duty-A15-4-pair.glb"
+    export_glb(pair_scene, pair_output_path, pair_metadata)
+    print(f"已导出配组: {pair_output_path}")
+    
     print("\n测试生成轻型货架（增强版）- 5层...")
     scene, metadata = generate_light_duty_shelf(
         长度=1500, 深度=400, 高度=2000, 层数=5,
         层载重=500, 标准层高=600, 层板厚度=20,
-        立柱颜色="#B0C4DE", 横梁颜色="#FF4500", 层板颜色="#FFFFFF",
         顶层挡板高度=50
     )
     print(f"生成成功: {metadata['name']}")
@@ -618,7 +833,6 @@ if __name__ == "__main__":
     scene, metadata = generate_light_duty_shelf(
         长度=2000, 深度=600, 高度=2000, 层数=4,
         层载重=500, 标准层高=600, 层板厚度=20,
-        立柱颜色="#B0C4DE", 横梁颜色="#FF4500", 层板颜色="#FFFFFF",
         顶层挡板高度=50
     )
     print(f"生成成功: {metadata['name']}")
@@ -633,7 +847,6 @@ if __name__ == "__main__":
     scene, metadata = generate_light_duty_shelf(
         长度=2000, 深度=600, 高度=2500, 层数=5,
         层载重=500, 标准层高=600, 层板厚度=20,
-        立柱颜色="#B0C4DE", 横梁颜色="#FF4500", 层板颜色="#FFFFFF",
         顶层挡板高度=50
     )
     print(f"生成成功: {metadata['name']}")
@@ -648,7 +861,6 @@ if __name__ == "__main__":
     scene, metadata = generate_light_duty_shelf(
         长度=2000, 深度=600, 高度=3000, 层数=6,
         层载重=500, 标准层高=600, 层板厚度=20,
-        立柱颜色="#B0C4DE", 横梁颜色="#FF4500", 层板颜色="#FFFFFF",
         顶层挡板高度=50
     )
     print(f"生成成功: {metadata['name']}")
@@ -668,3 +880,137 @@ if __name__ == "__main__":
     scene, metadata = generate_pallet(length=1200, width=1000)
     print(f"生成成功: {metadata['name']}")
     print(f"几何体数量: {len(scene.geometry)}")
+    
+    # 导出GLB文件
+    output_path = "../frontend/public/assets/models/pallet-1200x1000.glb"
+    export_glb(scene, output_path, metadata)
+    print(f"已导出: {output_path}")
+    
+    # ==================== 中型货架 B20-4 生成 ====================
+    print("\n========== 中型货架 B20-4 生成 ==========")
+    
+    print("\n生成中型货架 B20-4（单组）...")
+    scene, metadata = generate_light_duty_shelf(
+        长度=2000, 深度=600, 高度=2000, 层数=4,
+        层载重=800, 标准层高=600, 层板厚度=MEDIUM_SHELF_SIZES['deck_thickness'],
+        立柱颜色=MEDIUM_SHELF_COLORS['upright'],
+        横梁颜色=MEDIUM_SHELF_COLORS['beam'],
+        层板颜色=MEDIUM_SHELF_COLORS['deck'],
+        顶层挡板高度=50,
+        立柱尺寸=MEDIUM_SHELF_SIZES['upright'],
+        横梁尺寸=MEDIUM_SHELF_SIZES['beam'],
+        生成侧拉梁=False
+    )
+    # 修改元数据为中型货架
+    metadata['id'] = 'medium-duty-B20-4'
+    metadata['name'] = '4层中型货架-L2.0xD0.6xH2.0'
+    metadata['category'] = 'medium-shelf'
+    metadata['description'] = '标准4层中型货架，适合3米以下仓库，人工存取中型货物，单层层载500-800kg，层高600mm，顶层配50mm挡板，立柱深蓝色，横梁橙红色'
+    metadata['tags'] = ['中型货架', '搁板式', '人工存取', 'B20系列']
+    
+    print(f"生成成功: {metadata['name']}")
+    print(f"几何体数量: {len(scene.geometry)}")
+    
+    # 导出GLB文件
+    output_path = "../frontend/public/assets/models/medium-duty-B20-4.glb"
+    export_glb(scene, output_path, metadata)
+    print(f"已导出: {output_path}")
+    
+    print("\n生成中型货架 B20-4 配组...")
+    pair_scene, pair_metadata = generate_pair_shelf(
+        generate_light_duty_shelf,
+        spacing=0,  # 中型货架背靠背间距为0
+        长度=2000, 深度=600, 高度=2000, 层数=4,
+        层载重=800, 标准层高=600, 层板厚度=MEDIUM_SHELF_SIZES['deck_thickness'],
+        立柱颜色=MEDIUM_SHELF_COLORS['upright'],
+        横梁颜色=MEDIUM_SHELF_COLORS['beam'],
+        层板颜色=MEDIUM_SHELF_COLORS['deck'],
+        顶层挡板高度=50,
+        立柱尺寸=MEDIUM_SHELF_SIZES['upright'],
+        横梁尺寸=MEDIUM_SHELF_SIZES['beam'],
+        生成侧拉梁=False
+    )
+    # 修改元数据
+    pair_metadata['id'] = 'medium-duty-B20-4-pair'
+    pair_metadata['name'] = '4层中型货架-L2.0xD1.2xH2.0配组'
+    pair_metadata['category'] = 'medium-shelf'
+    pair_metadata['description'] = 'B20-4中型货架背靠背配组，两组货架间距0mm，适合节省空间布局，总深度1200mm，立柱深蓝色，横梁橙红色'
+    pair_metadata['tags'] = ['中型货架', '搁板式', '配组', '背靠背', 'B20系列']
+    
+    print(f"生成成功: {pair_metadata['name']}")
+    print(f"几何体数量: {len(pair_scene.geometry)}")
+    print(f"总深度: {pair_metadata['dimensions']['深度']}mm")
+    
+    # 导出配组GLB文件
+    pair_output_path = "../frontend/public/assets/models/medium-duty-B20-4-pair.glb"
+    export_glb(pair_scene, pair_output_path, pair_metadata)
+    print(f"已导出配组: {pair_output_path}")
+    
+    print("\n========== 中型货架生成完成 ==========")
+    
+    # ==================== 高位货架 C23-3 生成 ====================
+    print("\n========== 高位货架 C23-3 生成 ==========")
+    
+    print("\n生成高位货架 C23-3（单组）...")
+    scene, metadata = generate_light_duty_shelf(
+        长度=2300, 深度=1000, 高度=3000, 层数=3,
+        层载重=1500, 标准层高=1350, 层板厚度=HIGH_SHELF_SIZES['deck_thickness'],
+        立柱颜色=HIGH_SHELF_COLORS['upright'],
+        横梁颜色=HIGH_SHELF_COLORS['beam'],
+        层板颜色=HIGH_SHELF_COLORS['deck'],
+        顶层挡板高度=300,
+        立柱尺寸=HIGH_SHELF_SIZES['upright'],
+        横梁尺寸=HIGH_SHELF_SIZES['beam'],
+        侧拉梁尺寸=(40, 25),  # 高位货架侧拉梁 40x25mm
+        侧拉梁位置=(0.2, 0.8),  # 下部20%，上部80%
+        背靠背侧拉梁=False
+    )
+    # 修改元数据为高位货架
+    metadata['id'] = 'high-duty-C23-3'
+    metadata['name'] = '3层高位货架-L2.3xD1.0xH3.0'
+    metadata['category'] = 'heavy-shelf'
+    metadata['description'] = '标准3层高位货架，适合4.5米以下仓库，叉车存取重型货物，单层层载1000-2000kg，层高1.35米，层板透明，带侧拉梁，立柱橙红色，横梁深蓝色'
+    metadata['tags'] = ['高位货架', '叉车存取', '重型', 'C23系列']
+    
+    print(f"生成成功: {metadata['name']}")
+    print(f"几何体数量: {len(scene.geometry)}")
+    
+    # 导出GLB文件
+    output_path = "../frontend/public/assets/models/high-duty-C23-3.glb"
+    export_glb(scene, output_path, metadata)
+    print(f"已导出: {output_path}")
+    
+    print("\n生成高位货架 C23-3 配组...")
+    pair_scene, pair_metadata = generate_pair_shelf(
+        generate_light_duty_shelf,
+        spacing=200,  # 高位货架背靠背间距为200mm
+        长度=2300, 深度=1000, 高度=3000, 层数=3,
+        层载重=1500, 标准层高=1350, 层板厚度=HIGH_SHELF_SIZES['deck_thickness'],
+        立柱颜色=HIGH_SHELF_COLORS['upright'],
+        横梁颜色=HIGH_SHELF_COLORS['beam'],
+        层板颜色=HIGH_SHELF_COLORS['deck'],
+        顶层挡板高度=300,
+        立柱尺寸=HIGH_SHELF_SIZES['upright'],
+        横梁尺寸=HIGH_SHELF_SIZES['beam'],
+        侧拉梁尺寸=(40, 25),  # 高位货架侧拉梁 40x25mm
+        侧拉梁位置=(0.2, 0.8),  # 下部20%，上部80%
+        背靠背侧拉梁=True,
+        背靠背间距=200
+    )
+    # 修改元数据
+    pair_metadata['id'] = 'high-duty-C23-3-pair'
+    pair_metadata['name'] = '3层高位货架-L2.3xD2.0xH3.0配组'
+    pair_metadata['category'] = 'heavy-shelf'
+    pair_metadata['description'] = 'C23-3高位货架背靠背配组，两组货架间距200mm，适合节省空间布局，总深度2200mm，层板透明，带侧拉梁和背靠背拉梁，立柱橙红色，横梁深蓝色'
+    pair_metadata['tags'] = ['高位货架', '叉车存取', '配组', '背靠背', 'C23系列']
+    
+    print(f"生成成功: {pair_metadata['name']}")
+    print(f"几何体数量: {len(pair_scene.geometry)}")
+    print(f"总深度: {pair_metadata['dimensions']['深度']}mm")
+    
+    # 导出配组GLB文件
+    pair_output_path = "../frontend/public/assets/models/high-duty-C23-3-pair.glb"
+    export_glb(pair_scene, pair_output_path, pair_metadata)
+    print(f"已导出配组: {pair_output_path}")
+    
+    print("\n========== 高位货架生成完成 ==========")

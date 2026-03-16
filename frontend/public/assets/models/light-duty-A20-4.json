@@ -2,13 +2,15 @@
   "id": "light-duty-A20-4",
   "name": "4层轻型货架-L2.0xD0.6xH2.0",
   "category": "light-shelf",
-  "description": "标准4层轻型搁板式货架，适合3米以下仓库，人工存取轻型货物，单层层载500kg，层高600mm，顶层配50cm挡板",
+  "description": "标准4层轻型搁板式货架，适合3米以下仓库，人工存取轻型货物，单层层载500kg，层高600mm，顶层配50mm挡板",
   "tags": [
     "轻型货架",
     "搁板式",
     "人工存取",
     "A20系列"
   ],
+  "operationDirection": "+Z",
+  "isPairSecondGroup": false,
   "parameters": {
     "长度": {
       "type": "number",
@@ -65,7 +67,7 @@
     },
     "立柱颜色": {
       "type": "color",
-      "default": "#B0C4DE"
+      "default": "#0066CC"
     },
     "横梁颜色": {
       "type": "color",
@@ -75,5 +77,6 @@
       "type": "color",
       "default": "#FFFFFF"
     }
-  }
+  },
+  "prebuilt": false
 }
