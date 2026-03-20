@@ -3,7 +3,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -17,10 +17,23 @@ const props = defineProps({
   addingWindow: {
     type: Boolean,
     default: false
+  },
+  modelNameMap: {
+    type: Object,
+    default: () => ({})
+  },
+  warehouseConfig: {
+    type: Object,
+    default: () => ({
+      baseHeight: 0,
+      height: 5,
+      wallThickness: 0.2,
+      wallOpacity: 0.3
+    })
   }
 });
 
-const emit = defineEmits(['model-added', 'object-selected', 'object-deselected', 'zone-selected', 'save-project', 'add-door', 'add-window']);
+const emit = defineEmits(['model-added', 'object-selected', 'object-deselected', 'zone-selected', 'save-project', 'add-door', 'add-window', 'alignment-lines-updated']);
 
 let scene, camera, renderer, controls, loader, raycaster, mouse;
 let sceneObjects = [];
@@ -40,6 +53,1146 @@ let batchPreviewConfig = null;
 let rotationStartAngle = 0;
 let rotationStartPositions = new Map();
 let warehouseConfig = null;
+
+// 对齐线绘制状态
+let isDrawingAlignmentLine = false;
+let alignmentLineStartPoint = null;
+let alignmentLinePreview = null;
+
+// 对齐线数据结构和管理
+let alignmentLines = [];
+let nextLineId = 1;
+
+// 对齐线类
+class AlignmentLine {
+  constructor(id, name, startPoint, endPoint, color = 0x00ffff, style = 'dashed', visible = true) {
+    this.id = id;
+    this.name = name;
+    
+    // 原始数据（用于吸附计算）- 用户绘制的真实端点
+    this.originalStart = startPoint.clone();
+    this.originalEnd = endPoint.clone();
+    
+    // 视觉数据（用于Three.js渲染）- 无限长直线端点
+    // 关键修复：强制Y=0，确保在XZ平面（地面）延伸，防止Y坐标污染
+    const direction = new THREE.Vector3()
+      .subVectors(endPoint, startPoint);
+    direction.y = 0; // 强制Y分量为0，确保在地面平面延伸
+    direction.normalize(); // 重新归一化
+    
+    // 计算视觉端点（无限长线）
+    this.visualStart = new THREE.Vector3()
+      .copy(startPoint)
+      .add(direction.clone().multiplyScalar(-100000));
+    this.visualEnd = new THREE.Vector3()
+      .copy(startPoint)
+      .add(direction.clone().multiplyScalar(100000));
+    
+    // 关键修复：确保视觉端点的Y坐标也是0
+    this.visualStart.y = 0;
+    this.visualEnd.y = 0;
+    
+    // 保持向后兼容：startPoint/endPoint指向视觉端点（用于渲染）
+    this.startPoint = this.visualStart;
+    this.endPoint = this.visualEnd;
+    
+    this.color = color;
+    this.style = style;
+    this.visible = visible;
+  }
+}
+
+// 对齐线管理函数
+function addAlignmentLine(startPoint, endPoint) {
+  // 详细记录坐标值
+  console.log('🔴 对齐线创建 - 传入坐标:');
+  console.log('   起点:', startPoint.x, startPoint.y, startPoint.z);
+  console.log('   终点:', endPoint.x, endPoint.y, endPoint.z);
+  
+  // 检查是否有选中的货架，记录货架位置
+  if (selectedObjects.length > 0) {
+    const shelf = selectedObjects[0];
+    console.log('🔴 货架实际位置:', shelf.position.x, shelf.position.y, shelf.position.z);
+    const shelfBounds = getObjectBounds(shelf);
+    if (shelfBounds) {
+      console.log('🔴 货架边界 min:', shelfBounds.min.x, shelfBounds.min.y, shelfBounds.min.z);
+      console.log('🔴 货架边界 max:', shelfBounds.max.x, shelfBounds.max.y, shelfBounds.max.z);
+    }
+  } else {
+    console.log('🔴 没有选中的货架');
+  }
+  
+  const name = `对齐线${nextLineId++}`;
+  
+  // 确保起点和终点是Vector3对象
+  const start = startPoint instanceof THREE.Vector3 ? startPoint.clone() : new THREE.Vector3(startPoint.x, startPoint.y, startPoint.z);
+  const end = endPoint instanceof THREE.Vector3 ? endPoint.clone() : new THREE.Vector3(endPoint.x, endPoint.y, endPoint.z);
+  
+  console.log('克隆后起点:', start.x, start.y, start.z);
+  console.log('克隆后终点:', end.x, end.y, end.z);
+  
+  const line = new AlignmentLine(
+    `line-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    name,
+    start,
+    end
+  );
+  
+  alignmentLines.push(line);
+  console.log('对齐线已添加到数组，当前数量:', alignmentLines.length);
+  
+  renderAlignmentLines();
+  emit('alignment-lines-updated', alignmentLines);
+  
+  console.log('=== 对齐线添加完成 ===');
+  return line;
+}
+
+function removeAlignmentLine(id) {
+  const index = alignmentLines.findIndex(line => line.id === id);
+  if (index > -1) {
+    alignmentLines.splice(index, 1);
+    renderAlignmentLines();
+    emit('alignment-lines-updated', alignmentLines);
+    return true;
+  }
+  return false;
+}
+
+function updateAlignmentLine(id, data) {
+  const line = alignmentLines.find(line => line.id === id);
+  if (line) {
+    Object.assign(line, data);
+    renderAlignmentLines();
+    emit('alignment-lines-updated', alignmentLines);
+    return true;
+  }
+  return false;
+}
+
+function clearAlignmentLines() {
+  alignmentLines = [];
+  nextLineId = 1;
+  renderAlignmentLines();
+  emit('alignment-lines-updated', alignmentLines);
+}
+
+function getAlignmentLine(id) {
+  return alignmentLines.find(line => line.id === id);
+}
+
+function getAllAlignmentLines() {
+  return [...alignmentLines];
+}
+
+// 对齐线数据序列化
+function serializeAlignmentLines() {
+  return alignmentLines.map(line => ({
+    id: line.id,
+    name: line.name,
+    startPoint: { x: line.startPoint.x, y: line.startPoint.y, z: line.startPoint.z },
+    endPoint: { x: line.endPoint.x, y: line.endPoint.y, z: line.endPoint.z },
+    color: line.color,
+    style: line.style,
+    visible: line.visible
+  }));
+}
+
+// 对齐线渲染相关
+let alignmentLineObjects = new Map(); // 存储对齐线的Three.js对象
+
+// 创建对齐线材质
+function createAlignmentLineMaterial() {
+  return new THREE.LineDashedMaterial({
+    color: 0xff0000,  // 红色，醒目对比
+    linewidth: 2,
+    transparent: true,
+    opacity: 0.9,  // 提高透明度
+    dashSize: 50,  // 增大虚线尺寸
+    gapSize: 30,   // 增大间隙
+    scale: 1       // 虚线缩放
+  });
+}
+
+// 创建高亮对齐线材质
+function createHighlightedMaterial() {
+  return new THREE.LineBasicMaterial({
+    color: 0xffff00,
+    linewidth: 3,
+    transparent: true,
+    opacity: 0.9
+  });
+}
+
+// 更新线条材质
+function updateLineMaterial(line, isHighlighted) {
+  if (!line) return;
+  
+  const lineObject = alignmentLineObjects.get(line.id);
+  if (!lineObject) return;
+  
+  const material = isHighlighted ? createHighlightedMaterial() : createAlignmentLineMaterial();
+  lineObject.material = material;
+  
+  // 对于虚线材质，需要重新计算线条长度
+  if (material.type === 'LineDashedMaterial') {
+    lineObject.computeLineDistances();
+  }
+}
+
+// 高亮对齐线
+let highlightedLineId = null; // 当前高亮的对齐线ID
+
+function highlightAlignmentLine(lineId) {
+  console.log('高亮对齐线:', lineId);
+  
+  // 先取消所有高亮
+  alignmentLineObjects.forEach((lineObject, id) => {
+    lineObject.material = createAlignmentLineMaterial();
+    if (lineObject.material.type === 'LineDashedMaterial') {
+      lineObject.computeLineDistances();
+    }
+  });
+  
+  // 高亮选中的对齐线
+  if (lineId) {
+    const lineObject = alignmentLineObjects.get(lineId);
+    if (lineObject) {
+      // 使用发光效果的高亮材质
+      const highlightMaterial = new THREE.LineBasicMaterial({
+        color: 0xffff00, // 黄色高亮
+        linewidth: 3,
+        transparent: true,
+        opacity: 1.0
+      });
+      lineObject.material = highlightMaterial;
+      console.log('对齐线已高亮:', lineId);
+    }
+    highlightedLineId = lineId;
+  } else {
+    highlightedLineId = null;
+    console.log('取消所有高亮');
+  }
+}
+
+// 创建对齐线几何体（无限长直线）
+function createAlignmentLineGeometry(start, end) {
+  console.log('创建对齐线几何体，起点:', start, '终点:', end);
+  
+  // 确保起点和终点是Vector3对象
+  const startPoint = start instanceof THREE.Vector3 ? start : new THREE.Vector3(start.x, start.y, start.z);
+  const endPoint = end instanceof THREE.Vector3 ? end : new THREE.Vector3(end.x, end.y, end.z);
+  
+  // 计算方向向量（从start指向end）
+  // 关键修复：强制Y=0，确保在XZ平面（地面）延伸，防止Y坐标漂移
+  const direction = new THREE.Vector3().subVectors(endPoint, startPoint);
+  direction.y = 0; // 强制Y分量为0，确保在地面平面延伸
+  direction.normalize(); // 重新归一化
+  
+  // 向两端延伸足够长的距离（100000cm = 1000米）
+  const extensionLength = 100000;
+  
+  // 计算无限长直线的两个端点
+  const lineStart = new THREE.Vector3().copy(startPoint).add(direction.clone().multiplyScalar(-extensionLength));
+  const lineEnd = new THREE.Vector3().copy(startPoint).add(direction.clone().multiplyScalar(extensionLength));
+  
+  // 关键修复：确保视觉端点的Y坐标也是0（防止飘在空中）
+  lineStart.y = 0;
+  lineEnd.y = 0;
+  
+  const points = [lineStart, lineEnd];
+  const geometry = new THREE.BufferGeometry().setFromPoints(points);
+  
+  console.log('无限长直线几何体创建完成，顶点数:', geometry.attributes.position.count);
+  console.log('直线起点:', lineStart.x, lineStart.y, lineStart.z, '直线终点:', lineEnd.x, lineEnd.y, lineEnd.z);
+  return geometry;
+}
+
+// 更新对齐线几何体
+function updateAlignmentLineGeometry(line, start, end) {
+  if (!line || !line.geometry) return;
+  
+  const points = [start, end];
+  line.geometry.setFromPoints(points);
+  line.geometry.attributes.position.needsUpdate = true;
+}
+
+// 添加对齐线到场景
+function addLineToScene(line) {
+  if (!line || !line.visible) {
+    console.log('对齐线不可见或不存在，跳过渲染');
+    return;
+  }
+  
+  console.log('=== 添加对齐线到场景 ===');
+  console.log('对齐线ID:', line.id);
+  // 关键修复：使用原始端点（originalStart/End），而不是视觉端点（startPoint/End）
+  // 视觉端点是已经延伸10万cm的无限长线端点，会导致双倍延伸成天文数字
+  console.log('起点坐标(原始):', line.originalStart.x, line.originalStart.y, line.originalStart.z);
+  console.log('终点坐标(原始):', line.originalEnd.x, line.originalEnd.y, line.originalEnd.z);
+  
+  // 传入原始端点，让createAlignmentLineGeometry正确计算无限长直线
+  const geometry = createAlignmentLineGeometry(line.originalStart, line.originalEnd);
+  const material = createAlignmentLineMaterial();
+  
+  console.log('材质类型:', material.type);
+  console.log('材质颜色:', material.color);
+  console.log('材质透明度:', material.opacity);
+  
+  const lineObject = new THREE.Line(geometry, material);
+  
+  // 对于虚线材质，需要计算线条长度
+  console.log('检查材质类型是否为LineDashedMaterial:', material.type === 'LineDashedMaterial');
+  if (material.type === 'LineDashedMaterial') {
+    console.log('调用computeLineDistances...');
+    lineObject.computeLineDistances();
+    console.log('computeLineDistances调用完成');
+    console.log('线条距离属性:', lineObject.userData.lineDistances);
+  }
+  
+  // 确保对齐线在仓库地面上方（考虑baseHeight）
+  const baseHeight = props.warehouseConfig ? props.warehouseConfig.baseHeight * 100 : 0; // 米转厘米
+  lineObject.position.y = baseHeight + 2; // 在地面之上2cm，避免z-fighting
+  
+  console.log('对齐线Y轴位置:', lineObject.position.y, 'baseHeight:', baseHeight, 'props.warehouseConfig:', props.warehouseConfig);
+  console.log('相机位置:', camera ? camera.position : '未定义');
+  
+  scene.add(lineObject);
+  alignmentLineObjects.set(line.id, lineObject);
+  
+  console.log('对齐线已添加到场景:', line.id);
+  console.log('场景中对齐线对象:', lineObject);
+  console.log('========================');
+}
+
+// 从场景中移除对齐线
+function removeLineFromScene(line) {
+  if (!line) return;
+  
+  const lineObject = alignmentLineObjects.get(line.id);
+  if (lineObject) {
+    scene.remove(lineObject);
+    alignmentLineObjects.delete(line.id);
+  }
+}
+
+// 更新对齐线可见性
+function updateLineVisibility(line, visible) {
+  if (!line) return;
+  
+  line.visible = visible;
+  
+  const lineObject = alignmentLineObjects.get(line.id);
+  if (lineObject) {
+    lineObject.visible = visible;
+  } else if (visible) {
+    // 如果对象不存在且需要显示，则添加到场景
+    addLineToScene(line);
+  }
+}
+
+// 渲染对齐线
+function renderAlignmentLines() {
+  console.log('渲染对齐线，当前对齐线数量:', alignmentLines.length);
+  
+  // 清除旧的对齐线对象
+  alignmentLineObjects.forEach(obj => scene.remove(obj));
+  alignmentLineObjects.clear();
+  
+  // 渲染新的对齐线
+  alignmentLines.forEach(line => {
+    console.log('处理对齐线:', line.id, 'visible:', line.visible);
+    if (line.visible) {
+      addLineToScene(line);
+    }
+  });
+  
+  console.log('对齐线渲染完成，场景中对齐线对象数量:', alignmentLineObjects.size);
+}
+
+// 对齐线数据反序列化
+function deserializeAlignmentLines(data) {
+  if (!Array.isArray(data)) return;
+  
+  alignmentLines = data.map(item => {
+    // 版本兼容处理：确保所有必要字段都存在
+    const id = item.id || `line-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const name = item.name || `对齐线${nextLineId++}`;
+    const startPoint = item.startPoint ? 
+      new THREE.Vector3(item.startPoint.x, item.startPoint.y, item.startPoint.z) : 
+      new THREE.Vector3(0, 0, 0);
+    const endPoint = item.endPoint ? 
+      new THREE.Vector3(item.endPoint.x, item.endPoint.y, item.endPoint.z) : 
+      new THREE.Vector3(100, 0, 100);
+    const color = item.color || 0x00ffff;
+    const style = item.style || 'dashed';
+    const visible = item.visible !== undefined ? item.visible : true;
+    
+    return new AlignmentLine(id, name, startPoint, endPoint, color, style, visible);
+  });
+  
+  // 更新nextLineId
+  if (alignmentLines.length > 0) {
+    const maxNumber = Math.max(...alignmentLines.map(line => {
+      const match = line.name.match(/对齐线(\d+)/);
+      return match ? parseInt(match[1]) : 0;
+    }));
+    nextLineId = maxNumber + 1;
+  } else {
+    nextLineId = 1;
+  }
+  
+  // 重新渲染对齐线
+  renderAlignmentLines();
+}
+
+// 开始绘制对齐线
+function startDrawingAlignmentLine() {
+  isDrawingAlignmentLine = true;
+  alignmentLineStartPoint = null;
+  console.log('开始绘制对齐线');
+}
+
+// 结束绘制对齐线
+function stopDrawingAlignmentLine() {
+  isDrawingAlignmentLine = false;
+  clearAlignmentLinePreview();
+  console.log('结束绘制对齐线');
+}
+
+// 取消绘制对齐线
+function cancelDrawingAlignmentLine() {
+  isDrawingAlignmentLine = false;
+  clearAlignmentLinePreview();
+  console.log('取消绘制对齐线');
+}
+
+// 清除对齐线预览
+function clearAlignmentLinePreview() {
+  if (alignmentLinePreview) {
+    scene.remove(alignmentLinePreview);
+    alignmentLinePreview = null;
+  }
+}
+
+// 更新对齐线预览
+function updateAlignmentLinePreview(start, end) {
+  clearAlignmentLinePreview();
+  
+  const geometry = createAlignmentLineGeometry(start, end);
+  const material = createAlignmentLineMaterial();
+  alignmentLinePreview = new THREE.Line(geometry, material);
+  
+  if (material.type === 'LineDashedMaterial') {
+    alignmentLinePreview.computeLineDistances();
+  }
+  
+  alignmentLinePreview.position.y = 0.1;
+  scene.add(alignmentLinePreview);
+}
+
+// 子任务3.1: 对象边界计算
+
+// 计算对象的边界框
+function getObjectBounds(object) {
+  if (!object) return null;
+  
+  const box = new THREE.Box3().setFromObject(object);
+  return box;
+}
+
+// 提取对象的边缘线
+function getObjectEdges(bounds) {
+  if (!bounds) return [];
+  
+  const min = bounds.min;
+  const max = bounds.max;
+  
+  // 计算中心点
+  const center = bounds.getCenter(new THREE.Vector3());
+  
+  // 提取边缘线
+  const edges = [
+    // 底部边缘（地面上的边缘）
+    { start: new THREE.Vector3(min.x, 0, min.z), end: new THREE.Vector3(max.x, 0, min.z) }, // 前边缘
+    { start: new THREE.Vector3(max.x, 0, min.z), end: new THREE.Vector3(max.x, 0, max.z) }, // 右边缘
+    { start: new THREE.Vector3(max.x, 0, max.z), end: new THREE.Vector3(min.x, 0, max.z) }, // 后边缘
+    { start: new THREE.Vector3(min.x, 0, max.z), end: new THREE.Vector3(min.x, 0, min.z) }, // 左边缘
+    
+    // 中心线（可选）
+    { start: new THREE.Vector3(center.x, 0, min.z), end: new THREE.Vector3(center.x, 0, max.z) }, // 垂直中心线
+    { start: new THREE.Vector3(min.x, 0, center.z), end: new THREE.Vector3(max.x, 0, center.z) }  // 水平中心线
+  ];
+  
+  return edges;
+}
+
+// 子任务3.2: 参考线生成逻辑
+
+// 基于对象生成参考线
+function generateReferenceLines(object) {
+  if (!object) return [];
+  
+  // 计算对象边界
+  const bounds = getObjectBounds(object);
+  if (!bounds) return [];
+  
+  // 提取对象边缘
+  const edges = getObjectEdges(bounds);
+  
+  // 生成参考线（将边缘线转换为对齐线）
+  const referenceLines = edges.map((edge, index) => {
+    const name = `参考线-${index + 1}`;
+    return new AlignmentLine(
+      `ref-line-${Date.now()}-${index}-${Math.random().toString(36).substr(2, 9)}`,
+      name,
+      edge.start,
+      edge.end,
+      0x00ffff, // 青色
+      'dashed',
+      true
+    );
+  });
+  
+  // 过滤冗余参考线
+  const filteredLines = filterReferenceLines(referenceLines);
+  
+  return filteredLines;
+}
+
+// 过滤冗余参考线
+function filterReferenceLines(lines) {
+  if (!lines || lines.length === 0) return [];
+  
+  const filtered = [];
+  const threshold = 0.1; // 阈值，用于判断两条线是否重合
+  
+  lines.forEach((line, index) => {
+    // 检查是否与已添加的线重合
+    const isRedundant = filtered.some(existingLine => {
+      // 检查两条线是否有相同的起点和终点（考虑方向）
+      const sameStart = line.startPoint.distanceTo(existingLine.startPoint) < threshold &&
+                      line.endPoint.distanceTo(existingLine.endPoint) < threshold;
+      const reverseStart = line.startPoint.distanceTo(existingLine.endPoint) < threshold &&
+                          line.endPoint.distanceTo(existingLine.startPoint) < threshold;
+      
+      return sameStart || reverseStart;
+    });
+    
+    if (!isRedundant) {
+      filtered.push(line);
+    }
+  });
+  
+  return filtered;
+}
+
+// 子任务5.1: 距离计算与吸附逻辑
+
+// 吸附配置
+const SNAP_CONFIG = {
+  threshold: 10, // 吸附距离阈值：10CM
+  enabled: true  // 是否启用吸附
+};
+
+// 当前吸附状态
+let currentSnapState = {
+  isSnapped: false,
+  snappedLineId: null,
+  snapPoint: null,
+  originalPosition: null
+};
+
+// 计算点到线段的距离
+function calculateDistance(point, lineStart, lineEnd) {
+  if (!point || !lineStart || !lineEnd) return Infinity;
+  
+  // 将输入转换为Vector3
+  const p = point instanceof THREE.Vector3 ? point : new THREE.Vector3(point.x, point.y, point.z);
+  const start = lineStart instanceof THREE.Vector3 ? lineStart : new THREE.Vector3(lineStart.x, lineStart.y, lineStart.z);
+  const end = lineEnd instanceof THREE.Vector3 ? lineEnd : new THREE.Vector3(lineEnd.x, lineEnd.y, lineEnd.z);
+  
+  // 计算线段方向向量
+  const lineVector = new THREE.Vector3().subVectors(end, start);
+  const lineLength = lineVector.length();
+  
+  if (lineLength === 0) {
+    return p.distanceTo(start);
+  }
+  
+  // 计算投影参数 t
+  const t = Math.max(0, Math.min(1, new THREE.Vector3().subVectors(p, start).dot(lineVector) / (lineLength * lineLength)));
+  
+  // 计算投影点
+  const projection = new THREE.Vector3().copy(start).add(lineVector.multiplyScalar(t));
+  
+  // 返回点到投影点的距离
+  return p.distanceTo(projection);
+}
+
+// 计算点到无限长直线的距离（用于对齐线）
+function calculateDistanceToInfiniteLine(point, lineStart, lineEnd) {
+  if (!point || !lineStart || !lineEnd) return Infinity;
+  
+  const p = point instanceof THREE.Vector3 ? point : new THREE.Vector3(point.x, point.y, point.z);
+  const start = lineStart instanceof THREE.Vector3 ? lineStart : new THREE.Vector3(lineStart.x, lineStart.y, lineStart.z);
+  const end = lineEnd instanceof THREE.Vector3 ? lineEnd : new THREE.Vector3(lineEnd.x, lineEnd.y, lineEnd.z);
+  
+  // 计算直线方向向量
+  const lineVector = new THREE.Vector3().subVectors(end, start).normalize();
+  
+  // 计算从起点到点的向量
+  const pointVector = new THREE.Vector3().subVectors(p, start);
+  
+  // 计算叉积的模 = |a||b|sin(theta)
+  const cross = new THREE.Vector3().crossVectors(lineVector, pointVector);
+  
+  // 距离 = |叉积| / |方向向量| = |叉积| (因为方向向量已归一化)
+  return cross.length();
+}
+
+// 找到最近的对齐线
+function findClosestAlignmentLine(point, lines) {
+  if (!point || !lines || lines.length === 0) {
+    return { line: null, distance: Infinity, projection: null };
+  }
+  
+  let closestLine = null;
+  let minDistance = Infinity;
+  let closestProjection = null;
+  
+  const p = point instanceof THREE.Vector3 ? point : new THREE.Vector3(point.x, point.y, point.z);
+  
+  lines.forEach(line => {
+    if (!line.visible) return;
+    
+    // 计算到无限长直线的距离（使用原始端点）
+    const distance = calculateDistanceToInfiniteLine(p, line.originalStart, line.originalEnd);
+    
+    if (distance < minDistance) {
+      minDistance = distance;
+      closestLine = line;
+      
+      // 计算投影点（使用原始端点）
+      const start = line.originalStart instanceof THREE.Vector3 ? line.originalStart : new THREE.Vector3(line.originalStart.x, line.originalStart.y, line.originalStart.z);
+      const end = line.originalEnd instanceof THREE.Vector3 ? line.originalEnd : new THREE.Vector3(line.originalEnd.x, line.originalEnd.y, line.originalEnd.z);
+      const lineVector = new THREE.Vector3().subVectors(end, start).normalize();
+      const pointVector = new THREE.Vector3().subVectors(p, start);
+      const projectionDistance = pointVector.dot(lineVector);
+      closestProjection = new THREE.Vector3().copy(start).add(lineVector.multiplyScalar(projectionDistance));
+    }
+  });
+  
+  return {
+    line: closestLine,
+    distance: minDistance,
+    projection: closestProjection
+  };
+}
+
+// 应用吸附逻辑
+function applySnap(position, object, moveDirection) {
+  console.log('applySnap被调用，原始position:', position.x, position.y, position.z);
+  console.log('alignmentLines数量:', alignmentLines.length);
+  console.log('SNAP_CONFIG:', SNAP_CONFIG);
+  
+  if (!SNAP_CONFIG.enabled || snapDisabled || !position || alignmentLines.length === 0) {
+    console.log('applySnap提前返回，原因:', 
+      !SNAP_CONFIG.enabled ? 'SNAP_CONFIG.enabled=false' :
+      snapDisabled ? 'snapDisabled=true' :
+      !position ? 'position为空' :
+      'alignmentLines为空'
+    );
+    return { snapped: false, position: position };
+  }
+  
+  // P0修复：强制投影到地面（Y=0），仓库布局是平面逻辑
+  const groundPosition = position.clone();
+  groundPosition.y = 0;
+  console.log('🔧 投影后位置:', groundPosition.x, groundPosition.y, groundPosition.z);
+  
+  // 获取对象的边界中心点（用于吸附计算）- 使用投影后的位置
+  let snapPoint = groundPosition.clone();
+  
+  if (object) {
+    const bounds = getObjectBounds(object);
+    if (bounds) {
+      const center = bounds.getCenter(new THREE.Vector3());
+      // 使用底部中心点进行吸附，Y强制为0
+      snapPoint = new THREE.Vector3(center.x, 0, center.z);
+    }
+  }
+  
+  // 使用handleBoundarySnap处理边界吸附（包含优先级逻辑）
+  // 传入投影后的位置进行计算
+  const boundaryResult = handleBoundarySnap(object, alignmentLines, moveDirection);
+  
+  if (boundaryResult.shouldSnap) {
+    const line = boundaryResult.line;
+    const projection = boundaryResult.position;
+    const distance = boundaryResult.distance;
+    
+    // 计算吸附后的位置偏移
+    const deltaX = projection.x - snapPoint.x;
+    const deltaZ = projection.z - snapPoint.z;
+    
+    // 应用偏移到原位置（保持原高度）
+    const snappedPosition = position.clone();
+    snappedPosition.x += deltaX;
+    snappedPosition.z += deltaZ;
+    // Y保持原高度不变
+    
+    console.log('🎯 吸附成功！吸附到位置:', snappedPosition.x, snappedPosition.y, snappedPosition.z);
+    
+    // 更新吸附状态
+    currentSnapState = {
+      isSnapped: true,
+      snappedLineId: line.id,
+      snapPoint: projection,
+      originalPosition: position.clone(),
+      priority: boundaryResult.priority
+    };
+    
+    return {
+      snapped: true,
+      position: snappedPosition,
+      line: line,
+      distance: distance,
+      projection: projection,
+      priority: boundaryResult.priority
+    };
+  }
+  
+  // 未吸附，重置状态
+  currentSnapState = {
+    isSnapped: false,
+    snappedLineId: null,
+    snapPoint: null,
+    originalPosition: null,
+    priority: null
+  };
+  
+  return {
+    snapped: false,
+    position: position
+  };
+}
+
+// 获取当前吸附状态
+function getSnapState() {
+  return { ...currentSnapState };
+}
+
+// 设置吸附配置
+function setSnapConfig(config) {
+  if (config.threshold !== undefined) {
+    SNAP_CONFIG.threshold = config.threshold;
+  }
+  if (config.enabled !== undefined) {
+    SNAP_CONFIG.enabled = config.enabled;
+  }
+}
+
+// 获取吸附配置
+function getSnapConfig() {
+  return { ...SNAP_CONFIG };
+}
+
+// 子任务5.2: 吸附优先级与边界处理
+
+// 用户操作意图跟踪
+let userIntent = {
+  preferredAxis: null, // 'x' | 'z' | null
+  lastMoveDirection: new THREE.Vector3(),
+  moveHistory: []
+};
+
+// 计算吸附优先级
+// 优先级顺序：最近距离 > 轴向优先 > 用户意图
+function calculateSnapPriority(distance, line, object, moveDirection) {
+  if (!line || !object) return { score: Infinity, priority: 'none' };
+  
+  let score = distance; // 基础分数为距离
+  let priority = 'distance';
+  
+  // 获取对齐线方向
+  const lineDirection = new THREE.Vector3()
+    .subVectors(line.endPoint, line.startPoint)
+    .normalize();
+  
+  // 判断对齐线主要轴向 (X轴或Z轴)
+  const isLineXAxis = Math.abs(lineDirection.x) > Math.abs(lineDirection.z);
+  const isLineZAxis = Math.abs(lineDirection.z) > Math.abs(lineDirection.x);
+  
+  // 1. 轴向优先：如果移动方向与对齐线方向一致，降低分数（提高优先级）
+  if (moveDirection && moveDirection.length() > 0) {
+    const moveDirNormalized = moveDirection.clone().normalize();
+    const isMoveXAxis = Math.abs(moveDirNormalized.x) > Math.abs(moveDirNormalized.z);
+    const isMoveZAxis = Math.abs(moveDirNormalized.z) > Math.abs(moveDirNormalized.x);
+    
+    // 如果移动方向与对齐线方向匹配，给予优先级奖励
+    if ((isLineXAxis && isMoveXAxis) || (isLineZAxis && isMoveZAxis)) {
+      score *= 0.7; // 降低30%分数，提高优先级
+      priority = 'axis';
+    }
+  }
+  
+  // 2. 用户意图优先：如果用户有偏好的轴向
+  if (userIntent.preferredAxis) {
+    const isPreferredX = userIntent.preferredAxis === 'x';
+    const isPreferredZ = userIntent.preferredAxis === 'z';
+    
+    if ((isLineXAxis && isPreferredX) || (isLineZAxis && isPreferredZ)) {
+      score *= 0.5; // 降低50%分数，最高优先级
+      priority = 'intent';
+    }
+  }
+  
+  return { score, priority, isLineXAxis, isLineZAxis };
+}
+
+// 更新用户移动意图
+function updateUserIntent(moveDelta) {
+  if (!moveDelta || moveDelta.length() < 0.01) return;
+  
+  // 记录移动历史
+  userIntent.moveHistory.push({
+    direction: moveDelta.clone(),
+    timestamp: Date.now()
+  });
+  
+  // 只保留最近10次移动记录
+  if (userIntent.moveHistory.length > 10) {
+    userIntent.moveHistory.shift();
+  }
+  
+  // 分析移动方向偏好
+  const recentMoves = userIntent.moveHistory.slice(-5);
+  let totalX = 0;
+  let totalZ = 0;
+  
+  recentMoves.forEach(move => {
+    totalX += Math.abs(move.direction.x);
+    totalZ += Math.abs(move.direction.z);
+  });
+  
+  // 如果某个方向的移动明显占优，记录为用户意图
+  if (totalX > totalZ * 2) {
+    userIntent.preferredAxis = 'x';
+  } else if (totalZ > totalX * 2) {
+    userIntent.preferredAxis = 'z';
+  } else {
+    userIntent.preferredAxis = null;
+  }
+  
+  userIntent.lastMoveDirection = moveDelta.clone();
+}
+
+// 重置用户意图
+function resetUserIntent() {
+  userIntent = {
+    preferredAxis: null,
+    lastMoveDirection: new THREE.Vector3(),
+    moveHistory: []
+  };
+}
+
+// 处理边界吸附
+function handleBoundarySnap(object, lines, moveDirection) {
+  console.log('📐 handleBoundarySnap被调用，对齐线数量:', lines.length);
+  
+  if (!object || !lines || lines.length === 0) {
+    console.log('❌ handleBoundarySnap提前返回：对象或对齐线为空');
+    return { shouldSnap: false, line: null, position: null };
+  }
+  
+  const bounds = getObjectBounds(object);
+  if (!bounds) {
+    console.log('❌ handleBoundarySnap提前返回：无法获取对象边界');
+    return { shouldSnap: false, line: null, position: null };
+  }
+  
+  const center = bounds.getCenter(new THREE.Vector3());
+  // 投影到地面（Y=0），仓库布局是平面逻辑
+  const centerOnGround = new THREE.Vector3(center.x, 0, center.z);
+  console.log('📍 对象中心点（地面投影）:', centerOnGround.x, centerOnGround.z);
+  console.log('📏 吸附阈值:', SNAP_CONFIG.threshold);
+  
+  const snapCandidates = [];
+  
+  // 评估每条对齐线的吸附优先级
+  lines.forEach((line, index) => {
+    console.log(`📊 检查对齐线 ${index}:`, line.name, 'visible:', line.visible);
+    console.log(`   原始起点: (${line.originalStart.x}, ${line.originalStart.z})`);
+    console.log(`   原始终点: (${line.originalEnd.x}, ${line.originalEnd.z})`);
+    console.log(`   视觉起点: (${line.startPoint.x}, ${line.startPoint.z})`);
+    console.log(`   视觉终点: (${line.endPoint.x}, ${line.endPoint.z})`);
+    
+    if (!line.visible) {
+      console.log(`   ⏭️ 跳过：对齐线不可见`);
+      return;
+    }
+    
+    // 计算到对齐线的距离（使用原始端点和地面投影后的中心点）
+    const distance = calculateDistanceToInfiniteLine(centerOnGround, line.originalStart, line.originalEnd);
+    console.log(`   📏 计算距离（基于原始端点）: ${distance.toFixed(2)}cm`);
+    
+    // 只有在阈值内才考虑
+    if (distance <= SNAP_CONFIG.threshold) {
+      console.log(`   ✅ 距离在阈值内，加入候选`);
+      const priority = calculateSnapPriority(distance, line, object, moveDirection);
+      
+      snapCandidates.push({
+        line,
+        distance,
+        score: priority.score,
+        priority: priority.priority,
+        isLineXAxis: priority.isLineXAxis,
+        isLineZAxis: priority.isLineZAxis
+      });
+    } else {
+      console.log(`   ❌ 距离超出阈值 (${SNAP_CONFIG.threshold}cm)`);
+    }
+  });
+  
+  // 按分数排序（分数越低优先级越高）
+  snapCandidates.sort((a, b) => a.score - b.score);
+  
+  console.log('📋 候选对齐线数量:', snapCandidates.length);
+  if (snapCandidates.length > 0) {
+    console.log('🏆 最佳候选距离:', snapCandidates[0].distance.toFixed(2), 'cm');
+  }
+  
+  // 返回最佳吸附候选
+  if (snapCandidates.length > 0) {
+    const bestCandidate = snapCandidates[0];
+    
+    // 计算投影点（使用原始端点和地面投影后的中心点）
+    const start = bestCandidate.line.originalStart;
+    const end = bestCandidate.line.originalEnd;
+    const lineVector = new THREE.Vector3().subVectors(end, start).normalize();
+    const pointVector = new THREE.Vector3().subVectors(centerOnGround, start);
+    const projectionDistance = pointVector.dot(lineVector);
+    const projection = new THREE.Vector3().copy(start).add(lineVector.multiplyScalar(projectionDistance));
+    
+    console.log('✅ handleBoundarySnap返回：应该吸附');
+    console.log('   投影点:', projection.x, projection.z);
+    
+    return {
+      shouldSnap: true,
+      line: bestCandidate.line,
+      position: projection,
+      distance: bestCandidate.distance,
+      priority: bestCandidate.priority
+    };
+  }
+  
+  console.log('❌ handleBoundarySnap返回：无候选对齐线');
+  return { shouldSnap: false, line: null, position: null };
+}
+
+// 取消吸附功能
+let snapDisabled = false;
+let snapDisableTimer = null;
+
+function cancelSnap() {
+  // 临时禁用吸附
+  snapDisabled = true;
+  
+  // 清除当前吸附状态
+  currentSnapState = {
+    isSnapped: false,
+    snappedLineId: null,
+    snapPoint: null,
+    originalPosition: null
+  };
+  
+  // 清除用户意图
+  resetUserIntent();
+  
+  // 3秒后自动恢复吸附功能
+  if (snapDisableTimer) {
+    clearTimeout(snapDisableTimer);
+  }
+  
+  snapDisableTimer = setTimeout(() => {
+    snapDisabled = false;
+    console.log('吸附功能已恢复');
+  }, 3000);
+  
+  console.log('吸附功能已临时取消（3秒）');
+  return true;
+}
+
+// 检查吸附是否被禁用
+function isSnapDisabled() {
+  return snapDisabled;
+}
+
+// 恢复吸附功能
+function enableSnap() {
+  snapDisabled = false;
+  if (snapDisableTimer) {
+    clearTimeout(snapDisableTimer);
+    snapDisableTimer = null;
+  }
+  console.log('吸附功能已手动恢复');
+  return true;
+}
+
+// 子任务5.3: 对齐辅助提示
+
+// 吸附指示器对象
+let snapIndicator = null;
+let snapIndicatorGroup = null;
+
+// 创建吸附提示指示器
+function createSnapIndicator() {
+  // 如果已存在，先移除
+  if (snapIndicatorGroup) {
+    hideSnapIndicator();
+  }
+  
+  // 创建指示器组
+  snapIndicatorGroup = new THREE.Group();
+  
+  // 1. 创建中心点（绿色圆点）
+  const centerGeometry = new THREE.SphereGeometry(3, 16, 16);
+  const centerMaterial = new THREE.MeshBasicMaterial({
+    color: 0x00ff00,
+    transparent: true,
+    opacity: 0.8
+  });
+  const centerDot = new THREE.Mesh(centerGeometry, centerMaterial);
+  snapIndicatorGroup.add(centerDot);
+  
+  // 2. 创建外圈环（脉冲效果）
+  const ringGeometry = new THREE.RingGeometry(5, 6, 32);
+  const ringMaterial = new THREE.MeshBasicMaterial({
+    color: 0x00ff00,
+    transparent: true,
+    opacity: 0.6,
+    side: THREE.DoubleSide
+  });
+  const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+  ring.rotation.x = -Math.PI / 2;
+  snapIndicatorGroup.add(ring);
+  
+  // 3. 创建十字线
+  const crossSize = 10;
+  const crossGeometry = new THREE.BufferGeometry();
+  const crossVertices = new Float32Array([
+    -crossSize, 0, 0,  crossSize, 0, 0,  // X轴线
+    0, 0, -crossSize,  0, 0, crossSize   // Z轴线
+  ]);
+  crossGeometry.setAttribute('position', new THREE.BufferAttribute(crossVertices, 3));
+  const crossMaterial = new THREE.LineBasicMaterial({
+    color: 0x00ff00,
+    transparent: true,
+    opacity: 0.7,
+    linewidth: 2
+  });
+  const crossLines = new THREE.LineSegments(crossGeometry, crossMaterial);
+  snapIndicatorGroup.add(crossLines);
+  
+  // 4. 创建距离文字标签（使用Sprite）
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 64;
+  const context = canvas.getContext('2d');
+  context.font = 'bold 24px Arial';
+  context.fillStyle = '#00ff00';
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  context.fillText('已吸附', 64, 32);
+  
+  const texture = new THREE.CanvasTexture(canvas);
+  const spriteMaterial = new THREE.SpriteMaterial({
+    map: texture,
+    transparent: true,
+    opacity: 0.9
+  });
+  const labelSprite = new THREE.Sprite(spriteMaterial);
+  labelSprite.position.set(0, 15, 0);
+  labelSprite.scale.set(30, 15, 1);
+  snapIndicatorGroup.add(labelSprite);
+  
+  // 默认隐藏
+  snapIndicatorGroup.visible = false;
+  
+  // 添加到场景
+  scene.add(snapIndicatorGroup);
+  
+  return snapIndicatorGroup;
+}
+
+// 更新吸附提示
+function updateSnapIndicator(position, line, distance) {
+  if (!snapIndicatorGroup) {
+    createSnapIndicator();
+  }
+  
+  if (!position || !snapIndicatorGroup) return;
+  
+  // 更新位置
+  snapIndicatorGroup.position.copy(position);
+  // 确保指示器在地面上方
+  snapIndicatorGroup.position.y = 5;
+  
+  // 显示指示器
+  snapIndicatorGroup.visible = true;
+  
+  // 如果有距离信息，更新标签
+  if (distance !== undefined) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 128;
+    canvas.height = 64;
+    const context = canvas.getContext('2d');
+    context.font = 'bold 20px Arial';
+    context.fillStyle = '#00ff00';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText(`已吸附 ${distance.toFixed(1)}cm`, 64, 32);
+    
+    const texture = new THREE.CanvasTexture(canvas);
+    const labelSprite = snapIndicatorGroup.children[3];
+    if (labelSprite && labelSprite.material) {
+      labelSprite.material.map = texture;
+      labelSprite.material.needsUpdate = true;
+    }
+  }
+  
+  // 添加脉冲动画效果
+  const ring = snapIndicatorGroup.children[1];
+  if (ring) {
+    // 简单的脉冲效果：缩放变化
+    const time = Date.now() * 0.005;
+    const scale = 1 + Math.sin(time) * 0.2;
+    ring.scale.set(scale, scale, 1);
+  }
+}
+
+// 隐藏吸附提示
+function hideSnapIndicator() {
+  if (snapIndicatorGroup) {
+    snapIndicatorGroup.visible = false;
+  }
+}
+
+// 销毁吸附提示（清理资源）
+function destroySnapIndicator() {
+  if (snapIndicatorGroup) {
+    scene.remove(snapIndicatorGroup);
+    snapIndicatorGroup.traverse(child => {
+      if (child.geometry) child.geometry.dispose();
+      if (child.material) {
+        if (child.material.map) child.material.map.dispose();
+        child.material.dispose();
+      }
+    });
+    snapIndicatorGroup = null;
+  }
+}
 
 // 功能区规划相关
 let zones = [];
@@ -106,6 +1259,7 @@ onMounted(() => {
   // 添加事件监听
   window.addEventListener('resize', handleResize);
   container.value.addEventListener('click', onClick);
+  container.value.addEventListener('mousedown', onMouseDown);
   container.value.addEventListener('mousemove', onMouseMove);
   container.value.addEventListener('mouseup', onMouseUp);
   
@@ -131,12 +1285,46 @@ onUnmounted(() => {
   window.removeEventListener('keydown', onKeyDown);
   if (container.value) {
     container.value.removeEventListener('click', onClick);
+    container.value.removeEventListener('mousedown', onMouseDown);
     container.value.removeEventListener('mousemove', onMouseMove);
     container.value.removeEventListener('mouseup', onMouseUp);
     container.value.removeEventListener('dragover', onDragOver);
     container.value.removeEventListener('drop', onDrop);
   }
 });
+
+// 更新相机位置
+function updateCameraPosition(config) {
+  if (!config || !camera || !controls) return;
+  
+  console.log('更新相机位置，warehouseConfig:', config);
+  
+  // 计算仓库中心点
+  const centerX = 4000; // 默认中心
+  const centerZ = 4000; // 默认中心
+  
+  // 设置相机位置（俯视仓库）
+  const cameraHeight = 10000; // 100米高度
+  camera.position.set(centerX, cameraHeight, centerZ);
+  
+  // 相机看向仓库中心
+  camera.lookAt(centerX, 0, centerZ);
+  
+  // 更新控制器
+  controls.target.set(centerX, 0, centerZ);
+  controls.update();
+  
+  console.log('相机位置已更新:', camera.position.x, camera.position.y, camera.position.z);
+  console.log('相机看向:', centerX, 0, centerZ);
+}
+
+// 监听warehouseConfig变化，更新相机位置
+watch(() => props.warehouseConfig, (newConfig) => {
+  console.log('warehouseConfig变化:', newConfig);
+  if (newConfig && camera && controls) {
+    updateCameraPosition(newConfig);
+  }
+}, { deep: true, immediate: true });
 
 function handleResize() {
   if (camera && renderer && container.value) {
@@ -146,102 +1334,485 @@ function handleResize() {
   }
 }
 
-// 模型文件名映射（对象ID -> GLB文件名）
-const modelFileMap = {
-  // 货架系统
-  'shelf-beam-heavy': 'shelf-beam-heavy.glb',
-  'shelf-beam-medium': 'shelf-beam-medium.glb',
-  'shelf-drive-in': 'shelf-drive-in.glb',
-  'shelf-flow-4level': 'shelf-flow-4level.glb',
-  'shelf-light-v2': 'shelf-light-v2.glb',
-  
+// ============================================
+// 统一模型数据库（方案3）
+// 包含所有对象的完整信息：短ID、长ID、中文名称、文件路径、参数
+// ============================================
+const modelDatabase = {
   // ========== 轻型货架（10个）==========
-  'light-duty-A15-4': 'light-duty-A15-4.glb',
-  'light-duty-A15-4-pair': 'light-duty-A15-4-pair.glb',
-  'light-duty-A15-5': 'light-duty-A15-5.glb',
-  'light-duty-A15-5-pair': 'light-duty-A15-5-pair.glb',
-  'light-duty-A20-4': 'light-duty-A20-4.glb',
-  'light-duty-A20-4-pair': 'light-duty-A20-4-pair.glb',
-  'light-duty-A20-5': 'light-duty-A20-5.glb',
-  'light-duty-A20-5-pair': 'light-duty-A20-5-pair.glb',
-  'light-duty-A20-6': 'light-duty-A20-6.glb',
-  'light-duty-A20-6-pair': 'light-duty-A20-6-pair.glb',
-  
-  // ========== 中型货架（6个）==========
-  'medium-duty-B20-4': 'medium-duty-B20-4.glb',
-  'medium-duty-B20-4-pair': 'medium-duty-B20-4-pair.glb',
-  'medium-duty-B20-5': 'medium-duty-B20-5.glb',
-  'medium-duty-B20-5-pair': 'medium-duty-B20-5-pair.glb',
-  'medium-duty-B20-6': 'medium-duty-B20-6.glb',
-  'medium-duty-B20-6-pair': 'medium-duty-B20-6-pair.glb',
-  
-  // ========== 高位货架（24个）==========
+  'A15-4': {
+    shortId: 'A15-4', longId: 'light-duty-A15-4',
+    name: '4层轻型货架-L1.5xD0.4xH2.0',
+    category: 'light-shelf', fileName: 'light-duty-A15-4.glb',
+    params: { length: 1500, width: 400, height: 2000, levels: 4, type: 'shelf', color: 0x4169E1 }
+  },
+  'A15-5': {
+    shortId: 'A15-5', longId: 'light-duty-A15-5',
+    name: '5层轻型货架-L1.5xD0.4xH2.0',
+    category: 'light-shelf', fileName: 'light-duty-A15-5.glb',
+    params: { length: 1500, width: 400, height: 2000, levels: 5, type: 'shelf', color: 0x4169E1 }
+  },
+  'A20-4': {
+    shortId: 'A20-4', longId: 'light-duty-A20-4',
+    name: '4层轻型货架-L2.0xD0.6xH2.0',
+    category: 'light-shelf', fileName: 'light-duty-A20-4.glb',
+    params: { length: 2000, width: 600, height: 2000, levels: 4, type: 'shelf', color: 0x4169E1 }
+  },
+  'A20-5': {
+    shortId: 'A20-5', longId: 'light-duty-A20-5',
+    name: '5层轻型货架-L2.0xD0.6xH2.5',
+    category: 'light-shelf', fileName: 'light-duty-A20-5.glb',
+    params: { length: 2000, width: 600, height: 2500, levels: 5, type: 'shelf', color: 0x4169E1 }
+  },
+  'A20-6': {
+    shortId: 'A20-6', longId: 'light-duty-A20-6',
+    name: '6层轻型货架-L2.0xD0.6xH3.0',
+    category: 'light-shelf', fileName: 'light-duty-A20-6.glb',
+    params: { length: 2000, width: 600, height: 3000, levels: 6, type: 'shelf', color: 0x4169E1 }
+  },
+  'A15-4-pair': {
+    shortId: 'A15-4-pair', longId: 'light-duty-A15-4-pair',
+    name: '4层轻型货架-L1.5xD0.4xH2.0-配组',
+    category: 'light-shelf', fileName: 'light-duty-A15-4-pair.glb',
+    params: { length: 1500, width: 800, height: 2000, levels: 4, type: 'shelf', color: 0x4169E1 }
+  },
+  'A15-5-pair': {
+    shortId: 'A15-5-pair', longId: 'light-duty-A15-5-pair',
+    name: '5层轻型货架-L1.5xD0.4xH2.0-配组',
+    category: 'light-shelf', fileName: 'light-duty-A15-5-pair.glb',
+    params: { length: 1500, width: 800, height: 2000, levels: 5, type: 'shelf', color: 0x4169E1 }
+  },
+  'A20-4-pair': {
+    shortId: 'A20-4-pair', longId: 'light-duty-A20-4-pair',
+    name: '4层轻型货架-L2.0xD0.6xH2.0-配组',
+    category: 'light-shelf', fileName: 'light-duty-A20-4-pair.glb',
+    params: { length: 2000, width: 1200, height: 2000, levels: 4, type: 'shelf', color: 0x4169E1 }
+  },
+  'A20-5-pair': {
+    shortId: 'A20-5-pair', longId: 'light-duty-A20-5-pair',
+    name: '5层轻型货架-L2.0xD0.6xH2.5-配组',
+    category: 'light-shelf', fileName: 'light-duty-A20-5-pair.glb',
+    params: { length: 2000, width: 1200, height: 2500, levels: 5, type: 'shelf', color: 0x4169E1 }
+  },
+  'A20-6-pair': {
+    shortId: 'A20-6-pair', longId: 'light-duty-A20-6-pair',
+    name: '6层轻型货架-L2.0xD0.6xH3.0-配组',
+    category: 'light-shelf', fileName: 'light-duty-A20-6-pair.glb',
+    params: { length: 2000, width: 1200, height: 3000, levels: 6, type: 'shelf', color: 0x4169E1 }
+  },
+
+  // ========== 中型货架（8个）==========
+  'B20-4': {
+    shortId: 'B20-4', longId: 'medium-duty-B20-4',
+    name: '4层中型货架-L2.0xD0.6xH2.0',
+    category: 'medium-shelf', fileName: 'medium-duty-B20-4.glb',
+    params: { length: 2000, width: 600, height: 2000, levels: 4, type: 'shelf', color: 0x00008B }
+  },
+  'B20-5': {
+    shortId: 'B20-5', longId: 'medium-duty-B20-5',
+    name: '5层中型货架-L2.0xD0.6xH2.5',
+    category: 'medium-shelf', fileName: 'medium-duty-B20-5.glb',
+    params: { length: 2000, width: 600, height: 2500, levels: 5, type: 'shelf', color: 0x00008B }
+  },
+  'B20-6': {
+    shortId: 'B20-6', longId: 'medium-duty-B20-6',
+    name: '6层中型货架-L2.0xD0.6xH3.0',
+    category: 'medium-shelf', fileName: 'medium-duty-B20-6.glb',
+    params: { length: 2000, width: 600, height: 3000, levels: 6, type: 'shelf', color: 0x00008B }
+  },
+  'C23-3': {
+    shortId: 'C23-3', longId: 'high-duty-C23-3',
+    name: '3层高位货架-L2.3xD1.0xH3.0',
+    category: 'medium-shelf', fileName: 'high-duty-C23-3.glb',
+    params: { length: 2300, width: 1000, height: 3000, levels: 3, type: 'shelf', color: 0xFF4500 }
+  },
+  'B20-4-pair': {
+    shortId: 'B20-4-pair', longId: 'medium-duty-B20-4-pair',
+    name: '4层中型货架-L2.0xD0.6xH2.0-配组',
+    category: 'medium-shelf', fileName: 'medium-duty-B20-4-pair.glb',
+    params: { length: 2000, width: 1200, height: 2000, levels: 4, type: 'shelf', color: 0x00008B }
+  },
+  'B20-5-pair': {
+    shortId: 'B20-5-pair', longId: 'medium-duty-B20-5-pair',
+    name: '5层中型货架-L2.0xD0.6xH2.5-配组',
+    category: 'medium-shelf', fileName: 'medium-duty-B20-5-pair.glb',
+    params: { length: 2000, width: 1200, height: 2500, levels: 5, type: 'shelf', color: 0x00008B }
+  },
+  'B20-6-pair': {
+    shortId: 'B20-6-pair', longId: 'medium-duty-B20-6-pair',
+    name: '6层中型货架-L2.0xD0.6xH3.0-配组',
+    category: 'medium-shelf', fileName: 'medium-duty-B20-6-pair.glb',
+    params: { length: 2000, width: 1200, height: 3000, levels: 6, type: 'shelf', color: 0x00008B }
+  },
+  'C23-3-pair': {
+    shortId: 'C23-3-pair', longId: 'high-duty-C23-3-pair',
+    name: '3层高位货架-L2.3xD1.0xH3.0-配组',
+    category: 'medium-shelf', fileName: 'high-duty-C23-3-pair.glb',
+    params: { length: 2300, width: 2000, height: 3000, levels: 3, type: 'shelf', color: 0xFF4500 }
+  },
+
+  // ========== 高位货架（22个）==========
   // C23系列
-  'high-duty-C23-3': 'high-duty-C23-3.glb',
-  'high-duty-C23-3-pair': 'high-duty-C23-3-pair.glb',
-  'high-duty-C23-4': 'high-duty-C23-4.glb',
-  'high-duty-C23-4-pair': 'high-duty-C23-4-pair.glb',
-  'high-duty-C23-5': 'high-duty-C23-5.glb',
-  'high-duty-C23-5-pair': 'high-duty-C23-5-pair.glb',
-  'high-duty-C23-6': 'high-duty-C23-6.glb',
-  'high-duty-C23-6-pair': 'high-duty-C23-6-pair.glb',
+  'C23-4': {
+    shortId: 'C23-4', longId: 'high-duty-C23-4',
+    name: '4层高位货架-L2.3xD1.0xH4.5',
+    category: 'heavy-shelf', fileName: 'high-duty-C23-4.glb',
+    params: { length: 2300, width: 1000, height: 4500, levels: 4, type: 'shelf', color: 0xFF4500 }
+  },
+  'C23-5': {
+    shortId: 'C23-5', longId: 'high-duty-C23-5',
+    name: '5层高位货架-L2.3xD1.0xH6.0',
+    category: 'heavy-shelf', fileName: 'high-duty-C23-5.glb',
+    params: { length: 2300, width: 1000, height: 6000, levels: 5, type: 'shelf', color: 0xFF4500 }
+  },
+  'C23-6': {
+    shortId: 'C23-6', longId: 'high-duty-C23-6',
+    name: '6层高位货架-L2.3xD1.0xH7.0',
+    category: 'heavy-shelf', fileName: 'high-duty-C23-6.glb',
+    params: { length: 2300, width: 1000, height: 7000, levels: 6, type: 'shelf', color: 0xFF4500 }
+  },
+  'C23-4-pair': {
+    shortId: 'C23-4-pair', longId: 'high-duty-C23-4-pair',
+    name: '4层高位货架-L2.3xD1.0xH4.5-配组',
+    category: 'heavy-shelf', fileName: 'high-duty-C23-4-pair.glb',
+    params: { length: 2300, width: 2000, height: 4500, levels: 4, type: 'shelf', color: 0xFF4500 }
+  },
+  'C23-5-pair': {
+    shortId: 'C23-5-pair', longId: 'high-duty-C23-5-pair',
+    name: '5层高位货架-L2.3xD1.0xH6.0-配组',
+    category: 'heavy-shelf', fileName: 'high-duty-C23-5-pair.glb',
+    params: { length: 2300, width: 2000, height: 6000, levels: 5, type: 'shelf', color: 0xFF4500 }
+  },
+  'C23-6-pair': {
+    shortId: 'C23-6-pair', longId: 'high-duty-C23-6-pair',
+    name: '6层高位货架-L2.3xD1.0xH7.0-配组',
+    category: 'heavy-shelf', fileName: 'high-duty-C23-6-pair.glb',
+    params: { length: 2300, width: 2000, height: 7000, levels: 6, type: 'shelf', color: 0xFF4500 }
+  },
   // C25系列
-  'high-duty-C25-3': 'high-duty-C25-3.glb',
-  'high-duty-C25-3-pair': 'high-duty-C25-3-pair.glb',
-  'high-duty-C25-4': 'high-duty-C25-4.glb',
-  'high-duty-C25-4-pair': 'high-duty-C25-4-pair.glb',
-  'high-duty-C25-5': 'high-duty-C25-5.glb',
-  'high-duty-C25-5-pair': 'high-duty-C25-5-pair.glb',
-  'high-duty-C25-6': 'high-duty-C25-6.glb',
-  'high-duty-C25-6-pair': 'high-duty-C25-6-pair.glb',
+  'C25-3': {
+    shortId: 'C25-3', longId: 'high-duty-C25-3',
+    name: '3层高位货架-L2.5xD1.0xH3.0',
+    category: 'heavy-shelf', fileName: 'high-duty-C25-3.glb',
+    params: { length: 2500, width: 1000, height: 3000, levels: 3, type: 'shelf', color: 0xFF4500 }
+  },
+  'C25-4': {
+    shortId: 'C25-4', longId: 'high-duty-C25-4',
+    name: '4层高位货架-L2.5xD1.0xH4.5',
+    category: 'heavy-shelf', fileName: 'high-duty-C25-4.glb',
+    params: { length: 2500, width: 1000, height: 4500, levels: 4, type: 'shelf', color: 0xFF4500 }
+  },
+  'C25-5': {
+    shortId: 'C25-5', longId: 'high-duty-C25-5',
+    name: '5层高位货架-L2.5xD1.0xH6.0',
+    category: 'heavy-shelf', fileName: 'high-duty-C25-5.glb',
+    params: { length: 2500, width: 1000, height: 6000, levels: 5, type: 'shelf', color: 0xFF4500 }
+  },
+  'C25-6': {
+    shortId: 'C25-6', longId: 'high-duty-C25-6',
+    name: '6层高位货架-L2.5xD1.0xH7.0',
+    category: 'heavy-shelf', fileName: 'high-duty-C25-6.glb',
+    params: { length: 2500, width: 1000, height: 7000, levels: 6, type: 'shelf', color: 0xFF4500 }
+  },
+  'C25-3-pair': {
+    shortId: 'C25-3-pair', longId: 'high-duty-C25-3-pair',
+    name: '3层高位货架-L2.5xD1.0xH3.0-配组',
+    category: 'heavy-shelf', fileName: 'high-duty-C25-3-pair.glb',
+    params: { length: 2500, width: 2000, height: 3000, levels: 3, type: 'shelf', color: 0xFF4500 }
+  },
+  'C25-4-pair': {
+    shortId: 'C25-4-pair', longId: 'high-duty-C25-4-pair',
+    name: '4层高位货架-L2.5xD1.0xH4.5-配组',
+    category: 'heavy-shelf', fileName: 'high-duty-C25-4-pair.glb',
+    params: { length: 2500, width: 2000, height: 4500, levels: 4, type: 'shelf', color: 0xFF4500 }
+  },
+  'C25-5-pair': {
+    shortId: 'C25-5-pair', longId: 'high-duty-C25-5-pair',
+    name: '5层高位货架-L2.5xD1.0xH6.0-配组',
+    category: 'heavy-shelf', fileName: 'high-duty-C25-5-pair.glb',
+    params: { length: 2500, width: 2000, height: 6000, levels: 5, type: 'shelf', color: 0xFF4500 }
+  },
+  'C25-6-pair': {
+    shortId: 'C25-6-pair', longId: 'high-duty-C25-6-pair',
+    name: '6层高位货架-L2.5xD1.0xH7.0-配组',
+    category: 'heavy-shelf', fileName: 'high-duty-C25-6-pair.glb',
+    params: { length: 2500, width: 2000, height: 7000, levels: 6, type: 'shelf', color: 0xFF4500 }
+  },
   // C27系列
-  'high-duty-C27-3': 'high-duty-C27-3.glb',
-  'high-duty-C27-3-pair': 'high-duty-C27-3-pair.glb',
-  'high-duty-C27-4': 'high-duty-C27-4.glb',
-  'high-duty-C27-4-pair': 'high-duty-C27-4-pair.glb',
-  'high-duty-C27-5': 'high-duty-C27-5.glb',
-  'high-duty-C27-5-pair': 'high-duty-C27-5-pair.glb',
-  'high-duty-C27-6': 'high-duty-C27-6.glb',
-  'high-duty-C27-6-pair': 'high-duty-C27-6-pair.glb',
-  // 载具容器
-  'pallet-wooden-1200': 'pallet-wooden-1200.glb',
-  'pallet-plastic-1200': 'pallet-plastic-1200.glb',
-  'pallet-wood-1200x1000': 'pallet-wood-1200x1000.glb',
-  'pallet-plastic-1200x1000': 'pallet-plastic-1200x1000.glb',
-  'container-foldable': 'container-foldable.glb',
-  'container-tote-600x400x300': 'container-tote-600x400.glb',
-  'container-tote-600x400x220': 'container-tote-600x400-low.glb',
-  'container-tote-400x300x150': 'container-tote-400x300.glb',
-  // 搬运设备
-  'forklift-reach-2t': 'forklift-reach-2t.glb',
-  'forklift-counterbalance-2.5t': 'forklift-counterbalance-2.5t.glb',
-  'forklift-pallet-truck-electric': 'forklift-pallet-truck-electric.glb',
-  'forklift-pallet-jack-manual': 'forklift-pallet-jack-manual.glb',
-  'cart-picking-3tier': 'cart-picking-3tier.glb',
-  'cart-cage-logistics-2tier': 'cart-cage-logistics-2tier.glb',
-  // 输送设备
-  'lift-cargo-hydraulic-3floor': 'lift-cargo-hydraulic-3floor.glb',
-  'conveyor-curve-90degree-600': 'conveyor-curve-90degree-600.glb',
-  'conveyor-roller-straight-600-red': 'conveyor-roller-straight-600-red.glb',
-  // 拣选设备
-  'putwall-standard-16cell': 'putwall-standard-16cell.glb',
-  'station-packcheck-integrated-red': 'station-packcheck-integrated-red.glb',
-  'weigher-automatic-check-600-red': 'weigher-automatic-check-600-red.glb',
-  // 其他设备
-  'guard-rack-heavy-redyellow': 'guard-rack-heavy-redyellow.glb',
-  'guard-column-protector-redyellow': 'guard-column-protector-redyellow.glb',
-  // 人员
-  'person-warehouse-admin-red': 'person-warehouse-admin-red.glb',
-  // 默认模型
-  'shelf': '../shelf_with_pallet.glb'
+  'C27-3': {
+    shortId: 'C27-3', longId: 'high-duty-C27-3',
+    name: '3层高位货架-L2.7xD1.0xH3.0',
+    category: 'heavy-shelf', fileName: 'high-duty-C27-3.glb',
+    params: { length: 2700, width: 1000, height: 3000, levels: 3, type: 'shelf', color: 0xFF4500 }
+  },
+  'C27-4': {
+    shortId: 'C27-4', longId: 'high-duty-C27-4',
+    name: '4层高位货架-L2.7xD1.0xH4.5',
+    category: 'heavy-shelf', fileName: 'high-duty-C27-4.glb',
+    params: { length: 2700, width: 1000, height: 4500, levels: 4, type: 'shelf', color: 0xFF4500 }
+  },
+  'C27-5': {
+    shortId: 'C27-5', longId: 'high-duty-C27-5',
+    name: '5层高位货架-L2.7xD1.0xH6.0',
+    category: 'heavy-shelf', fileName: 'high-duty-C27-5.glb',
+    params: { length: 2700, width: 1000, height: 6000, levels: 5, type: 'shelf', color: 0xFF4500 }
+  },
+  'C27-6': {
+    shortId: 'C27-6', longId: 'high-duty-C27-6',
+    name: '6层高位货架-L2.7xD1.0xH7.0',
+    category: 'heavy-shelf', fileName: 'high-duty-C27-6.glb',
+    params: { length: 2700, width: 1000, height: 7000, levels: 6, type: 'shelf', color: 0xFF4500 }
+  },
+  'C27-3-pair': {
+    shortId: 'C27-3-pair', longId: 'high-duty-C27-3-pair',
+    name: '3层高位货架-L2.7xD1.0xH3.0-配组',
+    category: 'heavy-shelf', fileName: 'high-duty-C27-3-pair.glb',
+    params: { length: 2700, width: 2000, height: 3000, levels: 3, type: 'shelf', color: 0xFF4500 }
+  },
+  'C27-4-pair': {
+    shortId: 'C27-4-pair', longId: 'high-duty-C27-4-pair',
+    name: '4层高位货架-L2.7xD1.0xH4.5-配组',
+    category: 'heavy-shelf', fileName: 'high-duty-C27-4-pair.glb',
+    params: { length: 2700, width: 2000, height: 4500, levels: 4, type: 'shelf', color: 0xFF4500 }
+  },
+  'C27-5-pair': {
+    shortId: 'C27-5-pair', longId: 'high-duty-C27-5-pair',
+    name: '5层高位货架-L2.7xD1.0xH6.0-配组',
+    category: 'heavy-shelf', fileName: 'high-duty-C27-5-pair.glb',
+    params: { length: 2700, width: 2000, height: 6000, levels: 5, type: 'shelf', color: 0xFF4500 }
+  },
+  'C27-6-pair': {
+    shortId: 'C27-6-pair', longId: 'high-duty-C27-6-pair',
+    name: '6层高位货架-L2.7xD1.0xH7.0-配组',
+    category: 'heavy-shelf', fileName: 'high-duty-C27-6-pair.glb',
+    params: { length: 2700, width: 2000, height: 7000, levels: 6, type: 'shelf', color: 0xFF4500 }
+  },
+
+  // ========== 其他货架（旧版兼容）==========
+  'shelf-beam-heavy': {
+    shortId: 'shelf-beam-heavy', longId: 'shelf-beam-heavy',
+    name: 'A101 重型横梁式货架-5层重型',
+    category: 'other-shelf', fileName: 'shelf-beam-heavy.glb',
+    params: { length: 2700, width: 1000, height: 4500, levels: 5, type: 'shelf', color: 0xCC0000 }
+  },
+  'shelf-beam-medium': {
+    shortId: 'shelf-beam-medium', longId: 'shelf-beam-medium',
+    name: 'A102 横梁式货架-中型4层',
+    category: 'other-shelf', fileName: 'shelf-beam-medium.glb',
+    params: { length: 2000, width: 800, height: 3500, levels: 4, type: 'shelf', color: 0x4169E1 }
+  },
+  'shelf-drive-in': {
+    shortId: 'shelf-drive-in', longId: 'shelf-drive-in',
+    name: 'A103 驶入式货架-重型',
+    category: 'other-shelf', fileName: 'shelf-drive-in.glb',
+    params: { length: 3600, width: 1500, height: 6000, levels: 5, type: 'shelf', color: 0x8B4513 }
+  },
+  'shelf-flow-4level': {
+    shortId: 'shelf-flow-4level', longId: 'shelf-flow-4level',
+    name: 'A104 流利式货架-4层拣选',
+    category: 'other-shelf', fileName: 'shelf-flow-4level.glb',
+    params: { length: 900, width: 450, height: 1800, levels: 4, type: 'shelf', color: 0x98FB98 }
+  },
+
+  // ========== 载具容器（8个）==========
+  'pallet-wooden-1200': {
+    shortId: 'pallet-wooden-1200', longId: 'pallet-wooden-1200',
+    name: 'C101 木质托盘 1200×1000mm',
+    category: 'containers', fileName: 'pallet-wooden-1200.glb',
+    params: { length: 1200, width: 1000, height: 150, type: 'pallet', color: 0xD2691E }
+  },
+  'pallet-plastic-1200': {
+    shortId: 'pallet-plastic-1200', longId: 'pallet-plastic-1200',
+    name: 'C102 塑料托盘 1200×1000mm',
+    category: 'containers', fileName: 'pallet-plastic-1200.glb',
+    params: { length: 1200, width: 1000, height: 150, type: 'pallet', color: 0x4169E1 }
+  },
+  'pallet-wood-1200x1000': {
+    shortId: 'pallet-wood-1200x1000', longId: 'pallet-wood-1200x1000',
+    name: 'C103 木质托盘-标准双向',
+    category: 'containers', fileName: 'pallet-wood-1200x1000.glb',
+    params: { length: 1200, width: 1000, height: 150, type: 'pallet', color: 0x8B4513 }
+  },
+  'pallet-plastic-1200x1000': {
+    shortId: 'pallet-plastic-1200x1000', longId: 'pallet-plastic-1200x1000',
+    name: 'C104 塑料托盘-网格双面',
+    category: 'containers', fileName: 'pallet-plastic-1200x1000.glb',
+    params: { length: 1200, width: 1000, height: 150, type: 'pallet', color: 0x4169E1 }
+  },
+  'container-foldable': {
+    shortId: 'container-foldable', longId: 'container-foldable',
+    name: 'C105 可折叠周转箱',
+    category: 'containers', fileName: 'container-foldable.glb',
+    params: { length: 600, width: 400, height: 340, type: 'container', color: 0x32CD32 }
+  },
+  'container-tote-600x400x300': {
+    shortId: 'container-tote-600x400x300', longId: 'container-tote-600x400x300',
+    name: 'C106 可堆叠周转箱-600×400×300',
+    category: 'containers', fileName: 'container-tote-600x400.glb',
+    params: { length: 600, width: 400, height: 300, type: 'container', color: 0x4169E1 }
+  },
+  'container-tote-600x400x220': {
+    shortId: 'container-tote-600x400x220', longId: 'container-tote-600x400x220',
+    name: 'C107 可堆叠周转箱-600×400×220',
+    category: 'containers', fileName: 'container-tote-600x400-low.glb',
+    params: { length: 600, width: 400, height: 220, type: 'container', color: 0x4169E1 }
+  },
+  'container-tote-400x300x150': {
+    shortId: 'container-tote-400x300x150', longId: 'container-tote-400x300x150',
+    name: 'C108 可堆叠周转箱-400×300×150',
+    category: 'containers', fileName: 'container-tote-400x300.glb',
+    params: { length: 400, width: 300, height: 150, type: 'container', color: 0x4169E1 }
+  },
+
+  // ========== 搬运设备（6个）==========
+  'forklift-reach-2t': {
+    shortId: 'forklift-reach-2t', longId: 'forklift-reach-2t',
+    name: 'B101 前移式叉车-2吨9米',
+    category: 'handling', fileName: 'forklift-reach-2t.glb',
+    params: { length: 1200, width: 800, height: 2500, type: 'forklift', color: 0xFFD700 }
+  },
+  'forklift-counterbalance-2.5t': {
+    shortId: 'forklift-counterbalance-2.5t', longId: 'forklift-counterbalance-2.5t',
+    name: 'B102 平衡重叉车-2.5吨4米',
+    category: 'handling', fileName: 'forklift-counterbalance-2.5t.glb',
+    params: { length: 2500, width: 1200, height: 2200, type: 'forklift', color: 0xFFD700 }
+  },
+  'forklift-pallet-truck-electric': {
+    shortId: 'forklift-pallet-truck-electric', longId: 'forklift-pallet-truck-electric',
+    name: 'B103 电动搬运车-2吨步行式',
+    category: 'handling', fileName: 'forklift-pallet-truck-electric.glb',
+    params: { length: 1500, width: 700, height: 1200, type: 'forklift', color: 0xFFD700 }
+  },
+  'forklift-pallet-jack-manual': {
+    shortId: 'forklift-pallet-jack-manual', longId: 'forklift-pallet-jack-manual',
+    name: 'B104 手动液压搬运车-2.5吨',
+    category: 'handling', fileName: 'forklift-pallet-jack-manual.glb',
+    params: { length: 1200, width: 550, height: 1200, type: 'forklift', color: 0xFFD700 }
+  },
+  'cart-picking-3tier': {
+    shortId: 'cart-picking-3tier', longId: 'cart-picking-3tier',
+    name: 'B105 三层拣货车-标准型',
+    category: 'handling', fileName: 'cart-picking-3tier.glb',
+    params: { length: 800, width: 600, height: 1000, type: 'cart', color: 0x32CD32 }
+  },
+  'cart-cage-logistics-2tier': {
+    shortId: 'cart-cage-logistics-2tier', longId: 'cart-cage-logistics-2tier',
+    name: 'B106 物流笼车-2层标准款',
+    category: 'handling', fileName: 'cart-cage-logistics-2tier.glb',
+    params: { length: 800, width: 600, height: 1500, type: 'cart', color: 0x32CD32 }
+  },
+
+  // ========== 输送设备（3个）==========
+  'lift-cargo-hydraulic-3floor': {
+    shortId: 'lift-cargo-hydraulic-3floor', longId: 'lift-cargo-hydraulic-3floor',
+    name: 'D101 液压升降平台-3层货物提升',
+    category: 'conveying', fileName: 'lift-cargo-hydraulic-3floor.glb',
+    params: { length: 2000, width: 1500, height: 8000, type: 'conveyor', color: 0xFF6347 }
+  },
+  'conveyor-curve-90degree-600': {
+    shortId: 'conveyor-curve-90degree-600', longId: 'conveyor-curve-90degree-600',
+    name: 'D102 90度转弯输送机-滚筒转弯',
+    category: 'conveying', fileName: 'conveyor-curve-90degree-600.glb',
+    params: { length: 1500, width: 1500, height: 800, type: 'conveyor', color: 0xFF6347 }
+  },
+  'conveyor-roller-straight-600-red': {
+    shortId: 'conveyor-roller-straight-600-red', longId: 'conveyor-roller-straight-600-red',
+    name: 'D103 动力滚筒输送机-标准直线型',
+    category: 'conveying', fileName: 'conveyor-roller-straight-600-red.glb',
+    params: { length: 2000, width: 600, height: 800, type: 'conveyor', color: 0xFF6347 }
+  },
+
+  // ========== 拣选设备（3个）==========
+  'putwall-standard-16cell': {
+    shortId: 'putwall-standard-16cell', longId: 'putwall-standard-16cell',
+    name: 'E101 播种墙-16格位标准型',
+    category: 'picking', fileName: 'putwall-standard-16cell.glb',
+    params: { length: 1600, width: 500, height: 1800, type: 'picking', color: 0x9370DB }
+  },
+  'station-packcheck-integrated-red': {
+    shortId: 'station-packcheck-integrated-red', longId: 'station-packcheck-integrated-red',
+    name: 'E102 打包工作站-人体工学设计',
+    category: 'picking', fileName: 'station-packcheck-integrated-red.glb',
+    params: { length: 1800, width: 900, height: 2000, type: 'picking', color: 0xFF6347 }
+  },
+  'weigher-automatic-check-600-red': {
+    shortId: 'weigher-automatic-check-600-red', longId: 'weigher-automatic-check-600-red',
+    name: 'E103 自动称重机-600mm宽',
+    category: 'picking', fileName: 'weigher-automatic-check-600-red.glb',
+    params: { length: 1600, width: 700, height: 800, type: 'picking', color: 0xFF6347 }
+  },
+
+  // ========== 其他设备（2个）==========
+  'guard-rack-heavy-redyellow': {
+    shortId: 'guard-rack-heavy-redyellow', longId: 'guard-rack-heavy-redyellow',
+    name: 'F101 货架防撞护栏-重型红黄警示',
+    category: 'others', fileName: 'guard-rack-heavy-redyellow.glb',
+    params: { length: 1500, width: 150, height: 400, type: 'guard', color: 0xFF4500 }
+  },
+  'guard-column-protector-redyellow': {
+    shortId: 'guard-column-protector-redyellow', longId: 'guard-column-protector-redyellow',
+    name: 'F102 立柱防撞护角-红黄警示',
+    category: 'others', fileName: 'guard-column-protector-redyellow.glb',
+    params: { length: 120, width: 120, height: 400, type: 'guard', color: 0xFF4500 }
+  },
+
+  // ========== 人员（1个）==========
+  'person-warehouse-admin-red': {
+    shortId: 'person-warehouse-admin-red', longId: 'person-warehouse-admin-red',
+    name: 'G101 仓库管理员-标准工作人员',
+    category: 'personnel', fileName: 'person-warehouse-admin-red.glb',
+    params: { length: 450, width: 300, height: 1750, type: 'person', color: 0xFF69B4 }
+  }
 };
+
+// 向后兼容：保留旧版长ID映射（用于加载旧项目）
+const longIdToShortIdMap = {};
+Object.values(modelDatabase).forEach(model => {
+  if (model.longId !== model.shortId) {
+    longIdToShortIdMap[model.longId] = model.shortId;
+  }
+});
+
+// 辅助函数：获取模型信息（支持短ID和长ID）
+function getModelInfo(modelId) {
+  // 先尝试短ID
+  if (modelDatabase[modelId]) {
+    return modelDatabase[modelId];
+  }
+  // 再尝试长ID转换
+  const shortId = longIdToShortIdMap[modelId];
+  if (shortId && modelDatabase[shortId]) {
+    return modelDatabase[shortId];
+  }
+  // 未找到返回null
+  return null;
+}
+
+// 辅助函数：获取模型文件路径
+function getModelFilePath(modelId) {
+  const model = getModelInfo(modelId);
+  return model ? `/assets/models/${model.fileName}` : null;
+}
+
+// 辅助函数：获取模型显示名称
+function getModelDisplayName(modelId) {
+  const model = getModelInfo(modelId);
+  return model ? model.name : modelId;
+}
+
+// 辅助函数：获取模型参数
+function getModelParams(modelId) {
+  const model = getModelInfo(modelId);
+  return model ? model.params : null;
+}
 
 // 加载所有模型
 function loadAllModels() {
   loader = new GLTFLoader();
   
-  Object.entries(modelFileMap).forEach(([modelId, fileName]) => {
-    loadModel(modelId, fileName);
+  // 从 modelDatabase 加载所有模型
+  Object.values(modelDatabase).forEach((model) => {
+    loadModel(model.longId, model.fileName);
   });
 }
 
@@ -558,9 +2129,13 @@ function onKeyDown(event) {
     return;
   }
   
-  // Esc取消选择
+  // Esc取消选择或取消对齐线绘制
   if (event.key === 'Escape') {
-    clearSelection();
+    if (isDrawingAlignmentLine) {
+      cancelDrawingAlignmentLine();
+    } else {
+      clearSelection();
+    }
     return;
   }
 }
@@ -643,6 +2218,53 @@ function onClick(event) {
     return;
   }
   
+  // 处理对齐线绘制
+  if (isDrawingAlignmentLine) {
+    const rect = container.value.getBoundingClientRect();
+    mouse.x = ((event.clientX - rect.left) / container.value.clientWidth) * 2 - 1;
+    mouse.y = -((event.clientY - rect.top) / container.value.clientHeight) * 2 + 1;
+    
+    raycaster.setFromCamera(mouse, camera);
+    
+    // 强制与地面Y=0平面相交（正确做法）
+    const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const intersectPoint = new THREE.Vector3();
+    
+    if (raycaster.ray.intersectPlane(groundPlane, intersectPoint)) {
+      // 防御性检查：防止天文数字坐标
+      if (Math.abs(intersectPoint.x) > 100000 || Math.abs(intersectPoint.z) > 100000) {
+        console.error('❌ 坐标异常，拒绝创建对齐线:', intersectPoint);
+        return; // 阻止创建，避免垃圾数据
+      }
+      
+      console.log('🎯 射线与地面交点:', intersectPoint.x, intersectPoint.z);
+      
+      if (!alignmentLineStartPoint) {
+        // 开始点
+        alignmentLineStartPoint = intersectPoint.clone();
+        console.log('✅ 对齐线开始点:', alignmentLineStartPoint.x, alignmentLineStartPoint.z);
+      } else {
+        // 结束点，创建对齐线
+        const endPoint = intersectPoint.clone();
+        
+        // 防御性检查：确保终点坐标也正常
+        if (Math.abs(endPoint.x) > 100000 || Math.abs(endPoint.z) > 100000) {
+          console.error('❌ 终点坐标异常，拒绝创建对齐线:', endPoint);
+          return;
+        }
+        
+        console.log('✅ 对齐线结束点:', endPoint.x, endPoint.z);
+        addAlignmentLine(alignmentLineStartPoint, endPoint);
+        alignmentLineStartPoint = null;
+        clearAlignmentLinePreview();
+        console.log('对齐线创建完成');
+      }
+    } else {
+      console.error('❌ 射线与地面平面无交点');
+    }
+    return;
+  }
+  
   const rect = container.value.getBoundingClientRect();
   mouse.x = ((event.clientX - rect.left) / container.value.clientWidth) * 2 - 1;
   mouse.y = -((event.clientY - rect.top) / container.value.clientHeight) * 2 + 1;
@@ -680,6 +2302,7 @@ function onClick(event) {
     return;
   }
   
+  // 处理移动模式
   if (isMoving && selectedObjects.length > 0) {
     if (raycaster.ray.intersectPlane(movePlane, moveIntersectPoint)) {
       moveSelectedObjects(moveIntersectPoint.sub(moveOffset));
@@ -749,10 +2372,26 @@ function selectObject(obj) {
   });
   
   // 构建选中对象的信息
+  // 优先使用已存储的中文名称，如果没有则从modelDatabase查找
+  const modelType = obj.userData.modelType || '';
+  let displayName = obj.userData.name;
+  
+  // 如果没有存储名称，尝试从modelDatabase查找
+  if (!displayName && modelType) {
+    const modelInfo = getModelInfo(modelType);
+    displayName = modelInfo ? modelInfo.name : modelType;
+  }
+  
+  // 最终回退
+  if (!displayName) {
+    displayName = obj.userData.type || '未命名对象';
+  }
+  
   const objectInfo = {
     uuid: obj.uuid,
-    name: obj.userData.name || obj.userData.modelType || obj.userData.type || '未命名对象',
+    name: displayName,
     type: obj.userData.type || obj.userData.modelType || 'unknown',
+    modelType: modelType,
     position: obj.position,
     rotation: obj.rotation.y,
     dimensions: obj.userData.dimensions || calculateObjectDimensions(obj)
@@ -796,6 +2435,34 @@ function clearSelection() {
 }
 
 function moveSelectedObjects(delta) {
+  console.log('🔵 moveSelectedObjects被调用', delta);
+  
+  // 如果有对齐线，尝试吸附
+  if (alignmentLines.length > 0 && selectedObjects.length > 0) {
+    const firstObj = selectedObjects[0];
+    const targetPosition = firstObj.position.clone().add(delta);
+    
+    console.log('尝试吸附，对象当前位置:', firstObj.position.x, firstObj.position.z);
+    console.log('目标位置:', targetPosition.x, targetPosition.z);
+    console.log('对齐线数量:', alignmentLines.length);
+    
+    const snapResult = applySnap(targetPosition, firstObj);
+    
+    if (snapResult.snapped) {
+      console.log('🎯 已吸附！吸附到位置:', snapResult.position.x, snapResult.position.z);
+      // 重新计算delta
+      delta.subVectors(snapResult.position, firstObj.position);
+      
+      // 显示吸附提示
+      if (snapResult.projection) {
+        updateSnapIndicator(snapResult.projection, snapResult.line, snapResult.distance);
+      }
+    } else {
+      console.log('未吸附');
+      hideSnapIndicator();
+    }
+  }
+  
   selectedObjects.forEach(obj => {
     obj.position.add(delta);
   });
@@ -809,21 +2476,37 @@ function onMouseMove(event) {
   
   raycaster.setFromCamera(mouse, camera);
   
+  // 对齐线绘制预览
+  if (isDrawingAlignmentLine && alignmentLineStartPoint) {
+    const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const intersectPoint = new THREE.Vector3();
+    if (raycaster.ray.intersectPlane(groundPlane, intersectPoint)) {
+      // 防御性检查：防止天文数字坐标
+      if (Math.abs(intersectPoint.x) > 100000 || Math.abs(intersectPoint.z) > 100000) {
+        console.error('❌ 预览坐标异常，跳过更新:', intersectPoint);
+        return;
+      }
+      updateAlignmentLinePreview(alignmentLineStartPoint, intersectPoint);
+    }
+    return;
+  }
+  
   // 移动模式
   if (isMoving && selectedObjects.length > 0) {
     if (raycaster.ray.intersectPlane(movePlane, moveIntersectPoint)) {
-      const targetPosition = moveIntersectPoint.sub(moveOffset);
+      const targetPosition = moveIntersectPoint.clone().sub(moveOffset);
       targetPosition.x = Math.round(targetPosition.x * 10) / 10;
       targetPosition.z = Math.round(targetPosition.z * 10) / 10;
-      
+
       const firstObj = selectedObjects[0];
       const deltaX = targetPosition.x - firstObj.position.x;
       const deltaZ = targetPosition.z - firstObj.position.z;
       
-      selectedObjects.forEach(obj => {
-        obj.position.x += deltaX;
-        obj.position.z += deltaZ;
-      });
+      console.log('🟡 移动中:', targetPosition.x, targetPosition.z, 'delta:', deltaX, deltaZ);
+
+      // 调用移动函数
+      const delta = new THREE.Vector3(deltaX, 0, deltaZ);
+      moveSelectedObjects(delta);
     }
     updateCornerMarkers();
     return;
@@ -881,11 +2564,45 @@ function onMouseMove(event) {
   }
 }
 
+function onMouseDown(event) {
+  // 检查是否点击了选中的对象
+  const rect = container.value.getBoundingClientRect();
+  mouse.x = ((event.clientX - rect.left) / container.value.clientWidth) * 2 - 1;
+  mouse.y = -((event.clientY - rect.top) / container.value.clientHeight) * 2 + 1;
+  
+  raycaster.setFromCamera(mouse, camera);
+  
+  // 如果点击了选中的对象，开始拖拽
+  if (selectedObjects.length > 0) {
+    const intersects = raycaster.intersectObjects(selectedObjects, true);
+    if (intersects.length > 0) {
+      isMoving = true;
+      
+      // 创建移动平面
+      const firstObj = selectedObjects[0];
+      movePlane.setFromNormalAndCoplanarPoint(
+        new THREE.Vector3(0, 1, 0),
+        firstObj.position
+      );
+      
+      // 计算moveOffset
+      raycaster.ray.intersectPlane(movePlane, moveIntersectPoint);
+      moveOffset.subVectors(moveIntersectPoint, firstObj.position);
+      
+      container.value.style.cursor = 'move';
+      console.log('🟢 拖拽开始');
+    }
+  }
+}
+
 function onMouseUp() {
   if (isMoving) {
     isMoving = false;
     container.value.style.cursor = '';
     console.log('移动完成');
+    
+    // 移动完成时隐藏吸附提示
+    hideSnapIndicator();
   }
   if (isRotating) {
     isRotating = false;
@@ -1075,22 +2792,16 @@ function onDrop(event) {
       yPosition = warehouseConfig.baseHeight;
     }
     
-    // 检查模型是否存在，如果不存在则创建占位对象
-    let newModel;
-    if (models[modelName]) {
-      // 使用已加载的模型
-      newModel = addModelInternal(modelName, {
-        x: intersectPoint.x,
-        y: yPosition,
-        z: intersectPoint.z
-      });
-    } else {
-      // 创建占位对象（彩色方块）
-      newModel = createPlaceholderObject(modelName, {
-        x: intersectPoint.x,
-        y: yPosition,
-        z: intersectPoint.z
-      });
+    // 使用新的统一模型数据库添加模型
+    const newModel = addModelInternal(modelName, {
+      x: intersectPoint.x,
+      y: yPosition,
+      z: intersectPoint.z
+    });
+    
+    if (!newModel) {
+      console.error('添加模型失败:', modelName);
+      return;
     }
     
     if (newModel) {
@@ -1101,13 +2812,24 @@ function onDrop(event) {
 
 // 内部使用的添加模型方法
 function addModelInternal(modelName, position = null) {
-  console.log('尝试添加模型:', modelName, 'models中是否存在:', !!models[modelName]);
+  // 使用新的统一模型数据库获取模型信息
+  const modelInfo = getModelInfo(modelName);
   
-  if (models[modelName]) {
-    const newModel = models[modelName].clone();
+  if (!modelInfo) {
+    console.error('未找到模型信息:', modelName);
+    return null;
+  }
+  
+  const shortId = modelInfo.shortId;
+  const longId = modelInfo.longId;
+  
+  console.log('尝试添加模型:', modelName, '短ID:', shortId, '长ID:', longId, 'models中是否存在:', !!models[longId]);
+  
+  if (models[longId]) {
+    const newModel = models[longId].clone();
     
     // 确保克隆后的模型保持原始缩放
-    console.log('克隆模型，原始缩放:', models[modelName].scale.x, models[modelName].scale.y, models[modelName].scale.z);
+    console.log('克隆模型，原始缩放:', models[longId].scale.x, models[longId].scale.y, models[longId].scale.z);
     console.log('克隆后缩放:', newModel.scale.x, newModel.scale.y, newModel.scale.z);
     
     // 【关键修复】强制计算几何体边界框，解决"幽灵模型"问题
@@ -1125,10 +2847,12 @@ function addModelInternal(modelName, position = null) {
       }
     });
     
-    // 记录对象类型
-    newModel.userData.modelType = modelName;
+    // 记录对象类型和中文名称（统一使用短ID）
+    newModel.userData.modelType = shortId; // 存储短ID
     newModel.userData.modelId = 'shelf_001';
-    newModel.userData.type = 'shelf'; // 添加类型标识，用于射线检测
+    newModel.userData.type = modelInfo.params.type || 'shelf'; // 添加类型标识，用于射线检测
+    newModel.userData.name = modelInfo.name; // 中文名称（从modelDatabase获取）
+    newModel.userData.params = modelInfo.params; // 存储参数
     
     // 设置位置，考虑仓库基准高度
     // 注意：模型在loadModel中已经设置了offsetY使底部与Y=0平齐
@@ -1234,22 +2958,15 @@ const objectLibraryParams = {
 function createDetailedModel(modelName, position) {
   const group = new THREE.Group();
   
-  // 获取对象参数
-  let params = objectLibraryParams[modelName];
-  if (!params) {
-    // 尝试匹配短ID（如A101）
-    const shortIdMatch = modelName.match(/(A|B|C|D|E|F|G)\d{3}/);
-    if (shortIdMatch) {
-      const shortId = shortIdMatch[0];
-      params = Object.values(objectLibraryParams).find(p => p.shortId === shortId);
-    }
+  // 使用新的统一模型数据库获取模型信息
+  const modelInfo = getModelInfo(modelName);
+  
+  if (!modelInfo) {
+    console.error('createDetailedModel: 未找到模型信息:', modelName);
+    return null;
   }
   
-  // 如果还是没有找到，使用默认参数
-  if (!params) {
-    params = { length: 1000, width: 1000, height: 1000, type: 'default', color: 0x888888 };
-  }
-  
+  const params = modelInfo.params;
   const { length, width, height, levels, type, color } = params;
   const lengthM = length / 100; // mm to cm (Three.js单位)
   const widthM = width / 100;
@@ -1296,11 +3013,12 @@ function createDetailedModel(modelName, position) {
   // 设置位置
   group.position.set(position.x, position.y, position.z);
   
-  // 存储对象信息
+  // 存储对象信息（使用短ID）
   group.userData = {
     type: 'model',
-    modelType: modelName,
-    modelId: modelName,
+    modelType: modelInfo.shortId,
+    modelId: modelInfo.shortId,
+    name: modelInfo.name,
     params: params,
     isDetailedModel: true
   };
@@ -1652,9 +3370,19 @@ function createPersonModel(group, length, width, height, color) {
 
 // 创建占位对象（优先使用GLB模型，如果没有则使用详细几何体）
 function createPlaceholderObject(modelName, position) {
+  // 获取模型信息
+  const modelInfo = getModelInfo(modelName);
+  
+  if (!modelInfo) {
+    console.error('createPlaceholderObject: 未找到模型信息:', modelName);
+    return null;
+  }
+  
+  const longId = modelInfo.longId;
+  
   // 首先尝试使用预加载的GLB模型
-  if (models[modelName]) {
-    const newModel = models[modelName].clone();
+  if (models[longId]) {
+    const newModel = models[longId].clone();
     
     newModel.traverse((child) => {
       if (child.material) {
@@ -1662,9 +3390,11 @@ function createPlaceholderObject(modelName, position) {
       }
     });
     
-    // 记录对象信息
-    newModel.userData.modelType = modelName;
-    newModel.userData.modelId = modelName;
+    // 记录对象信息（使用短ID）
+    newModel.userData.modelType = modelInfo.shortId;
+    newModel.userData.modelId = modelInfo.shortId;
+    newModel.userData.name = modelInfo.name;
+    newModel.userData.params = modelInfo.params;
     newModel.userData.isGLBModel = true;
     
     // 设置位置
@@ -1678,14 +3408,14 @@ function createPlaceholderObject(modelName, position) {
     scene.add(newModel);
     sceneObjects.push(newModel);
     
-    console.log('GLB模型添加到场景:', modelName, 'sceneObjects数量:', sceneObjects.length);
+    console.log('GLB模型添加到场景:', modelInfo.shortId, 'sceneObjects数量:', sceneObjects.length);
     emit('model-added', newModel);
     
     return newModel;
   }
   
   // 如果没有GLB模型，使用详细几何体生成
-  console.log('GLB模型未加载，使用详细几何体:', modelName);
+  console.log('GLB模型未加载，使用详细几何体:', modelInfo.shortId);
   return createDetailedModel(modelName, position);
 }
 
@@ -2024,9 +3754,13 @@ function exportImage() {
 function addModel(modelName) {
   // 默认位置
   const defaultPosition = new THREE.Vector3(0, 0, 0);
-  addModelInternal(modelName, defaultPosition);
-  emit('model-added', modelName);
-  console.log('添加模型:', modelName);
+  const newModel = addModelInternal(modelName, defaultPosition);
+  if (newModel) {
+    emit('model-added', newModel);
+    console.log('添加模型成功:', modelName);
+  } else {
+    console.error('添加模型失败:', modelName);
+  }
 }
 
 // 创建仓库
@@ -2991,9 +4725,10 @@ function startBatchPreview(config) {
       const rowDirVector = getDirectionVector(rowDirection, objRotation);
       const colDirVector = getDirectionVector(colDirection, objRotation);
       
-      // 计算位置偏移（cm转three.js单位）
-      const rowOffset = r * (getObjectDepth(originalObj) + rowSpacing * 100);
-      const colOffset = c * (getObjectWidth(originalObj) + colSpacing * 100);
+      // 计算位置偏移（使用本地尺寸，不受旋转影响）
+      // 行方向（前后）使用本地深度（Z尺寸），列方向（左右）使用本地宽度（X尺寸）
+      const rowOffset = r * (getObjectLocalDepth(originalObj) + rowSpacing * 100);
+      const colOffset = c * (getObjectLocalWidth(originalObj) + colSpacing * 100);
       
       // 应用方向向量计算实际偏移
       const offsetX = colOffset * colDirVector.x + rowOffset * rowDirVector.x;
@@ -3015,15 +4750,33 @@ function startBatchPreview(config) {
   console.log('批量复制预览:', rows, '行', cols, '列', '共', batchPreviewObjects.length, '个预览对象');
 }
 
-// 获取对象宽度
+// 获取对象宽度（世界坐标系）
 function getObjectWidth(obj) {
   const box = new THREE.Box3().setFromObject(obj);
   return box.max.x - box.min.x;
 }
 
-// 获取对象深度
+// 获取对象深度（世界坐标系）
 function getObjectDepth(obj) {
   const box = new THREE.Box3().setFromObject(obj);
+  return box.max.z - box.min.z;
+}
+
+// 获取对象本地宽度（不考虑旋转，获取模型本身的X尺寸）
+function getObjectLocalWidth(obj) {
+  // 克隆对象并清除旋转，测量本地尺寸
+  const clonedObj = obj.clone();
+  clonedObj.rotation.set(0, 0, 0);
+  const box = new THREE.Box3().setFromObject(clonedObj);
+  return box.max.x - box.min.x;
+}
+
+// 获取对象本地深度（不考虑旋转，获取模型本身的Z尺寸）
+function getObjectLocalDepth(obj) {
+  // 克隆对象并清除旋转，测量本地尺寸
+  const clonedObj = obj.clone();
+  clonedObj.rotation.set(0, 0, 0);
+  const box = new THREE.Box3().setFromObject(clonedObj);
   return box.max.z - box.min.z;
 }
 
@@ -3237,51 +4990,93 @@ function resetView() {
 }
 
 // 暴露方法
-defineExpose({
-  // 暴露获取相机的方法
-  getCamera: () => camera,
-  // 暴露控制器
-  getControls: () => controls,
-  createWarehouse,
-  createWarehouseFromShape,
-  createDoor,
-  createWindow,
-  deleteOpening,
-  addModel,
-  addModelInternal,
-  getSceneObjects,
-  getSelectedObjectsCount,
-  getObjectsCount,
-  updateShelf,
-  updateConveyor,
-  startDrawZone,
-  cancelDrawZone,
-  clearAllZones,
-  deleteZone,
-  exportImage,
-  enableBatchPlaceMode,
-  disableBatchPlaceMode,
-  moveObject,
-  startRotate,
-  endRotate,
-  previewRotation,
-  applyRotation,
-  deleteSelectedObjects,
-  copySelectedObject,
-  startBatchPreview,
-  confirmBatchPlace,
-  cancelBatchPreview,
-  alignObjects,
-  distributeObjects,
-  clearScene,
-  saveLayout,
-  loadLayout,
-  zoomIn,
-  zoomOut,
-  resetView,
-  forceRender,
-  handleResize // 暴露resize方法供父组件调用
-});
+  defineExpose({
+    // 暴露获取相机的方法
+    getCamera: () => camera,
+    // 暴露控制器
+    getControls: () => controls,
+    createWarehouse,
+    createWarehouseFromShape,
+    createDoor,
+    createWindow,
+    deleteOpening,
+    addModel,
+    addModelInternal,
+    getSceneObjects,
+    getSelectedObjectsCount,
+    getObjectsCount,
+    updateShelf,
+    updateConveyor,
+    startDrawZone,
+    cancelDrawZone,
+    clearAllZones,
+    deleteZone,
+    exportImage,
+    enableBatchPlaceMode,
+    disableBatchPlaceMode,
+    moveObject,
+    startRotate,
+    endRotate,
+    previewRotation,
+    applyRotation,
+    deleteSelectedObjects,
+    copySelectedObject,
+    startBatchPreview,
+    confirmBatchPlace,
+    cancelBatchPreview,
+    alignObjects,
+    distributeObjects,
+    clearScene,
+    saveLayout,
+    loadLayout,
+    zoomIn,
+    zoomOut,
+    resetView,
+    forceRender,
+    handleResize, // 暴露resize方法供父组件调用
+    // 对齐线相关方法
+    getAlignmentLines: serializeAlignmentLines,
+    setAlignmentLines: deserializeAlignmentLines,
+    addAlignmentLine,
+    removeAlignmentLine,
+    updateAlignmentLine,
+    getAlignmentLine,
+    getAllAlignmentLines,
+    clearAlignmentLines,
+    // 对齐线绘制相关方法
+    startDrawingAlignmentLine,
+    stopDrawingAlignmentLine,
+    cancelDrawingAlignmentLine,
+    // 对象边界计算相关方法
+    getObjectBounds,
+    getObjectEdges,
+    // 参考线生成相关方法
+    generateReferenceLines,
+    filterReferenceLines,
+    // 对齐线高亮方法
+    highlightAlignmentLine,
+    // 子任务5.1: 距离计算与吸附逻辑相关方法
+    calculateDistance,
+    calculateDistanceToInfiniteLine,
+    findClosestAlignmentLine,
+    applySnap,
+    getSnapState,
+    setSnapConfig,
+    getSnapConfig,
+    // 子任务5.2: 吸附优先级与边界处理相关方法
+    calculateSnapPriority,
+    updateUserIntent,
+    resetUserIntent,
+    handleBoundarySnap,
+    cancelSnap,
+    isSnapDisabled,
+    enableSnap,
+    // 子任务5.3: 对齐辅助提示相关方法
+    createSnapIndicator,
+    updateSnapIndicator,
+    hideSnapIndicator,
+    destroySnapIndicator
+  });
 </script>
 
 <style scoped>

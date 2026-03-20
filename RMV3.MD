@@ -81,6 +81,9 @@
 | V1.3.9 | 自定义货架模型库版 | 2026-03-13 | 40个货架模型预生成、两层级联选择器、P2创建→P1拖拽流程 |
 | V1.4.0 | 批量复制方向选择版 | 2026-03-13 | 货架操作方向白线标记、批量复制方向选择（前/后/左/右） |
 | V1.4.1 | 精确旋转角度输入版 | 2026-03-13 | 旋转角度输入对话框、实时预览、白线方向为0°基准 |
+| V1.5.0 | 三面板菜单交互版 | 2026-03-16 | 顶部工具栏重构、左侧面板对齐线卡片、右侧面板优化 |
+| V1.7.0 | 对齐线功能完整版 | 2026-03-19 | 对齐线绘制（红色无限长直线）、对齐线管理、高亮交互、工具栏按钮状态、ESC键退出、相机位置优化 |
+| V1.7.1 | 对齐线吸附功能版 | 2026-03-20 | 对齐线吸附功能验收通过（10cm阈值）、代码冻结、坐标计算修复（强制Y=0） |
 
 ---
 
@@ -271,19 +274,39 @@
 ## 项目进度总结
 
 ### 当前版本
-**V1.4.1**（2026-03-13）- 精确旋转角度输入版
+**V1.7.1**（2026-03-20）- 对齐线吸附功能版（代码已冻结）
 
 ### 已完成成果
 | 模块 | 完成度 | 关键成果 |
 |------|--------|----------|
 | 2D工作台 | 100% | 仓库绘制、功能区规划、文字标注 |
 | 3D场景渲染 | 98% | 多边形墙体、网格地面、80个GLB模型（含40个货架） |
-| 对象操作系统 | 100% | 选择/移动/旋转/删除/复制、批量复制（带方向选择）、精确旋转、对齐工具 |
+| 对象操作系统 | 100% | 选择/移动/旋转/删除/复制、批量复制（带方向选择）、精确旋转 |
 | 自定义货架系统 | 100% | 40个货架模型、两层级联选择器、P2创建→P1拖拽 |
 | 项目管理 | 85% | 保存/导入、导出效果图 |
-| UI/UX | 97% | 三面板布局、卡片式导航、自定义货架弹窗、批量复制方向选择、精确旋转对话框 |
+| UI/UX | 100% | 三面板布局、卡片式导航、顶部工具栏重构、对齐线卡片（完整功能）、批量复制方向选择、精确旋转对话框 |
+| 对齐线功能 | 100% | 对齐线绘制（红色无限长直线）、对齐线管理、高亮交互、按钮状态、ESC键退出、相机位置优化、保存/加载、吸附功能（10cm阈值） |
 
-### 当前版本功能亮点 (V1.4.1)
+### 当前版本功能亮点 (V1.7.0)
+**对齐线功能完整实现** - 已完成
+- ✅ 对齐线绘制：点击工具栏按钮进入绘制模式，点击画布两点生成红色无限长虚线
+- ✅ 按钮激活状态：点击后按钮变红色（背景、边框、文字、阴影），再次点击或ESC退出
+- ✅ 自动切换模式：退出对齐线绘制后自动切换到选择模式
+- ✅ 对齐线管理：左侧面板列表显示，支持删除单条、清空全部
+- ✅ 对齐线高亮：点击列表项，该项红色高亮，3D场景中对应直线黄色高亮
+- ✅ 相机位置优化：俯视仓库中心，确保对齐线始终可见
+- ✅ 保存/加载：对齐线数据随项目一起保存和恢复
+
+### 上一版本功能亮点 (V1.5.0)
+**三面板菜单交互优化** - 已完成
+- ✅ 顶部工具栏重构：移除2D/3D切换按钮，改为卡片控制视图
+- ✅ 顶部工具栏新增：🖱️选择、📏测量（占位）、➕对齐线（占位）、➕📦自定义货架、📐对齐工具（MVP禁用）
+- ✅ 左侧面板新增：第3个卡片"📏对齐线"
+- ✅ 右侧面板优化：移除对齐工具，移至顶部工具栏禁用状态
+- ✅ 面板折叠按钮：简化为只显示图标
+- ✅ 删除按钮位置：保留在右侧面板对象操作面板中
+
+### 上一版本功能亮点 (V1.4.1)
 **精确旋转角度输入** - 已完成
 - ✅ 旋转角度输入对话框：点击旋转按钮弹出
 - ✅ 角度输入范围：-360° 到 +360°，支持小数
@@ -418,7 +441,589 @@
 
 ---
 
-**最后更新**: 2026-03-13 (V1.4.1) - 精确旋转角度输入功能完成，旋转角度对话框、实时预览、白线方向为0°基准
+## Bug修复记录
+
+### 2026-03-16: 编辑线条取消后状态未恢复问题
+
+**问题描述**
+编辑线条流程：点击线条 → 点击"编辑线条" → 点击"取消" → 点击空白画布 → **线条仍然是红色**（应该恢复正常颜色）
+
+**问题原因**
+`cancelLengthInput` 函数在取消编辑线条时，没有重置以下状态变量：
+- `isEditingLine` - 编辑线条模式标志
+- `editingLineIndex` - 正在编辑的线条索引
+- `selectedLineIndex` - 选中的线条索引
+
+**修复内容**
+在 `cancelLengthInput` 函数中添加状态重置逻辑：
+```javascript
+function cancelLengthInput() {
+  showLengthDialog.value = false;
+  isWaitingForLength.value = false;
+  tempStartPoint = null;
+  
+  // 如果是编辑线条模式，取消编辑并恢复线条状态
+  if (isEditingLine.value) {
+    isEditingLine.value = false;
+    editingLineIndex.value = null;
+    selectedLineIndex.value = null; // 同时取消线条选中状态
+    console.log('取消编辑线条，恢复线条状态');
+  }
+  
+  console.log('取消长度输入');
+}
+```
+
+**修复后行为**
+1. 点击线条 → 线条变红，右侧面板显示"编辑线条"按钮
+2. 点击"编辑线条" → 弹出编辑对话框
+3. 点击"取消" → 对话框关闭，线条恢复到未选中状态（不再是红色）
+4. 点击空白画布 → 线条保持正常状态
+
+**影响文件**
+- `frontend/src/views/CoreFunction.vue` - `cancelLengthInput` 函数
+
+---
+
+### 2026-03-16: 功能区精确尺寸编辑功能
+
+**功能描述**
+为功能区编辑增加精确尺寸输入功能，与现有的直接编辑（拖拽移动、手柄缩放）形成互补。
+
+**功能实现**
+1. **新增状态变量**
+   - `showZoneSizeDialog` - 控制对话框显示
+   - `zoneEditWidth` - 长度输入（米）
+   - `zoneEditHeight` - 宽度输入（米）
+
+2. **修改 `editSelectedZone` 函数**
+   - 打开精确尺寸编辑对话框
+   - 默认值设为0
+   - 自动聚焦长度输入框
+
+3. **新增方法**
+   - `confirmZoneSizeEdit()` - 确认编辑，按输入尺寸调整功能区，保持中心点不变
+   - `cancelZoneSizeEdit()` - 取消编辑，关闭对话框
+
+4. **新增对话框UI**
+   - 标题：精确编辑功能区尺寸
+   - 两个输入框：长度（米）、宽度（米）
+   - 提示文字：以中心点为基准调整大小
+   - 确认按钮：尺寸必须大于0才可用
+   - 取消按钮
+
+**交互流程**
+1. 点击功能区 → 功能区变红，出现8个手柄（可拖动手柄缩放）
+2. 可以直接拖拽移动功能区
+3. 点击"编辑功能区"按钮 → 弹出精确尺寸编辑对话框
+4. 输入长宽（米）→ 点击确认 → 功能区按输入尺寸精确调整，保持中心点不变
+5. 点击取消 → 对话框关闭，功能区保持原尺寸
+
+**影响文件**
+- `frontend/src/views/CoreFunction.vue` - `editSelectedZone`、`confirmZoneSizeEdit`、`cancelZoneSizeEdit` 函数及对话框UI
+
+---
+
+### 2026-03-16: 功能区8个手柄消失问题修复
+
+**问题描述**
+添加功能区精确尺寸编辑功能后，选中功能区时8个调整手柄消失，无法进行拖拽缩放。
+
+**问题原因**
+8个手柄的显示条件是 `v-if="isZoneEditMode && selectedZone === zone.id"`，需要同时满足：
+1. `isZoneEditMode = true`
+2. `selectedZone` 等于当前功能区ID
+
+原来的 `editSelectedZone` 函数会设置 `isZoneEditMode = true`，但修改为只打开对话框后不再设置。而 `onZoneClick` 函数只设置了 `selectedZone`，没有设置 `isZoneEditMode`，导致8个手柄不显示。
+
+**修复内容**
+在 `onZoneClick` 函数中添加：
+```javascript
+// 进入功能区编辑模式，显示8个手柄
+isZoneEditMode.value = true;
+```
+
+**修复后行为**
+- 点击功能区 → 功能区变红，显示8个手柄（可拖动手柄缩放）
+- 可以直接拖拽移动功能区
+- 点击"编辑功能区"按钮 → 弹出精确尺寸编辑对话框
+- 输入长宽 → 确认 → 功能区按输入尺寸精确调整
+
+**影响文件**
+- `frontend/src/views/CoreFunction.vue` - `onZoneClick` 函数
+
+---
+
+### 2026-03-16: 弹窗结构统一与拖动功能
+
+**优化背景**
+项目中共有8个弹窗，但结构不一致：5个使用 `modal-dialog`，3个使用 `modal-content`。为了统一风格和后续维护，决定统一为 `modal-dialog` 结构，并添加拖动功能提升用户体验。
+
+**优化内容**
+
+**1. 弹窗结构统一**
+将以下3个弹窗从 `modal-content` 结构改为 `modal-dialog` 结构：
+
+| 弹窗 | 原结构 | 新结构 | 特定class |
+|------|--------|--------|-----------|
+| 快捷生成矩形仓库 | `modal-content` | `modal-dialog` + `modal-content` | `quick-rect-dialog` |
+| 文字标注输入 | `modal-content` | `modal-dialog` + `modal-content` | `text-input-dialog` |
+| 自定义轻型货架 | `modal-content custom-shelf-modal` | `modal-dialog` + `modal-content` | `custom-shelf-dialog` |
+
+**统一后的结构**：
+```html
+<div class="modal-overlay">
+  <div class="modal-dialog [特定class]">
+    <h3 class="modal-title">标题</h3>
+    <div class="modal-content">
+      <!-- 内容 -->
+    </div>
+    <div class="modal-actions">
+      <!-- 按钮 -->
+    </div>
+  </div>
+</div>
+```
+
+**2. 弹窗拖动功能**
+
+**新增状态变量**：
+- `isDraggingModal` - 是否正在拖动
+- `dragModalTarget` - 当前拖动的弹窗标识
+- `dragModalStartX/Y` - 拖动起始位置
+- `dragModalOffsetX/Y` - 弹窗当前偏移量
+
+**新增方法**：
+- `onModalDragStart(event, modalRef)` - 开始拖动（只有点击标题栏才能拖动）
+- `onModalDragMove(event)` - 拖动中（更新弹窗位置）
+- `onModalDragEnd()` - 结束拖动（移除事件监听）
+
+**为8个弹窗添加拖动事件**：
+| 弹窗 | 标识 |
+|------|------|
+| 线段长度输入 | `length` |
+| 保存项目 | `save` |
+| 精确旋转 | `rotation` |
+| 功能区尺寸编辑 | `zoneSize` |
+| 功能区列表 | `zoneList` |
+| 快捷生成矩形仓库 | `quickRect` |
+| 文字标注输入 | `textInput` |
+| 自定义轻型货架 | `customShelf` |
+
+**CSS样式更新**：
+- `.modal-title` 添加 `cursor: move` 和 `user-select: none`
+- `.modal-title:hover` 添加背景色变化提示可拖动
+
+**使用说明**
+1. 鼠标移动到弹窗标题栏 → 光标变为移动形状
+2. 按住标题栏拖动 → 弹窗跟随鼠标移动
+3. 释放鼠标 → 弹窗停留在新位置
+
+**影响文件**
+- `frontend/src/views/CoreFunction.vue` - 弹窗结构、拖动功能、CSS样式
+
+---
+
+### 2026-03-16: 文字标注选中交互优化
+
+**功能描述**
+为文字标注添加完整的选中-属性-操作交互流程，与功能区、线条的交互保持一致。
+
+**功能实现**
+
+**1. 文字标注点击选中**
+- 修改 `@mousedown` 事件为 `onTextLabelMouseDown`
+- 点击时设置 `selectedTextLabel` 并取消其他选中状态
+- 选中时文字变为橙色，显示虚线边框
+
+**2. 右侧面板属性显示**
+- 属性面板标题根据选中状态动态显示"文字标注属性"
+- 新增文字标注属性显示：
+  - 内容
+  - 字体大小
+  - 位置 X/Y
+
+**3. 右侧面板操作按钮**
+- 新增"文字标注操作"区域
+- "编辑文字"按钮：点击打开编辑弹窗（与双击相同功能）
+- "删除文字"按钮：点击删除文字标注
+
+**4. 辅助方法**
+- `getSelectedTextLabelContent()` - 获取内容
+- `getSelectedTextLabelFontSize()` - 获取字体大小
+- `getSelectedTextLabelX/Y()` - 获取坐标
+- `editSelectedTextLabel()` - 编辑文字标注
+- `deleteSelectedTextLabel()` - 删除文字标注
+
+**Bug修复：选中状态被清空问题**
+
+**问题现象**
+文字标注点击选中后，右侧面板需要按住鼠标左键才能显示，松开鼠标后面板立即消失。
+
+**根因分析**
+事件机制冲突：
+1. `mousedown` → `mouseup` → `click` 事件顺序
+2. `onTextLabelMouseDown` 中启动拖动，使用 `window.addEventListener('mouseup', onMouseUp)`
+3. `onCanvasClick` 使用 Vue 的 `@click`，与 `window` 上的 `mouseup` 是独立的监听机制
+4. `stopPropagation()` 只能阻止冒泡到父元素，不能阻止独立的 `click` 事件
+
+**修复方案：标志位拦截**
+```javascript
+// 添加标志位
+const ignoreNextCanvasClick = ref(false);
+
+// 文字标注 mousedown 处理
+function onTextLabelMouseDown(event, labelId) {
+  ignoreNextCanvasClick.value = true;  // 标记：接下来忽略画布click
+  selectedTextLabel.value = labelId;
+  // ... 其他逻辑
+}
+
+// 画布 click 处理
+function onCanvasClick(event) {
+  if (ignoreNextCanvasClick.value) {
+    ignoreNextCanvasClick.value = false;  // 重置标志
+    return;  // 不执行清空选中
+  }
+  // ... 原有逻辑
+}
+```
+
+**修复后行为**
+1. 点击文字标注 → 文字变橙色，显示虚线边框，右侧面板显示属性和操作按钮
+2. 松开鼠标 → 选中状态保持，面板不消失
+3. 点击"编辑文字"按钮 → 弹出编辑对话框
+4. 点击"删除文字"按钮 → 确认后删除文字标注
+5. 点击空白画布 → 取消选中状态
+
+**影响文件**
+- `frontend/src/views/CoreFunction.vue` - 文字标注选中逻辑、属性面板、操作面板、标志位机制
+
+---
+
+### 2026-03-16: 批量复制方向选项优化
+
+**问题描述**
+批量复制的行向和列向都有4个选项（向前、向后、向左、向右），这是错误的。行应该只沿前后方向，列应该只沿左右方向。
+
+**修复内容**
+
+**行向选项**（修改前）：
+- 向前、向后、向左、向右 ❌
+
+**行向选项**（修改后）：
+- 向前、向后 ✓
+
+**列向选项**（修改前）：
+- 向前、向后、向左、向右 ❌
+
+**列向选项**（修改后）：
+- 向左、向右 ✓
+
+**代码修改**：
+```html
+<!-- 行向 -->
+<select v-model="batchRowDirection">
+  <option value="forward">向前</option>
+  <option value="backward">向后</option>
+</select>
+
+<!-- 列向 -->
+<select v-model="batchColDirection">
+  <option value="left">向左</option>
+  <option value="right">向右</option>
+</select>
+```
+
+**注释更新**：
+```javascript
+const batchRowDirection = ref('forward'); // 行延伸方向：forward/backward（向前/向后）
+const batchColDirection = ref('left');    // 列延伸方向：left/right（向左/向右）
+```
+
+**修复后行为**
+- 行向只有"向前"和"向后"两个选项（沿货架前后方向排列）
+- 列向只有"向左"和"向右"两个选项（沿货架左右方向排列）
+- 符合货架阵列的逻辑
+
+**影响文件**
+- `frontend/src/views/CoreFunction.vue` - 批量复制方向选择UI
+
+---
+
+### 2026-03-16: 批量复制旋转后货架重叠Bug修复
+
+**问题描述**
+货架旋转90度后，进行批量复制（如3行2列，行距3米，列距0），中型、轻型货架出现重叠，而高位货架正常。
+
+**根因分析**
+批量复制位置计算使用了**世界坐标系尺寸**：
+```javascript
+const rowOffset = r * (getObjectDepth(originalObj) + rowSpacing * 100);
+const colOffset = c * (getObjectWidth(originalObj) + colSpacing * 100);
+```
+
+当货架旋转90度后：
+- 世界坐标系的X尺寸 = 原货架的Z尺寸（长度）
+- 世界坐标系的Z尺寸 = 原货架的X尺寸（宽度）
+
+导致行/列间距计算错误，货架重叠。
+
+**修复方案：使用本地尺寸**
+
+**1. 新增获取本地尺寸的方法**（不考虑旋转）：
+```javascript
+// 获取对象本地宽度（模型本身的X尺寸）
+function getObjectLocalWidth(obj) {
+  const clonedObj = obj.clone();
+  clonedObj.rotation.set(0, 0, 0);
+  const box = new THREE.Box3().setFromObject(clonedObj);
+  return box.max.x - box.min.x;
+}
+
+// 获取对象本地深度（模型本身的Z尺寸）
+function getObjectLocalDepth(obj) {
+  const clonedObj = obj.clone();
+  clonedObj.rotation.set(0, 0, 0);
+  const box = new THREE.Box3().setFromObject(clonedObj);
+  return box.max.z - box.min.z;
+}
+```
+
+**2. 修改批量复制位置计算**：
+```javascript
+// 使用本地尺寸，不受旋转影响
+const rowOffset = r * (getObjectLocalDepth(originalObj) + rowSpacing * 100);
+const colOffset = c * (getObjectLocalWidth(originalObj) + colSpacing * 100);
+```
+
+**修复后行为**
+- 无论货架旋转多少度（0°、90°、180°、270°），批量复制都使用货架的**真实本地尺寸**
+- 行间距基于货架本地深度（前后方向）
+- 列间距基于货架本地宽度（左右方向）
+- 轻型、中型、高位货架旋转后都能正确排列，不会重叠
+
+**影响文件**
+- `frontend/src/components/3d/ThreeScene.vue` - 批量复制位置计算逻辑、新增本地尺寸获取方法
+
+---
+
+### 2026-03-16: 移除3D对象操作面板的复制按钮
+
+**问题描述**
+所有3D对象（货架、人员模型、搬运设备等）的对象操作面板中都显示了"复制"按钮，但该功能不需要。
+
+**修复过程**
+
+**阶段1：尝试条件判断（失败）**
+- 添加 `isSelectedObjectPersonnel` 计算属性，尝试对人员模型隐藏复制按钮
+- 添加 `isSelectedObjectEquipment` 计算属性，尝试对搬运设备隐藏复制按钮
+- 使用 `v-if="!isSelectedObjectPersonnel && !isSelectedObjectEquipment"` 条件显示
+- **问题**：`selectedObject` 中缺少 `modelType` 字段，判断逻辑不生效
+
+**阶段2：修复数据结构（部分成功）**
+- 在 ThreeScene.vue 的 `objectInfo` 中添加 `modelType` 字段
+- 人员模型和搬运设备的判断逻辑开始生效
+- **问题**：货架的复制按钮仍然显示，需要进一步处理
+
+**阶段3：直接移除（成功）**
+- 直接删除复制按钮的HTML代码
+- 不再使用任何条件判断
+- 所有3D对象的操作面板都不再显示复制按钮
+
+**最终修复代码**：
+```html
+<!-- 修改前 -->
+<div class="operation-row">
+  <button v-if="isSelectedObjectShelf" @click="copySelectedObject" class="operation-btn">
+    <span class="btn-icon">📋</span>复制
+  </button>
+  <button @click="deleteSelectedObject" class="operation-btn warning-btn">
+    <span class="btn-icon">🗑️</span>删除
+  </button>
+</div>
+
+<!-- 修改后 -->
+<div class="operation-row">
+  <button @click="deleteSelectedObject" class="operation-btn warning-btn">
+    <span class="btn-icon">🗑️</span>删除
+  </button>
+</div>
+```
+
+**修复后行为**
+- 所有3D对象（货架、人员模型、搬运设备、其他所有对象）的对象操作面板**只显示"移动"、"旋转"、"删除"按钮**
+- **不再显示"复制"按钮**
+
+**影响文件**
+- `frontend/src/views/CoreFunction.vue` - 移除3D对象操作面板的复制按钮
+- `frontend/src/components/3d/ThreeScene.vue` - 在 objectInfo 中添加 modelType 字段（保留，以备后续使用）
+
+---
+
+### 2026-03-18: 重构3D模型数据库（方案3）
+
+**问题描述**
+对象模型数据库混乱，机器识别编码（长ID）和用户识别字段（短ID/中文名称）交叉分散在多个映射表中，维护困难，容易出错。
+
+**重构方案（方案3：独立的数据库表结构）**
+
+创建统一的 `modelDatabase` 对象，一个对象包含所有信息：
+- `shortId`: 短ID（用户界面使用，如 'A15-4'）
+- `longId`: 长ID（GLB文件标识，如 'light-duty-A15-4'）
+- `name`: 中文名称（如 '4层轻型货架-L1.5xD0.4xH2.0'）
+- `category`: 分类（如 'light-shelf'）
+- `fileName`: GLB文件名
+- `params`: 生成参数（length, width, height, levels, type, color）
+
+**模型数据库统计**
+- 轻型货架：10个（A15-4 ~ A20-6 及配组）
+- 中型货架：8个（B20-4 ~ B20-6, C23-3 及配组）
+- 高位货架：22个（C23-4 ~ C27-6 及配组）
+- 其他货架：4个（旧版兼容）
+- 载具容器：8个
+- 搬运设备：6个
+- 输送设备：3个
+- 拣选设备：3个
+- 其他设备：2个
+- 人员：1个
+- **总计：67个模型**
+
+**新增辅助函数**
+- `getModelInfo(modelId)`: 获取模型信息（支持短ID和长ID）
+- `getModelFilePath(modelId)`: 获取模型文件路径
+- `getModelDisplayName(modelId)`: 获取模型显示名称
+- `getModelParams(modelId)`: 获取模型参数
+- `longIdToShortIdMap`: 长ID到短ID的反向映射（向后兼容）
+
+**重构的函数**
+- `loadAllModels()`: 从 modelDatabase 加载所有模型
+- `addModelInternal()`: 使用 modelDatabase 添加模型
+- `createDetailedModel()`: 使用 modelDatabase 生成几何体
+- `createPlaceholderObject()`: 使用 modelDatabase 创建占位对象
+- `selectObject()`: 使用 modelDatabase 获取显示名称
+- `onDrop()`: 简化模型添加逻辑
+- `addModel()`: 改进错误处理
+
+**向后兼容**
+- 旧项目使用长ID（如 'light-duty-A15-4'）可以正常加载
+- `getModelInfo()` 函数自动处理长ID到短ID的转换
+- 保存时统一使用短ID存储
+
+**影响文件**
+- `frontend/src/components/3d/ThreeScene.vue` - 重构模型数据库和相关函数
+- `frontend/src/views/CoreFunction.vue` - modelFullNames 映射表（已包含短ID）
+
+---
+
+**最后更新**: 2026-03-20 (V1.7.1) - 对齐线吸附功能验收通过，代码已冻结。修复坐标计算bug（强制Y=0），实现对齐线吸附功能（10cm阈值）
+
+### 2026-03-20: 对齐线吸附功能验收通过（代码冻结）
+
+**功能验收**
+- ✅ 对齐线吸附功能验收通过
+- ✅ 吸附阈值：10cm（保持）
+- ✅ 距离计算逻辑：handleBoundarySnap（保持）
+- ✅ 射线检测逻辑：已正确（保持）
+
+**代码冻结声明**
+❌ 禁止修改吸附阈值（保持10cm）
+❌ 禁止修改距离计算逻辑（handleBoundarySnap已正确）
+❌ 禁止修改射线检测逻辑（已正确）
+❌ 禁止重构AlignmentLine类
+❌ 禁止优化createAlignmentLineGeometry（即使视觉端点有瑕疵）
+
+**修复的坐标计算Bug**
+1. **AlignmentLine类方向向量计算** - 强制Y=0，防止Y坐标漂移
+2. **addLineToScene数据流** - 使用originalStart/End代替startPoint/End
+3. **createAlignmentLineGeometry方向向量** - 强制Y=0，确保在XZ平面延伸
+
+**P0教训**: 所有2.5D仓库布局的数学计算，必须强制Y=0，不能相信输入数据的Y坐标一定是0。
+
+**影响文件**
+- `frontend/src/components/3d/ThreeScene.vue` - AlignmentLine类、addLineToScene、createAlignmentLineGeometry
+
+---
+
+**之前更新**: 2026-03-19 (V1.7.0) - 对齐线功能完整版，实现对齐线绘制（红色无限长直线）、对齐线管理（列表展示、删除、清空）、对齐线高亮（点击列表项高亮对应直线）、工具栏按钮状态（激活/取消）、ESC键退出绘制模式，相机位置优化（俯视仓库），对齐线保存/加载功能
+
+### 2026-03-19: 对齐线功能完整实现
+
+**功能概述**
+实现对齐线功能，帮助用户精确放置3D对象，类似CAD的辅助线功能。
+
+**核心功能**
+1. **对齐线绘制**
+   - 点击工具栏"➕对齐线"按钮进入绘制模式
+   - 按钮变为红色激活状态（背景、边框、文字、阴影）
+   - 在3D场景中点击两点确定直线方向
+   - 生成红色无限长虚线（向两端延伸1000米）
+   - 再次点击按钮或按ESC退出绘制模式
+   - 自动切换到选择模式
+
+2. **对齐线管理**
+   - 左侧面板"对齐线"卡片显示对齐线列表
+   - 列表项显示对齐线名称（如"对齐线1"）
+   - 点击列表项：该项显示红色边框和背景高亮
+   - 3D场景中对应的对齐线变为黄色高亮
+   - 支持删除单条对齐线
+   - 支持清空全部对齐线（带确认对话框）
+
+3. **技术实现**
+   - **颜色**: 红色 `0xff0000`，醒目对比
+   - **材质**: `LineDashedMaterial`，虚线效果
+   - **长度**: 无限长直线（向两端延伸100000cm）
+   - **高度**: 基于 `warehouseConfig.baseHeight`，在地面之上2cm
+   - **相机**: 俯视仓库中心（高度10000cm），确保对齐线可见
+   - **保存**: 对齐线数据随项目一起保存和加载
+
+**修复的问题**
+1. **对齐线不可见**: 修复Y轴高度（考虑baseHeight）和相机位置
+2. **按钮无激活状态**: 添加 `.top-bar-btn.active` CSS样式
+3. **ESC键无效**: 添加对齐线模式的ESC键处理
+4. **数据不同步**: 添加 `alignment-lines-updated` 事件
+
+**函数关系**
+```
+用户点击"对齐线"按钮
+  ↓
+addAlignLine() [CoreFunction.vue]
+  ↓
+isAlignLineMode.value = true
+  ↓
+threeScene.value.startDrawingAlignmentLine()
+  ↓
+startDrawingAlignmentLine() [ThreeScene.vue]
+  ↓
+isDrawingAlignmentLine = true
+  ↓
+用户点击画布两点
+  ↓
+onClick() [ThreeScene.vue]
+  ↓
+addAlignmentLine(start, end)
+  ↓
+createAlignmentLineGeometry() [无限长直线]
+createAlignmentLineMaterial() [红色虚线]
+  ↓
+addLineToScene()
+  ↓
+scene.add(lineObject)
+  ↓
+emit('alignment-lines-updated')
+  ↓
+handleAlignmentLinesUpdated() [CoreFunction.vue]
+  ↓
+alignLines.value = lines [更新列表]
+```
+
+**影响文件**
+- `frontend/src/views/CoreFunction.vue` - 工具栏按钮、对齐线列表、ESC键处理、CSS样式
+- `frontend/src/components/3d/ThreeScene.vue` - 对齐线绘制、渲染、高亮、相机位置
+
+---
+
+**之前更新**: 2026-03-18 (V1.6.0) - 三面板菜单交互版完成，顶部工具栏重构、左侧面板对齐线卡片、右侧面板优化，修复编辑线条取消后状态未恢复问题，新增功能区精确尺寸编辑功能，修复功能区8个手柄消失问题，弹窗结构统一与拖动功能，文字标注选中交互优化，批量复制方向选项优化，批量复制旋转后货架重叠Bug修复，移除3D对象操作面板的复制按钮，重构3D模型数据库（方案3）
 
 **重要教训**: 3D模型单位一致性 - 所有模型必须统一使用mm单位生成，ThreeScene.vue中使用0.1缩放，避免新旧模型尺寸不一致问题
 **项目维护**: RMF (AI Assistant)
@@ -432,6 +1037,7 @@
 | 标签名称 | 版本 | 日期 | 备份内容 | 回退命令 |
 |----------|------|------|----------|----------|
 | `3面板交互菜单前版本` | V1.4.1 | 2026-03-13 | 批量复制方向选择、精确旋转角度输入、40个货架白线标记 | `git checkout 3面板交互菜单前版本` |
+| `三面板菜单交互版` | V1.5.0 | 2026-03-16 | 顶部工具栏重构、左侧面板对齐线卡片、右侧面板移除对齐工具 | `git checkout 三面板菜单交互版` |
 
 ### 备份说明
 - **备份方式**: Git标签（Tag）

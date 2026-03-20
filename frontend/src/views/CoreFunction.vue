@@ -230,15 +230,29 @@
                   <!-- 轻型货架 -->
                   <div class="object-category-compact">
                     <div class="category-title-compact" @click="toggleObjectCategory('light-shelf')">
-                      <span>📦 轻型货架(2)</span>
+                      <span>📦 轻型货架(10)</span>
                       <span class="toggle-icon" :class="{ expanded: expandedObjectCategories['light-shelf'] }">▼</span>
                     </div>
                     <div v-show="expandedObjectCategories['light-shelf']" class="category-items-compact">
                       <div class="sub-menu-row-compact">
-                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'light-duty-A15-4')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('light-duty-A15-4')">A104 4层轻型货架-L1.5xD0.4xH2.0</div>
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'A15-4')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('A15-4')">{{ getModelFullName('A15-4') }}</div>
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'A15-5')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('A15-5')">{{ getModelFullName('A15-5') }}</div>
                       </div>
                       <div class="sub-menu-row-compact">
-                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'light-duty-A15-4-pair')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('light-duty-A15-4-pair')">A104P 4层轻型货架-L1.5xD0.8xH2.0配组</div>
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'A20-4')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('A20-4')">{{ getModelFullName('A20-4') }}</div>
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'A20-5')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('A20-5')">{{ getModelFullName('A20-5') }}</div>
+                      </div>
+                      <div class="sub-menu-row-compact">
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'A20-6')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('A20-6')">{{ getModelFullName('A20-6') }}</div>
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'A15-4-pair')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('A15-4-pair')">{{ getModelFullName('A15-4-pair') }}</div>
+                      </div>
+                      <div class="sub-menu-row-compact">
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'A15-5-pair')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('A15-5-pair')">{{ getModelFullName('A15-5-pair') }}</div>
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'A20-4-pair')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('A20-4-pair')">{{ getModelFullName('A20-4-pair') }}</div>
+                      </div>
+                      <div class="sub-menu-row-compact">
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'A20-5-pair')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('A20-5-pair')">{{ getModelFullName('A20-5-pair') }}</div>
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'A20-6-pair')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('A20-6-pair')">{{ getModelFullName('A20-6-pair') }}</div>
                       </div>
                     </div>
                   </div>
@@ -246,15 +260,25 @@
                   <!-- 中型货架 -->
                   <div class="object-category-compact">
                     <div class="category-title-compact" @click="toggleObjectCategory('medium-shelf')">
-                      <span>📦 中型货架(2)</span>
+                      <span>📦 中型货架(8)</span>
                       <span class="toggle-icon" :class="{ expanded: expandedObjectCategories['medium-shelf'] }">▼</span>
                     </div>
                     <div v-show="expandedObjectCategories['medium-shelf']" class="category-items-compact">
                       <div class="sub-menu-row-compact">
-                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'medium-duty-B20-4')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('medium-duty-B20-4')">B204 4层中型货架-L2.0xD0.6xH2.0</div>
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'B20-4')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('B20-4')">{{ getModelFullName('B20-4') }}</div>
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'B20-5')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('B20-5')">{{ getModelFullName('B20-5') }}</div>
                       </div>
                       <div class="sub-menu-row-compact">
-                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'medium-duty-B20-4-pair')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('medium-duty-B20-4-pair')">B204P 4层中型货架-L2.0xD1.2xH2.0配组</div>
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'B20-6')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('B20-6')">{{ getModelFullName('B20-6') }}</div>
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'C23-3')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('C23-3')">{{ getModelFullName('C23-3') }}</div>
+                      </div>
+                      <div class="sub-menu-row-compact">
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'B20-4-pair')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('B20-4-pair')">{{ getModelFullName('B20-4-pair') }}</div>
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'B20-5-pair')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('B20-5-pair')">{{ getModelFullName('B20-5-pair') }}</div>
+                      </div>
+                      <div class="sub-menu-row-compact">
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'B20-6-pair')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('B20-6-pair')">{{ getModelFullName('B20-6-pair') }}</div>
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'C23-3-pair')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('C23-3-pair')">{{ getModelFullName('C23-3-pair') }}</div>
                       </div>
                     </div>
                   </div>
@@ -262,15 +286,56 @@
                   <!-- 高位货架 -->
                   <div class="object-category-compact">
                     <div class="category-title-compact" @click="toggleObjectCategory('heavy-shelf')">
-                      <span>📦 高位货架(2)</span>
+                      <span>📦 高位货架(22)</span>
                       <span class="toggle-icon" :class="{ expanded: expandedObjectCategories['heavy-shelf'] }">▼</span>
                     </div>
                     <div v-show="expandedObjectCategories['heavy-shelf']" class="category-items-compact">
+                      <!-- C23系列 -->
                       <div class="sub-menu-row-compact">
-                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'high-duty-C23-3')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('high-duty-C23-3')">C233 3层高位货架-L2.3xD1.0xH3.0</div>
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'C23-4')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('C23-4')">{{ getModelFullName('C23-4') }}</div>
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'C23-5')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('C23-5')">{{ getModelFullName('C23-5') }}</div>
                       </div>
                       <div class="sub-menu-row-compact">
-                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'high-duty-C23-3-pair')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('high-duty-C23-3-pair')">C233P 3层高位货架-L2.3xD2.0xH3.0配组</div>
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'C23-6')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('C23-6')">{{ getModelFullName('C23-6') }}</div>
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'C23-4-pair')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('C23-4-pair')">{{ getModelFullName('C23-4-pair') }}</div>
+                      </div>
+                      <div class="sub-menu-row-compact">
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'C23-5-pair')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('C23-5-pair')">{{ getModelFullName('C23-5-pair') }}</div>
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'C23-6-pair')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('C23-6-pair')">{{ getModelFullName('C23-6-pair') }}</div>
+                      </div>
+                      <!-- C25系列 -->
+                      <div class="sub-menu-row-compact">
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'C25-3')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('C25-3')">{{ getModelFullName('C25-3') }}</div>
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'C25-4')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('C25-4')">{{ getModelFullName('C25-4') }}</div>
+                      </div>
+                      <div class="sub-menu-row-compact">
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'C25-5')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('C25-5')">{{ getModelFullName('C25-5') }}</div>
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'C25-6')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('C25-6')">{{ getModelFullName('C25-6') }}</div>
+                      </div>
+                      <div class="sub-menu-row-compact">
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'C25-3-pair')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('C25-3-pair')">{{ getModelFullName('C25-3-pair') }}</div>
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'C25-4-pair')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('C25-4-pair')">{{ getModelFullName('C25-4-pair') }}</div>
+                      </div>
+                      <div class="sub-menu-row-compact">
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'C25-5-pair')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('C25-5-pair')">{{ getModelFullName('C25-5-pair') }}</div>
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'C25-6-pair')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('C25-6-pair')">{{ getModelFullName('C25-6-pair') }}</div>
+                      </div>
+                      <!-- C27系列 -->
+                      <div class="sub-menu-row-compact">
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'C27-3')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('C27-3')">{{ getModelFullName('C27-3') }}</div>
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'C27-4')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('C27-4')">{{ getModelFullName('C27-4') }}</div>
+                      </div>
+                      <div class="sub-menu-row-compact">
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'C27-5')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('C27-5')">{{ getModelFullName('C27-5') }}</div>
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'C27-6')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('C27-6')">{{ getModelFullName('C27-6') }}</div>
+                      </div>
+                      <div class="sub-menu-row-compact">
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'C27-3-pair')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('C27-3-pair')">{{ getModelFullName('C27-3-pair') }}</div>
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'C27-4-pair')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('C27-4-pair')">{{ getModelFullName('C27-4-pair') }}</div>
+                      </div>
+                      <div class="sub-menu-row-compact">
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'C27-5-pair')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('C27-5-pair')">{{ getModelFullName('C27-5-pair') }}</div>
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'C27-6-pair')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('C27-6-pair')">{{ getModelFullName('C27-6-pair') }}</div>
                       </div>
                     </div>
                   </div>
@@ -424,9 +489,13 @@
                     <div v-if="alignLines.length === 0" class="empty-hint">
                       暂无对齐线
                     </div>
-                    <div v-for="(line, index) in alignLines" :key="index" class="align-line-item">
-                      <span class="line-name">对齐线 {{ index + 1 }}</span>
-                      <button @click="deleteAlignLine(index)" class="delete-btn" title="删除">🗑️</button>
+                    <div v-for="(line, index) in alignLines" 
+                         :key="line.id" 
+                         class="align-line-item"
+                         :class="{ active: selectedAlignmentLineId === line.id }"
+                         @click="selectAlignLine(line.id)">
+                      <span class="line-name">{{ line.name }}</span>
+                      <button @click.stop="deleteAlignLine(index)" class="delete-btn" title="删除">🗑️</button>
                     </div>
                   </div>
                 </div>
@@ -644,15 +713,27 @@
                     :y="label.y"
                     text-anchor="middle"
                     dominant-baseline="middle"
-                    :fill="label.color"
+                    :fill="selectedTextLabel === label.id ? '#ff5722' : label.color"
                     :font-size="label.fontSize"
-                    class="text-label"
-                    @mousedown.stop="onTextLabelDragStart($event, label.id)"
+                    :class="{ 'text-label': true, 'selected': selectedTextLabel === label.id }"
+                    @mousedown.stop="onTextLabelMouseDown($event, label.id)"
                     @dblclick.stop="editTextLabel(label.id)"
                     style="cursor: move; user-select: none;"
                   >
                     {{ label.content }}
                   </text>
+                  <!-- 选中时的背景框 -->
+                  <rect
+                    v-if="selectedTextLabel === label.id"
+                    :x="label.x - (label.content.length * label.fontSize * 0.3) - 4"
+                    :y="label.y - label.fontSize / 2 - 4"
+                    :width="label.content.length * label.fontSize * 0.6 + 8"
+                    :height="label.fontSize + 8"
+                    fill="none"
+                    stroke="#ff5722"
+                    stroke-width="2"
+                    stroke-dasharray="4,2"
+                  />
                 </g>
               </svg>
             </div>
@@ -688,6 +769,8 @@
             ref="threeScene"
             :adding-door="isAddingDoor"
             :adding-window="isAddingWindow"
+            :model-name-map="modelFullNames"
+            :warehouse-config="warehouseConfig"
             @model-added="onModelAdded"
             @object-selected="onObjectSelected"
             @object-deselected="onObjectDeselected"
@@ -695,6 +778,7 @@
             @save-project="saveProject"
             @add-door="onAddDoor"
             @add-window="onAddWindow"
+            @alignment-lines-updated="handleAlignmentLinesUpdated"
           />
         </div>
       </div>
@@ -705,11 +789,11 @@
         <div class="panel property-panel">
           <h3 class="panel-title">
             <span class="panel-icon">📊</span>
-            {{ selectedObject ? '对象属性' : (selectedZone !== null ? '功能区属性' : '仓库属性') }}
+            {{ selectedObject ? '对象属性' : (selectedZone !== null ? '功能区属性' : (selectedTextLabel !== null ? '文字标注属性' : '仓库属性')) }}
           </h3>
 
-          <!-- 仓库属性（未选中对象和功能区时） -->
-          <div v-if="!selectedObject && selectedZone === null" class="property-content">
+          <!-- 仓库属性（未选中对象、功能区和文字标注时） -->
+          <div v-if="!selectedObject && selectedZone === null && selectedTextLabel === null" class="property-content">
             <div class="property-group">
               <div class="property-item">
                 <span class="property-label">长:</span>
@@ -807,10 +891,38 @@
               </div>
             </div>
           </div>
+          
+          <!-- 文字标注属性（选中文字标注时） -->
+          <div v-else-if="selectedTextLabel !== null" class="property-content">
+            <div class="property-group">
+              <div class="property-item">
+                <span class="property-label">内容:</span>
+                <span class="property-value">{{ getSelectedTextLabelContent() }}</span>
+              </div>
+            </div>
+            <div class="property-divider"></div>
+            <div class="property-group">
+              <div class="property-item">
+                <span class="property-label">字体大小:</span>
+                <span class="property-value">{{ getSelectedTextLabelFontSize() }}px</span>
+              </div>
+            </div>
+            <div class="property-divider"></div>
+            <div class="property-group">
+              <div class="property-item">
+                <span class="property-label">位置 X:</span>
+                <span class="property-value">{{ getSelectedTextLabelX() }}px</span>
+              </div>
+              <div class="property-item">
+                <span class="property-label">位置 Y:</span>
+                <span class="property-value">{{ getSelectedTextLabelY() }}px</span>
+              </div>
+            </div>
+          </div>
         </div>
         
         <!-- 2D对象操作面板 -->
-        <div class="panel operation-panel" v-if="currentView === '2d' && (selectedLineIndex !== null || selectedZone !== null)">
+        <div class="panel operation-panel" v-if="currentView === '2d' && (selectedLineIndex !== null || selectedZone !== null || selectedTextLabel !== null)">
           <h3 class="panel-title">
             <span class="panel-icon">🛠️</span>
             对象操作
@@ -841,6 +953,19 @@
                 </button>
               </div>
             </div>
+            
+            <!-- 文字标注操作 -->
+            <div v-if="selectedTextLabel !== null" class="operation-section">
+              <h4 class="operation-subtitle">文字标注操作</h4>
+              <div class="operation-row">
+                <button @click="editSelectedTextLabel" class="operation-btn">
+                  <span class="btn-icon">✏️</span>编辑文字
+                </button>
+                <button @click="deleteSelectedTextLabel" class="operation-btn warning-btn">
+                  <span class="btn-icon">🗑️</span>删除文字
+                </button>
+              </div>
+            </div>
           </div>
         </div>
         
@@ -863,9 +988,6 @@
                 </button>
               </div>
               <div class="operation-row">
-                <button @click="copySelectedObject" :disabled="!selectedObject" class="operation-btn">
-                  <span class="btn-icon">📋</span>复制
-                </button>
                 <button @click="deleteSelectedObject" :disabled="!selectedObject" class="operation-btn warning-btn">
                   <span class="btn-icon">🗑️</span>删除
                 </button>
@@ -900,15 +1022,11 @@
                   <select v-model="batchRowDirection" :disabled="!selectedObject || isBatchPreview" class="direction-select">
                     <option value="forward">向前</option>
                     <option value="backward">向后</option>
-                    <option value="left">向左</option>
-                    <option value="right">向右</option>
                   </select>
                 </div>
                 <div class="control-row direction-row">
                   <label>列向:</label>
                   <select v-model="batchColDirection" :disabled="!selectedObject || isBatchPreview" class="direction-select">
-                    <option value="forward">向前</option>
-                    <option value="backward">向后</option>
                     <option value="left">向左</option>
                     <option value="right">向右</option>
                   </select>
@@ -938,7 +1056,7 @@
     
     <!-- 线段长度输入对话框 -->
     <div class="modal-overlay" v-if="showLengthDialog" @click.self="cancelLengthInput">
-      <div class="modal-dialog length-dialog">
+      <div class="modal-dialog length-dialog" @mousedown="onModalDragStart($event, 'length')">
         <h3 class="modal-title">{{ isEditingLine ? '编辑线段长度' : '输入线段长度' }}</h3>
         <div class="modal-content">
           <div class="form-group">
@@ -972,7 +1090,7 @@
     
     <!-- 保存项目对话框 -->
     <div class="modal-overlay" v-if="showSaveDialog" @click.self="showSaveDialog = false">
-      <div class="modal-dialog">
+      <div class="modal-dialog" @mousedown="onModalDragStart($event, 'save')">
         <h3 class="modal-title">保存项目</h3>
         <div class="modal-content">
           <div class="form-group">
@@ -989,7 +1107,7 @@
     
     <!-- 旋转角度输入对话框 -->
     <div class="modal-overlay" v-if="showRotationDialog" @click.self="cancelRotation">
-      <div class="modal-dialog rotation-dialog">
+      <div class="modal-dialog rotation-dialog" @mousedown="onModalDragStart($event, 'rotation')">
         <h3 class="modal-title">精确旋转</h3>
         <div class="modal-content">
           <div class="form-group">
@@ -1024,9 +1142,50 @@
       </div>
     </div>
     
+    <!-- 功能区尺寸编辑对话框 -->
+    <div class="modal-overlay" v-if="showZoneSizeDialog" @click.self="cancelZoneSizeEdit">
+      <div class="modal-dialog zone-size-dialog" @mousedown="onModalDragStart($event, 'zoneSize')">
+        <h3 class="modal-title">精确编辑功能区尺寸</h3>
+        <div class="modal-content">
+          <div class="form-row">
+            <div class="form-group">
+              <label>长度（米）：</label>
+              <input 
+                type="number" 
+                name="width"
+                v-model.number="zoneEditWidth" 
+                min="0.1" 
+                step="0.1"
+                placeholder="0"
+                @keyup.enter="confirmZoneSizeEdit"
+              >
+            </div>
+            <div class="form-group">
+              <label>宽度（米）：</label>
+              <input 
+                type="number" 
+                v-model.number="zoneEditHeight" 
+                min="0.1" 
+                step="0.1"
+                placeholder="0"
+                @keyup.enter="confirmZoneSizeEdit"
+              >
+            </div>
+          </div>
+          <p class="hint-text">
+            输入长宽尺寸后，功能区将以中心点为基准调整大小
+          </p>
+        </div>
+        <div class="modal-actions">
+          <button @click="confirmZoneSizeEdit" class="confirm-btn" :disabled="zoneEditWidth <= 0 || zoneEditHeight <= 0">确认</button>
+          <button @click="cancelZoneSizeEdit" class="cancel-btn">取消</button>
+        </div>
+      </div>
+    </div>
+    
     <!-- 区域列表对话框 -->
     <div class="modal-overlay" v-if="showZoneListDialog" @click.self="showZoneListDialog = false">
-      <div class="modal-dialog zone-list-dialog">
+      <div class="modal-dialog zone-list-dialog" @mousedown="onModalDragStart($event, 'zoneList')">
         <h3 class="modal-title">功能区列表</h3>
         <div class="modal-content">
           <div v-if="zones.length === 0" class="empty-hint">
@@ -1057,9 +1216,9 @@
 
     <!-- 快捷生成矩形仓库弹窗 -->
     <div v-if="showQuickRectWarehouseDialog" class="modal-overlay" @click.self="cancelQuickRectWarehouse">
-      <div class="modal-content">
-        <h3>快捷生成矩形仓库</h3>
-        <div class="modal-body">
+      <div class="modal-dialog quick-rect-dialog" @mousedown="onModalDragStart($event, 'quickRect')">
+        <h3 class="modal-title">快捷生成矩形仓库</h3>
+        <div class="modal-content">
           <div class="form-group">
             <label>仓库长度 (米):</label>
             <input type="number" class="quick-rect-input" v-model="quickRectWidth" min="10" max="500" step="1" placeholder="请输入长度" @keyup.enter="generateQuickRectWarehouse">
@@ -1086,9 +1245,9 @@
 
     <!-- 文字标注输入弹窗 -->
     <div v-if="showTextInputDialog" class="modal-overlay" @click.self="cancelAddText">
-      <div class="modal-content">
-        <h3>{{ isEditingText ? '编辑文字' : '添加文字' }}</h3>
-        <div class="modal-body">
+      <div class="modal-dialog text-input-dialog" @mousedown="onModalDragStart($event, 'textInput')">
+        <h3 class="modal-title">{{ isEditingText ? '编辑文字' : '添加文字' }}</h3>
+        <div class="modal-content">
           <div class="form-group">
             <label>文字内容:</label>
             <input type="text" v-model="textInputContent" placeholder="请输入文字" @keyup.enter="isEditingText ? confirmEditText() : confirmAddText()">
@@ -1107,9 +1266,9 @@
 
     <!-- 自定义轻型货架弹窗 -->
     <div v-if="showCustomLightShelfModal" class="modal-overlay" @click.self="closeCustomLightShelfModal">
-      <div class="modal-content custom-shelf-modal">
-        <h3>自定义轻型货架</h3>
-        <div class="modal-body">
+      <div class="modal-dialog custom-shelf-dialog" @mousedown="onModalDragStart($event, 'customShelf')">
+        <h3 class="modal-title">自定义轻型货架</h3>
+        <div class="modal-content">
           <!-- 规格选择 -->
           <div class="form-group">
             <label>选择规格:</label>
@@ -1181,6 +1340,7 @@ const isAlignLineMode = ref(false);
 
 // 对齐线数据
 const alignLines = ref([]);
+const selectedAlignmentLineId = ref(null); // 当前选中的对齐线ID
 
 // 精确旋转角度输入对话框状态
 const showRotationDialog = ref(false);
@@ -1246,8 +1406,8 @@ const batchCols = ref(3);
 const batchRowSpacing = ref(3);
 const batchColSpacing = ref(0);
 const batchRotation = ref(0);
-const batchRowDirection = ref('forward'); // 行延伸方向：forward/backward/left/right
-const batchColDirection = ref('left');    // 列延伸方向：forward/backward/left/right
+const batchRowDirection = ref('forward'); // 行延伸方向：forward/backward（向前/向后）
+const batchColDirection = ref('left');    // 列延伸方向：left/right（向左/向右）
 const isBatchPreview = ref(false);
 // isRotating 已在前面定义
 
@@ -1302,7 +1462,7 @@ const modelFullNames = {
   // 仓库设施
   'door': '仓库门-标准双开门 3000×3000mm',
   'window': '仓库窗-标准采光窗 2000×1500mm',
-  // 货架系统
+  // 货架系统（旧版长ID，保留兼容）
   'shelf-beam-heavy': 'A101 重型横梁式货架-5层重型 承重3000kg/层',
   'shelf-beam-medium': 'A102 横梁式货架-中型4层 承重2000kg/层',
   'shelf-drive-in': 'A103 驶入式货架-重型 适合大批量存储',
@@ -1317,6 +1477,55 @@ const modelFullNames = {
   'shelf-beam-heavy-5level': 'A108 横梁式货架-重型5层 承重3000kg/层',
   'shelf-beam-medium-4level-2m': 'A109 横梁式货架-中型4层 2米层高',
   'shelf-beam-medium-5level-2m': 'A110 横梁式货架-中型5层 2米层高',
+  
+  // ========== 轻型货架（10个）- 短ID格式 ==========
+  'A15-4': '4层轻型货架-L1.5xD0.4xH2.0',
+  'A15-5': '5层轻型货架-L1.5xD0.4xH2.0',
+  'A20-4': '4层轻型货架-L2.0xD0.4xH2.0',
+  'A20-5': '5层轻型货架-L2.0xD0.4xH2.0',
+  'A20-6': '6层轻型货架-L2.0xD0.4xH2.0',
+  'A15-4-pair': '4层轻型货架-L1.5xD0.4xH2.0-配组',
+  'A15-5-pair': '5层轻型货架-L1.5xD0.4xH2.0-配组',
+  'A20-4-pair': '4层轻型货架-L2.0xD0.4xH2.0-配组',
+  'A20-5-pair': '5层轻型货架-L2.0xD0.4xH2.0-配组',
+  'A20-6-pair': '6层轻型货架-L2.0xD0.4xH2.0-配组',
+  
+  // ========== 中型货架（8个）- 短ID格式 ==========
+  'B20-4': '4层中型货架-L2.0xD0.6xH2.0',
+  'B20-5': '5层中型货架-L2.0xD0.6xH2.5',
+  'B20-6': '6层中型货架-L2.0xD0.6xH3.0',
+  'C23-3': '3层高位货架-L2.3xD1.0xH3.0',
+  'B20-4-pair': '4层中型货架-L2.0xD0.6xH2.0-配组',
+  'B20-5-pair': '5层中型货架-L2.0xD0.6xH2.5-配组',
+  'B20-6-pair': '6层中型货架-L2.0xD0.6xH3.0-配组',
+  'C23-3-pair': '3层高位货架-L2.3xD1.0xH3.0-配组',
+  
+  // ========== 高位货架（22个）- 短ID格式 ==========
+  // C23系列
+  'C23-4': '4层高位货架-L2.3xD1.0xH4.5',
+  'C23-5': '5层高位货架-L2.3xD1.0xH6.0',
+  'C23-6': '6层高位货架-L2.3xD1.0xH7.0',
+  'C23-4-pair': '4层高位货架-L2.3xD1.0xH4.5-配组',
+  'C23-5-pair': '5层高位货架-L2.3xD1.0xH6.0-配组',
+  'C23-6-pair': '6层高位货架-L2.3xD1.0xH7.0-配组',
+  // C25系列
+  'C25-3': '3层高位货架-L2.5xD1.0xH3.0',
+  'C25-4': '4层高位货架-L2.5xD1.0xH4.5',
+  'C25-5': '5层高位货架-L2.5xD1.0xH6.0',
+  'C25-6': '6层高位货架-L2.5xD1.0xH7.0',
+  'C25-3-pair': '3层高位货架-L2.5xD1.0xH3.0-配组',
+  'C25-4-pair': '4层高位货架-L2.5xD1.0xH4.5-配组',
+  'C25-5-pair': '5层高位货架-L2.5xD1.0xH6.0-配组',
+  'C25-6-pair': '6层高位货架-L2.5xD1.0xH7.0-配组',
+  // C27系列
+  'C27-3': '3层高位货架-L2.7xD1.0xH3.0',
+  'C27-4': '4层高位货架-L2.7xD1.0xH4.5',
+  'C27-5': '5层高位货架-L2.7xD1.0xH6.0',
+  'C27-6': '6层高位货架-L2.7xD1.0xH7.0',
+  'C27-3-pair': '3层高位货架-L2.7xD1.0xH3.0-配组',
+  'C27-4-pair': '4层高位货架-L2.7xD1.0xH4.5-配组',
+  'C27-5-pair': '5层高位货架-L2.7xD1.0xH6.0-配组',
+  'C27-6-pair': '6层高位货架-L2.7xD1.0xH7.0-配组',
   // 载具容器
   'pallet-wooden-1200': 'C101 木质托盘 1200×1000mm 标准四向进叉',
   'pallet-plastic-1200': 'C102 塑料托盘 1200×1000mm 网格双面',
@@ -1444,9 +1653,9 @@ const warehouseDimensions = computed(() => {
     maxY = Math.max(maxY, point.y);
   });
   
-  // 转换为米（假设画布坐标是厘米）
-  const length = Math.round((maxX - minX) / 100 * 10) / 10;
-  const width = Math.round((maxY - minY) / 100 * 10) / 10;
+  // 转换为米（画布坐标：10像素 = 1米）
+  const length = Math.round((maxX - minX) / 10 * 10) / 10;
+  const width = Math.round((maxY - minY) / 10 * 10) / 10;
   
   return {
     length: length > 0 ? length : 0,
@@ -1475,6 +1684,34 @@ const isSelectedObjectShelf = computed(() => {
          category.includes('shelf');
 });
 
+// 判断选中的对象是否是人员模型（人员模型不显示复制按钮）
+const isSelectedObjectPersonnel = computed(() => {
+  if (!selectedObject.value) return false;
+  const type = selectedObject.value.type || '';
+  const modelType = selectedObject.value.modelType || '';
+  const category = selectedObject.value.category || '';
+  // 检查 type、modelType 或 category 是否包含人员相关关键词
+  return type === 'person' ||
+         modelType.includes('person') || 
+         category.includes('person') ||
+         modelType.includes('admin') ||
+         modelType.includes('worker');
+});
+
+// 判断选中的对象是否是搬运设备（搬运设备不显示复制按钮）
+const isSelectedObjectEquipment = computed(() => {
+  if (!selectedObject.value) return false;
+  const type = selectedObject.value.type || '';
+  const modelType = selectedObject.value.modelType || '';
+  // 检查 type 或 modelType 是否包含搬运设备相关关键词
+  return type === 'forklift' ||
+         type === 'conveyor' ||
+         modelType.includes('forklift') ||
+         modelType.includes('conveyor') ||
+         modelType.includes('truck') ||
+         modelType.includes('jack');
+});
+
 // 2D仓库绘制
 const is2DDrawing = ref(false);
 const warehouseShape = ref([]);
@@ -1497,6 +1734,9 @@ const selectedLineIndex = ref(null); // 选中的线条索引
 const isEditingLine = ref(false);
 const isEditMode = ref(false);
 
+// 忽略下一次画布点击标志（用于文字标注点击后阻止画布清空选中）
+const ignoreNextCanvasClick = ref(false);
+
 // 功能区规划
 const currentDrawTool = ref(null);
 const selectedZoneType = ref('storage');
@@ -1516,6 +1756,11 @@ const selectedZone = ref(null);
 const isDraggingZone = ref(false);
 const dragStartPos = ref({ x: 0, y: 0 });
 
+// 功能区精确尺寸编辑对话框
+const showZoneSizeDialog = ref(false);
+const zoneEditWidth = ref(0);
+const zoneEditHeight = ref(0);
+
 // 文字标注功能
 const textLabels = ref([]);
 const isAddingText = ref(false);
@@ -1529,6 +1774,14 @@ const isEditingText = ref(false);
 // 自定义轻型货架功能
 const showCustomLightShelfModal = ref(false);
 const selectedLightShelfSpec = ref('');
+
+// 弹窗拖动功能
+const isDraggingModal = ref(false);
+const dragModalTarget = ref(null);
+const dragModalStartX = ref(0);
+const dragModalStartY = ref(0);
+const dragModalOffsetX = ref(0);
+const dragModalOffsetY = ref(0);
 
 // 轻型货架规格定义
 const lightShelfSpecs = {
@@ -1662,6 +1915,7 @@ function clearAllSelection() {
   selectedLineIndex.value = null;
   selectedZone.value = null;
   selectedObject.value = null;
+  selectedTextLabel.value = null;
   console.log('清空所有选中状态');
 }
 
@@ -1747,6 +2001,15 @@ function cancelLengthInput() {
   showLengthDialog.value = false;
   isWaitingForLength.value = false;
   tempStartPoint = null;
+  
+  // 如果是编辑线条模式，取消编辑并恢复线条状态
+  if (isEditingLine.value) {
+    isEditingLine.value = false;
+    editingLineIndex.value = null;
+    selectedLineIndex.value = null; // 同时取消线条选中状态
+    console.log('取消编辑线条，恢复线条状态');
+  }
+  
   console.log('取消长度输入');
 }
 
@@ -1794,6 +2057,13 @@ function on2DCanvasMouseMove(event) {
 
 // 画布点击处理 - 统一处理绘制和编辑
 function onCanvasClick(event) {
+  // 如果标志位为true，说明是文字标注触发的点击，忽略本次点击不清空选中状态
+  if (ignoreNextCanvasClick.value) {
+    ignoreNextCanvasClick.value = false; // 重置标志
+    console.log('忽略本次画布点击（文字标注触发）');
+    return;
+  }
+
   const rect = event.currentTarget.getBoundingClientRect();
   const x = event.clientX - rect.left;
   const y = event.clientY - rect.top;
@@ -2370,6 +2640,15 @@ function handleKeyDown(event) {
       is2DDrawing.value = false;
       currentDrawTool.value = null;
       console.log('ESC：取消绘制模式');
+    } else if (isAlignLineMode.value) {
+      // 退出对齐线绘制模式
+      isAlignLineMode.value = false;
+      if (threeScene.value) {
+        threeScene.value.cancelDrawingAlignmentLine();
+      }
+      // 自动切换到选择模式
+      setSelectMode();
+      console.log('ESC：退出对齐线绘制模式，切换到选择模式');
     }
   }
   
@@ -2484,6 +2763,64 @@ function confirmAddCustomLightShelf() {
   closeCustomLightShelfModal();
 }
 
+// 弹窗拖动功能 - 开始拖动
+function onModalDragStart(event, modalRef) {
+  // 只有点击标题栏才能拖动
+  if (!event.target.closest('.modal-title')) return;
+
+  isDraggingModal.value = true;
+  dragModalTarget.value = modalRef;
+  dragModalStartX.value = event.clientX;
+  dragModalStartY.value = event.clientY;
+
+  // 获取当前偏移量
+  const dialog = event.target.closest('.modal-dialog');
+  if (dialog) {
+    const rect = dialog.getBoundingClientRect();
+    const parentRect = dialog.parentElement.getBoundingClientRect();
+    dragModalOffsetX.value = rect.left - parentRect.left;
+    dragModalOffsetY.value = rect.top - parentRect.top;
+  }
+
+  // 添加全局事件监听
+  document.addEventListener('mousemove', onModalDragMove);
+  document.addEventListener('mouseup', onModalDragEnd);
+
+  event.preventDefault();
+  console.log('开始拖动弹窗:', modalRef);
+}
+
+// 弹窗拖动功能 - 拖动中
+function onModalDragMove(event) {
+  if (!isDraggingModal.value) return;
+
+  const deltaX = event.clientX - dragModalStartX.value;
+  const deltaY = event.clientY - dragModalStartY.value;
+
+  // 更新弹窗位置
+  const dialogs = document.querySelectorAll('.modal-dialog');
+  dialogs.forEach(dialog => {
+    if (dialog.style.position !== 'fixed') {
+      dialog.style.position = 'fixed';
+    }
+    dialog.style.left = (dragModalOffsetX.value + deltaX) + 'px';
+    dialog.style.top = (dragModalOffsetY.value + deltaY) + 'px';
+    dialog.style.transform = 'none';
+  });
+}
+
+// 弹窗拖动功能 - 结束拖动
+function onModalDragEnd() {
+  isDraggingModal.value = false;
+  dragModalTarget.value = null;
+
+  // 移除全局事件监听
+  document.removeEventListener('mousemove', onModalDragMove);
+  document.removeEventListener('mouseup', onModalDragEnd);
+
+  console.log('结束拖动弹窗');
+}
+
 // 编辑文字标注
 function editTextLabel(labelId) {
   const label = textLabels.value.find(l => l.id === labelId);
@@ -2527,11 +2864,25 @@ function deleteTextLabel(labelId) {
 }
 
 // 开始拖拽文字标注
+// 文字标注鼠标按下处理（点击选中或开始拖动）
+function onTextLabelMouseDown(event, labelId) {
+  // 设置标志：接下来忽略一次画布点击（防止click事件清空选中状态）
+  ignoreNextCanvasClick.value = true;
+  
+  // 选中文字标注
+  selectedTextLabel.value = labelId;
+  // 取消其他选中状态
+  selectedZone.value = null;
+  selectedLineIndex.value = null;
+  console.log('选中文字标注:', labelId);
+  
+  // 开始拖动
+  onTextLabelDragStart(event, labelId);
+}
+
 function onTextLabelDragStart(event, labelId) {
   const label = textLabels.value.find(l => l.id === labelId);
   if (!label) return;
-  
-  selectedTextLabel.value = labelId;
   
   const startX = event.clientX;
   const startY = event.clientY;
@@ -2545,7 +2896,8 @@ function onTextLabelDragStart(event, labelId) {
     label.y = originalY + dy;
   }
   
-  function onMouseUp() {
+  function onMouseUp(e) {
+    e.stopPropagation(); // 阻止事件冒泡到画布，防止清空选中状态
     window.removeEventListener('mousemove', onMouseMove);
     window.removeEventListener('mouseup', onMouseUp);
     console.log('文字标注移动完成:', labelId);
@@ -2665,6 +3017,8 @@ function onZoneDragOver(event) {
 function onZoneClick(zoneId) {
   // 随时可选中功能区，不限于编辑模式
   selectedZone.value = zoneId;
+  // 进入功能区编辑模式，显示8个手柄
+  isZoneEditMode.value = true;
   // 取消线条选中
   selectedLineIndex.value = null;
   console.log('选中功能区:', zoneId);
@@ -3029,6 +3383,18 @@ function generate3DWarehouseInternal() {
       window.pendingObjects = null;
     }
     
+    // 如果有待加载的对齐线，加载它们
+    if (window.pendingAlignmentLines && window.pendingAlignmentLines.length > 0) {
+      console.log('加载导入的对齐线:', window.pendingAlignmentLines.length, '条');
+      if (threeScene.value) {
+        threeScene.value.setAlignmentLines(window.pendingAlignmentLines);
+        // 同步对齐线数据到UI
+        syncAlignLines();
+        console.log('对齐线加载完成');
+      }
+      window.pendingAlignmentLines = null;
+    }
+    
     resolve();
   });
 }
@@ -3060,6 +3426,11 @@ function loadImportedObjects(objects) {
         // 设置缩放
         if (objData.scale) {
           placedObject.scale.set(objData.scale.x, objData.scale.y, objData.scale.z);
+        }
+        
+        // 恢复中文名称（如果存在）
+        if (objData.name) {
+          placedObject.userData.name = objData.name;
         }
         
         console.log('加载对象成功:', modelType);
@@ -3231,6 +3602,13 @@ function importProject() {
             console.log('导入对象数据:', project.objects.length, '个对象待加载');
           }
           
+          // 保存对齐线数据，在生成3D仓库后加载
+          if (project.alignmentLines && project.alignmentLines.length > 0) {
+            // 存储对齐线数据，等待3D场景初始化后加载
+            window.pendingAlignmentLines = project.alignmentLines;
+            console.log('导入对齐线数据:', project.alignmentLines.length, '条对齐线待加载');
+          }
+          
           isProjectSaved.value = true;
           projectName.value = file.name.replace('.json', '');
           
@@ -3272,6 +3650,7 @@ async function confirmSaveProject() {
       .map(obj => ({
         modelType: obj.userData.modelType || obj.userData.modelName,
         modelName: obj.userData.modelName,
+        name: obj.userData.name, // 中文名称
         position: {
           x: obj.position.x,
           y: obj.position.y,
@@ -3293,6 +3672,13 @@ async function confirmSaveProject() {
     console.warn('3D场景未准备好，无法保存对象。当前视图:', currentView.value, 'is3DGenerated:', is3DGenerated.value);
   }
 
+  // 从3D场景获取对齐线数据
+  let alignmentLinesData = [];
+  if (threeScene.value && is3DGenerated.value) {
+    alignmentLinesData = threeScene.value.getAlignmentLines();
+    console.log('保存对齐线数据:', alignmentLinesData.length, '条对齐线');
+  }
+
   // 构建项目数据
   const projectData = {
     version: '1.0',
@@ -3302,7 +3688,8 @@ async function confirmSaveProject() {
     zones: zones.value,
     warehouseConfig: warehouseConfig.value,
     textLabels: textLabels.value,
-    objects: sceneObjectsData // 保存3D场景中的对象
+    objects: sceneObjectsData, // 保存3D场景中的对象
+    alignmentLines: alignmentLinesData // 保存对齐线数据
   };
 
   // 导出JSON文件
@@ -3418,21 +3805,63 @@ function startMeasure() {
   }
 }
 
-// 添加对齐线（占位功能）
+// 添加对齐线
 function addAlignLine() {
   isAlignLineMode.value = !isAlignLineMode.value;
   isAddingText.value = false;
   isMeasuring.value = false;
   if (isAlignLineMode.value) {
-    alert('对齐线功能开发中...');
-    isAlignLineMode.value = false;
+    // 开始绘制对齐线
+    if (threeScene.value) {
+      threeScene.value.startDrawingAlignmentLine();
+      console.log('进入对齐线绘制模式');
+    }
+  } else {
+    // 结束绘制对齐线，自动切换到选择模式
+    if (threeScene.value) {
+      threeScene.value.stopDrawingAlignmentLine();
+      console.log('退出对齐线绘制模式，切换到选择模式');
+    }
+    // 自动切换到选择模式
+    setSelectMode();
+  }
+}
+
+// 选中对齐线（高亮显示）
+function selectAlignLine(lineId) {
+  if (selectedAlignmentLineId.value === lineId) {
+    // 如果已选中，则取消选中
+    selectedAlignmentLineId.value = null;
+    if (threeScene.value) {
+      threeScene.value.highlightAlignmentLine(null);
+    }
+    console.log('取消选中对齐线');
+  } else {
+    // 选中新的对齐线
+    selectedAlignmentLineId.value = lineId;
+    if (threeScene.value) {
+      threeScene.value.highlightAlignmentLine(lineId);
+    }
+    console.log('选中对齐线:', lineId);
   }
 }
 
 // 删除单条对齐线
 function deleteAlignLine(index) {
-  alignLines.value.splice(index, 1);
-  console.log('删除对齐线:', index);
+  if (alignLines.value[index]) {
+    const lineId = alignLines.value[index].id;
+    if (threeScene.value) {
+      const success = threeScene.value.removeAlignmentLine(lineId);
+      if (success) {
+        alignLines.value.splice(index, 1);
+        // 如果删除的是当前选中的对齐线，清除选中状态
+        if (selectedAlignmentLineId.value === lineId) {
+          selectedAlignmentLineId.value = null;
+        }
+        console.log('删除对齐线:', lineId);
+      }
+    }
+  }
 }
 
 // 清空所有对齐线
@@ -3442,9 +3871,27 @@ function clearAllAlignLines() {
     return;
   }
   if (confirm(`确定要清空全部 ${alignLines.value.length} 条对齐线吗？`)) {
-    alignLines.value = [];
-    console.log('清空所有对齐线');
+    if (threeScene.value) {
+      threeScene.value.clearAlignmentLines();
+      alignLines.value = [];
+      console.log('清空所有对齐线');
+    }
   }
+}
+
+// 同步对齐线数据
+function syncAlignLines() {
+  if (threeScene.value) {
+    const lines = threeScene.value.getAllAlignmentLines();
+    alignLines.value = lines;
+    console.log('同步对齐线数据:', lines.length, '条');
+  }
+}
+
+// 处理对齐线更新事件
+function handleAlignmentLinesUpdated(lines) {
+  alignLines.value = lines;
+  console.log('对齐线数据已更新:', lines.length, '条');
 }
 
 // 打开自定义货架页面（P2）
@@ -3485,6 +3932,55 @@ function getSelectedZoneArea() {
   const heightM = (zone.height / 100 * 10).toFixed(1);
   const area = (widthM * heightM).toFixed(1);
   return `${widthM}米×${heightM}米=${area}平方米`;
+}
+
+// 获取选中文字标注的内容
+function getSelectedTextLabelContent() {
+  const label = textLabels.value.find(l => l.id === selectedTextLabel.value);
+  return label ? label.content : '';
+}
+
+// 获取选中文字标注的字体大小
+function getSelectedTextLabelFontSize() {
+  const label = textLabels.value.find(l => l.id === selectedTextLabel.value);
+  return label ? label.fontSize : 0;
+}
+
+// 获取选中文字标注的X坐标
+function getSelectedTextLabelX() {
+  const label = textLabels.value.find(l => l.id === selectedTextLabel.value);
+  return label ? Math.round(label.x) : 0;
+}
+
+// 获取选中文字标注的Y坐标
+function getSelectedTextLabelY() {
+  const label = textLabels.value.find(l => l.id === selectedTextLabel.value);
+  return label ? Math.round(label.y) : 0;
+}
+
+// 编辑选中的文字标注（通过按钮）
+function editSelectedTextLabel() {
+  if (!selectedTextLabel.value) {
+    alert('请先选中要编辑的文字标注！');
+    return;
+  }
+  editTextLabel(selectedTextLabel.value);
+}
+
+// 删除选中的文字标注
+function deleteSelectedTextLabel() {
+  if (!selectedTextLabel.value) {
+    alert('请先选中要删除的文字标注！');
+    return;
+  }
+  if (confirm('确定要删除这个文字标注吗？')) {
+    const index = textLabels.value.findIndex(l => l.id === selectedTextLabel.value);
+    if (index !== -1) {
+      textLabels.value.splice(index, 1);
+      selectedTextLabel.value = null;
+      console.log('删除文字标注');
+    }
+  }
 }
 
 // 批量放置功能
@@ -3646,15 +4142,68 @@ function deleteSelectedZone() {
   }
 }
 
-// 编辑选中的功能区
+// 编辑选中的功能区 - 打开精确尺寸编辑对话框
 function editSelectedZone() {
   if (!selectedZone.value) {
     alert('请先选中要编辑的功能区！');
     return;
   }
-  // 进入功能区编辑模式
-  isZoneEditMode.value = true;
-  console.log('进入功能区编辑模式:', selectedZone.value.id);
+  
+  // 打开精确尺寸编辑对话框
+  zoneEditWidth.value = 0;
+  zoneEditHeight.value = 0;
+  showZoneSizeDialog.value = true;
+  
+  // 自动聚焦长度输入框
+  setTimeout(() => {
+    const input = document.querySelector('.zone-size-dialog input[name="width"]');
+    if (input) {
+      input.focus();
+    }
+  }, 100);
+  
+  console.log('打开功能区精确尺寸编辑对话框:', selectedZone.value);
+}
+
+// 确认功能区尺寸编辑
+function confirmZoneSizeEdit() {
+  if (!selectedZone.value) return;
+  
+  const zone = zones.value.find(z => z.id === selectedZone.value);
+  if (!zone) return;
+  
+  // 将米转换为像素（1米 = 10像素）
+  const newWidth = zoneEditWidth.value * 10;
+  const newHeight = zoneEditHeight.value * 10;
+  
+  if (newWidth <= 0 || newHeight <= 0) {
+    alert('请输入有效的尺寸（大于0）');
+    return;
+  }
+  
+  // 保持中心点不变，调整尺寸
+  const centerX = zone.x + zone.width / 2;
+  const centerY = zone.y + zone.height / 2;
+  
+  zone.width = newWidth;
+  zone.height = newHeight;
+  zone.x = centerX - newWidth / 2;
+  zone.y = centerY - newHeight / 2;
+  
+  console.log('功能区尺寸已更新:', zone.width / 10, 'm x', zone.height / 10, 'm');
+  
+  // 关闭对话框
+  showZoneSizeDialog.value = false;
+  zoneEditWidth.value = 0;
+  zoneEditHeight.value = 0;
+}
+
+// 取消功能区尺寸编辑
+function cancelZoneSizeEdit() {
+  showZoneSizeDialog.value = false;
+  zoneEditWidth.value = 0;
+  zoneEditHeight.value = 0;
+  console.log('取消功能区尺寸编辑');
 }
 
 // 编辑选中的文字标注
@@ -4203,6 +4752,14 @@ defineExpose({
   border-color: #4fc3f7;
 }
 
+.top-bar-btn.active {
+  background: #ffebee;
+  border-color: #ff0000;
+  color: #ff0000;
+  box-shadow: 0 0 8px rgba(255, 0, 0, 0.3);
+  font-weight: bold;
+}
+
 .top-bar-btn:disabled {
   background: #e0e0e0;
   color: #999;
@@ -4444,12 +5001,12 @@ defineExpose({
 }
 
 /* 自定义轻型货架弹窗样式 */
-.custom-shelf-modal {
+.custom-shelf-dialog {
   min-width: 400px;
   max-width: 500px;
 }
 
-.custom-shelf-modal .spec-select {
+.custom-shelf-dialog .spec-select {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid #ddd;
@@ -4459,12 +5016,12 @@ defineExpose({
   cursor: pointer;
 }
 
-.custom-shelf-modal .spec-select:focus {
+.custom-shelf-dialog .spec-select:focus {
   outline: none;
   border-color: #4361ee;
 }
 
-.custom-shelf-modal .spec-details {
+.custom-shelf-dialog .spec-details {
   margin-top: 20px;
   padding: 16px;
   background: #f8f9ff;
@@ -4472,7 +5029,7 @@ defineExpose({
   border: 1px solid #e8ecff;
 }
 
-.custom-shelf-modal .detail-item {
+.custom-shelf-dialog .detail-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -4480,17 +5037,17 @@ defineExpose({
   border-bottom: 1px solid #e0e0e8;
 }
 
-.custom-shelf-modal .detail-item:last-child {
+.custom-shelf-dialog .detail-item:last-child {
   border-bottom: none;
 }
 
-.custom-shelf-modal .detail-label {
+.custom-shelf-dialog .detail-label {
   font-size: 13px;
   color: #666;
   font-weight: 500;
 }
 
-.custom-shelf-modal .detail-value {
+.custom-shelf-dialog .detail-value {
   font-size: 13px;
   color: #333;
   font-weight: 600;
@@ -4498,7 +5055,7 @@ defineExpose({
   max-width: 60%;
 }
 
-.custom-shelf-modal .spec-empty {
+.custom-shelf-dialog .spec-empty {
   margin-top: 20px;
   padding: 30px;
   text-align: center;
@@ -6100,6 +6657,12 @@ defineExpose({
   font-weight: bold;
   color: #333;
   border-bottom: 1px solid #eee;
+  cursor: move;
+  user-select: none;
+}
+
+.modal-title:hover {
+  background: #f5f5f5;
 }
 
 .modal-content {
@@ -6189,6 +6752,43 @@ defineExpose({
 .preset-btn:hover {
   background: #e0e0e0;
   border-color: #bbb;
+}
+
+/* 功能区尺寸编辑对话框 */
+.zone-size-dialog {
+  width: 320px;
+}
+
+.zone-size-dialog .form-row {
+  display: flex;
+  gap: 16px;
+}
+
+.zone-size-dialog .form-group {
+  flex: 1;
+}
+
+.zone-size-dialog .form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  color: #333;
+}
+
+.zone-size-dialog .form-group input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  text-align: center;
+}
+
+.zone-size-dialog .hint-text {
+  font-size: 12px;
+  color: #666;
+  margin-top: 12px;
+  line-height: 1.5;
 }
 
 /* 区域列表 */
@@ -6286,6 +6886,17 @@ defineExpose({
 
 .align-line-item .delete-btn:hover {
   opacity: 1;
+}
+
+.align-line-item.active {
+  background: #ffebee;
+  border: 2px solid #ff0000;
+  box-shadow: 0 0 8px rgba(255, 0, 0, 0.3);
+}
+
+.align-line-item.active .line-name {
+  color: #ff0000;
+  font-weight: bold;
 }
 
 /* 信息区域 */
