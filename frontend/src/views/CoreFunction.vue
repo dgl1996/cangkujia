@@ -2649,6 +2649,15 @@ function handleKeyDown(event) {
       // 自动切换到选择模式
       setSelectMode();
       console.log('ESC：退出对齐线绘制模式，切换到选择模式');
+    } else if (isMeasuring.value) {
+      // 退出测量模式
+      isMeasuring.value = false;
+      if (threeScene.value) {
+        threeScene.value.stopMeasuring();
+      }
+      // 自动切换到选择模式
+      setSelectMode();
+      console.log('ESC：退出测量模式，切换到选择模式');
     }
   }
   
@@ -3788,28 +3797,60 @@ function goToUsage() {
 
 // 设置选择模式
 function setSelectMode() {
+  // 如果当前在测量模式，先停止测量
+  if (isMeasuring.value && threeScene.value) {
+    threeScene.value.stopMeasuring();
+  }
+  // 如果当前在对齐线绘制模式，先停止绘制
+  if (isAlignLineMode.value && threeScene.value) {
+    threeScene.value.stopDrawingAlignmentLine();
+  }
+  
   isAddingText.value = false;
   isMeasuring.value = false;
   isAlignLineMode.value = false;
   console.log('切换到选择模式');
 }
 
-// 开始测量（占位功能）
+// 开始测量
 function startMeasure() {
+  // 如果当前在对齐线绘制模式，先停止绘制（确保模式互斥）
+  if (isAlignLineMode.value && threeScene.value) {
+    threeScene.value.stopDrawingAlignmentLine();
+    console.log('退出对齐线绘制模式，准备进入测量模式');
+  }
+  
   isMeasuring.value = !isMeasuring.value;
   isAddingText.value = false;
   isAlignLineMode.value = false;
+  
   if (isMeasuring.value) {
-    alert('测量功能开发中...');
-    isMeasuring.value = false;
+    // 进入测量模式
+    if (threeScene.value) {
+      threeScene.value.startMeasuring();
+      console.log('进入测量模式');
+    }
+  } else {
+    // 退出测量模式，自动切换到选择模式
+    if (threeScene.value) {
+      threeScene.value.stopMeasuring();
+      console.log('退出测量模式，切换到选择模式');
+    }
   }
 }
 
 // 添加对齐线
 function addAlignLine() {
+  // 如果当前在测量模式，先停止测量（确保模式互斥）
+  if (isMeasuring.value && threeScene.value) {
+    threeScene.value.stopMeasuring();
+    console.log('退出测量模式，准备进入对齐线绘制模式');
+  }
+  
   isAlignLineMode.value = !isAlignLineMode.value;
   isAddingText.value = false;
   isMeasuring.value = false;
+  
   if (isAlignLineMode.value) {
     // 开始绘制对齐线
     if (threeScene.value) {

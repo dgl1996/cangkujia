@@ -59,9 +59,21 @@ let isDrawingAlignmentLine = false;
 let alignmentLineStartPoint = null;
 let alignmentLinePreview = null;
 
+// 测量工具状态
+let isMeasuring = false;
+let measureStartPoint = null;
+let measureEndPoint = null;
+let measureLine = null;
+let measureResultDiv = null;
+
 // 对齐线数据结构和管理
 let alignmentLines = [];
 let nextLineId = 1;
+
+// 空间分区优化 - 网格索引
+let alignmentLineGrid = null;
+const GRID_CELL_SIZE = 500; // 网格单元大小500cm
+const MAX_LINES_PER_CELL = 10; // 每个单元格最大对齐线数量，超过则细分
 
 // 对齐线类
 class AlignmentLine {
@@ -141,6 +153,9 @@ function addAlignmentLine(startPoint, endPoint) {
   alignmentLines.push(line);
   console.log('对齐线已添加到数组，当前数量:', alignmentLines.length);
   
+  // 性能优化：重新构建网格索引
+  clearAlignmentLineGrid();
+  
   renderAlignmentLines();
   emit('alignment-lines-updated', alignmentLines);
   
@@ -152,6 +167,10 @@ function removeAlignmentLine(id) {
   const index = alignmentLines.findIndex(line => line.id === id);
   if (index > -1) {
     alignmentLines.splice(index, 1);
+    
+    // 性能优化：重新构建网格索引
+    clearAlignmentLineGrid();
+    
     renderAlignmentLines();
     emit('alignment-lines-updated', alignmentLines);
     return true;
@@ -163,6 +182,10 @@ function updateAlignmentLine(id, data) {
   const line = alignmentLines.find(line => line.id === id);
   if (line) {
     Object.assign(line, data);
+    
+    // 性能优化：重新构建网格索引
+    clearAlignmentLineGrid();
+    
     renderAlignmentLines();
     emit('alignment-lines-updated', alignmentLines);
     return true;
@@ -173,6 +196,10 @@ function updateAlignmentLine(id, data) {
 function clearAlignmentLines() {
   alignmentLines = [];
   nextLineId = 1;
+  
+  // 性能优化：清除网格索引
+  clearAlignmentLineGrid();
+  
   renderAlignmentLines();
   emit('alignment-lines-updated', alignmentLines);
 }
@@ -185,17 +212,108 @@ function getAllAlignmentLines() {
   return [...alignmentLines];
 }
 
+// 空间分区 - 构建网格索引
+function buildAlignmentLineGrid() {
+  alignmentLineGrid = new Map();
+  
+  alignmentLines.forEach(line => {
+    if (!line.visible) return;
+    
+    // 获取对齐线的边界框
+    const minX = Math.min(line.originalStart.x, line.originalEnd.x);
+    const maxX = Math.max(line.originalStart.x, line.originalEnd.x);
+    const minZ = Math.min(line.originalStart.z, line.originalEnd.z);
+    const maxZ = Math.max(line.originalStart.z, line.originalEnd.z);
+    
+    // 计算覆盖的网格单元
+    const startCellX = Math.floor(minX / GRID_CELL_SIZE);
+    const endCellX = Math.floor(maxX / GRID_CELL_SIZE);
+    const startCellZ = Math.floor(minZ / GRID_CELL_SIZE);
+    const endCellZ = Math.floor(maxZ / GRID_CELL_SIZE);
+    
+    // 将对齐线添加到所有覆盖的网格单元
+    for (let x = startCellX; x <= endCellX; x++) {
+      for (let z = startCellZ; z <= endCellZ; z++) {
+        const cellKey = `${x},${z}`;
+        if (!alignmentLineGrid.has(cellKey)) {
+          alignmentLineGrid.set(cellKey, []);
+        }
+        alignmentLineGrid.get(cellKey).push(line);
+      }
+    }
+  });
+  
+  console.log('网格索引构建完成，单元格数量:', alignmentLineGrid.size);
+}
+
+// 空间分区 - 获取点附近的对齐线（优化版）
+function getNearbyAlignmentLines(point, radius = 1000) {
+  if (!alignmentLineGrid) {
+    buildAlignmentLineGrid();
+  }
+  
+  const nearbyLines = new Set();
+  
+  // 计算点所在的网格单元
+  const centerCellX = Math.floor(point.x / GRID_CELL_SIZE);
+  const centerCellZ = Math.floor(point.z / GRID_CELL_SIZE);
+  
+  // 计算需要检查的单元格范围（半径覆盖的单元格）
+  const cellRadius = Math.ceil(radius / GRID_CELL_SIZE);
+  
+  for (let x = centerCellX - cellRadius; x <= centerCellX + cellRadius; x++) {
+    for (let z = centerCellZ - cellRadius; z <= centerCellZ + cellRadius; z++) {
+      const cellKey = `${x},${z}`;
+      if (alignmentLineGrid.has(cellKey)) {
+        alignmentLineGrid.get(cellKey).forEach(line => {
+          if (line.visible) {
+            nearbyLines.add(line);
+          }
+        });
+      }
+    }
+  }
+  
+  return Array.from(nearbyLines);
+}
+
+// 空间分区 - 清除网格索引
+function clearAlignmentLineGrid() {
+  alignmentLineGrid = null;
+}
+
 // 对齐线数据序列化
 function serializeAlignmentLines() {
-  return alignmentLines.map(line => ({
-    id: line.id,
-    name: line.name,
-    startPoint: { x: line.startPoint.x, y: line.startPoint.y, z: line.startPoint.z },
-    endPoint: { x: line.endPoint.x, y: line.endPoint.y, z: line.endPoint.z },
-    color: line.color,
-    style: line.style,
-    visible: line.visible
-  }));
+  console.log('💾 开始保存对齐线，数量:', alignmentLines.length);
+  
+  return alignmentLines.map(line => {
+    // 调试日志：确认数据污染环节
+    console.log('💾 保存对齐线:', line.id, 
+      '\n  originalStart:', line.originalStart?.x?.toFixed(2), line.originalStart?.z?.toFixed(2),
+      '\n  visualStart:', line.visualStart?.x?.toFixed(2), line.visualStart?.z?.toFixed(2),
+      '\n  startPoint:', line.startPoint?.x?.toFixed(2), line.startPoint?.z?.toFixed(2)
+    );
+    
+    return {
+      id: line.id,
+      name: line.name,
+      // 关键修复：保存原始端点（originalStart/End），而不是视觉端点（startPoint/End）
+      // 视觉端点是无限长线的端点（延伸±10万cm），保存后会导致加载时对齐线跑到画面外
+      startPoint: { 
+        x: line.originalStart.x, 
+        y: 0, // 强制Y=0
+        z: line.originalStart.z 
+      },
+      endPoint: { 
+        x: line.originalEnd.x, 
+        y: 0, // 强制Y=0
+        z: line.originalEnd.z 
+      },
+      color: line.color,
+      style: line.style,
+      visible: line.visible !== false
+    };
+  });
 }
 
 // 对齐线渲染相关
@@ -414,16 +532,30 @@ function renderAlignmentLines() {
 function deserializeAlignmentLines(data) {
   if (!Array.isArray(data)) return;
   
+  console.log('📂 开始加载对齐线，数量:', data.length);
+  
   alignmentLines = data.map(item => {
     // 版本兼容处理：确保所有必要字段都存在
     const id = item.id || `line-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const name = item.name || `对齐线${nextLineId++}`;
+    
+    // 调试日志：确认加载的数据
+    console.log('📂 加载对齐线数据:', id, 
+      'item.startPoint:', item.startPoint?.x?.toFixed(2), item.startPoint?.z?.toFixed(2)
+    );
+    
+    // 关键修复：强制Y=0，使用保存的原始坐标
     const startPoint = item.startPoint ? 
-      new THREE.Vector3(item.startPoint.x, item.startPoint.y, item.startPoint.z) : 
+      new THREE.Vector3(item.startPoint.x, 0, item.startPoint.z) : 
       new THREE.Vector3(0, 0, 0);
     const endPoint = item.endPoint ? 
-      new THREE.Vector3(item.endPoint.x, item.endPoint.y, item.endPoint.z) : 
+      new THREE.Vector3(item.endPoint.x, 0, item.endPoint.z) : 
       new THREE.Vector3(100, 0, 100);
+    
+    console.log('📂 创建AlignmentLine:', id, 
+      'startPoint:', startPoint.x.toFixed(2), startPoint.z.toFixed(2)
+    );
+    
     const color = item.color || 0x00ffff;
     const style = item.style || 'dashed';
     const visible = item.visible !== undefined ? item.visible : true;
@@ -465,6 +597,105 @@ function cancelDrawingAlignmentLine() {
   isDrawingAlignmentLine = false;
   clearAlignmentLinePreview();
   console.log('取消绘制对齐线');
+}
+
+// 开始测量
+function startMeasuring() {
+  isMeasuring = true;
+  measureStartPoint = null;
+  measureEndPoint = null;
+  console.log('开始测量模式');
+}
+
+// 结束测量
+function stopMeasuring() {
+  isMeasuring = false;
+  clearMeasureLine();
+  hideMeasureResult();
+  console.log('结束测量模式');
+}
+
+// 取消测量
+function cancelMeasuring() {
+  isMeasuring = false;
+  clearMeasureLine();
+  hideMeasureResult();
+  console.log('取消测量');
+}
+
+// 清除测量线
+function clearMeasureLine() {
+  if (measureLine) {
+    scene.remove(measureLine);
+    measureLine.geometry.dispose();
+    measureLine.material.dispose();
+    measureLine = null;
+  }
+}
+
+// 隐藏测量结果
+function hideMeasureResult() {
+  if (measureResultDiv) {
+    measureResultDiv.remove();
+    measureResultDiv = null;
+  }
+}
+
+// 创建测量线
+function createMeasureLine(start, end) {
+  clearMeasureLine();
+  
+  const points = [start, end];
+  const geometry = new THREE.BufferGeometry().setFromPoints(points);
+  
+  const material = new THREE.LineBasicMaterial({
+    color: 0xff0000,
+    linewidth: 2
+  });
+  
+  measureLine = new THREE.Line(geometry, material);
+  measureLine.position.y = 0.2; // 在地面之上0.2cm
+  scene.add(measureLine);
+}
+
+// 更新测量线
+function updateMeasureLine(end) {
+  if (measureLine && measureStartPoint) {
+    const points = [measureStartPoint, end];
+    measureLine.geometry.setFromPoints(points);
+  }
+}
+
+// 显示测量结果
+function showMeasureResult(distance) {
+  hideMeasureResult();
+  
+  // 转换为米并格式化
+  const distanceMeters = (distance / 100).toFixed(2);
+  
+  // 创建结果显示div
+  measureResultDiv = document.createElement('div');
+  measureResultDiv.style.cssText = `
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: bold;
+    z-index: 1000;
+    pointer-events: none;
+  `;
+  measureResultDiv.textContent = `距离: ${distanceMeters} 米`;
+  document.body.appendChild(measureResultDiv);
+  
+  // 3秒后自动隐藏
+  setTimeout(() => {
+    hideMeasureResult();
+  }, 3000);
 }
 
 // 清除对齐线预览
@@ -651,7 +882,7 @@ function calculateDistanceToInfiniteLine(point, lineStart, lineEnd) {
   return cross.length();
 }
 
-// 找到最近的对齐线
+// 找到最近的对齐线（使用空间分区优化）
 function findClosestAlignmentLine(point, lines) {
   if (!point || !lines || lines.length === 0) {
     return { line: null, distance: Infinity, projection: null };
@@ -663,7 +894,18 @@ function findClosestAlignmentLine(point, lines) {
   
   const p = point instanceof THREE.Vector3 ? point : new THREE.Vector3(point.x, point.y, point.z);
   
-  lines.forEach(line => {
+  // 性能优化：如果对齐线数量超过20条，使用空间分区
+  let linesToCheck = lines;
+  if (lines.length > 20) {
+    linesToCheck = getNearbyAlignmentLines(p, 2000); // 只检查2000cm范围内的对齐线
+    
+    // 如果附近没有对齐线，直接返回
+    if (linesToCheck.length === 0) {
+      return { line: null, distance: Infinity, projection: null };
+    }
+  }
+  
+  linesToCheck.forEach(line => {
     if (!line.visible) return;
     
     // 计算到无限长直线的距离（使用原始端点）
@@ -2265,6 +2507,57 @@ function onClick(event) {
     return;
   }
   
+  // 处理测量模式
+  if (isMeasuring) {
+    const rect = container.value.getBoundingClientRect();
+    mouse.x = ((event.clientX - rect.left) / container.value.clientWidth) * 2 - 1;
+    mouse.y = -((event.clientY - rect.top) / container.value.clientHeight) * 2 + 1;
+    
+    raycaster.setFromCamera(mouse, camera);
+    
+    // 强制与地面Y=0平面相交
+    const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const intersectPoint = new THREE.Vector3();
+    
+    if (raycaster.ray.intersectPlane(groundPlane, intersectPoint)) {
+      // 防御性检查：防止天文数字坐标
+      if (Math.abs(intersectPoint.x) > 100000 || Math.abs(intersectPoint.z) > 100000) {
+        console.error('❌ 坐标异常，拒绝测量:', intersectPoint);
+        return;
+      }
+      
+      if (!measureStartPoint) {
+        // 第一点
+        measureStartPoint = intersectPoint.clone();
+        measureEndPoint = intersectPoint.clone();
+        createMeasureLine(measureStartPoint, measureEndPoint);
+        console.log('✅ 测量第一点:', measureStartPoint.x, measureStartPoint.z);
+      } else {
+        // 第二点，完成测量
+        measureEndPoint = intersectPoint.clone();
+        updateMeasureLine(measureEndPoint);
+        
+        // 计算距离
+        const distance = measureStartPoint.distanceTo(measureEndPoint);
+        console.log('✅ 测量第二点:', measureEndPoint.x, measureEndPoint.z);
+        console.log('📏 测量距离:', distance, 'cm');
+        
+        // 显示结果
+        showMeasureResult(distance);
+        
+        // 重置测量状态，准备下一次测量
+        measureStartPoint = null;
+        measureEndPoint = null;
+        
+        // 3秒后清除测量线
+        setTimeout(() => {
+          clearMeasureLine();
+        }, 3000);
+      }
+    }
+    return;
+  }
+  
   const rect = container.value.getBoundingClientRect();
   mouse.x = ((event.clientX - rect.left) / container.value.clientWidth) * 2 - 1;
   mouse.y = -((event.clientY - rect.top) / container.value.clientHeight) * 2 + 1;
@@ -2487,6 +2780,21 @@ function onMouseMove(event) {
         return;
       }
       updateAlignmentLinePreview(alignmentLineStartPoint, intersectPoint);
+    }
+    return;
+  }
+  
+  // 测量模式预览
+  if (isMeasuring && measureStartPoint) {
+    const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const intersectPoint = new THREE.Vector3();
+    if (raycaster.ray.intersectPlane(groundPlane, intersectPoint)) {
+      // 防御性检查：防止天文数字坐标
+      if (Math.abs(intersectPoint.x) > 100000 || Math.abs(intersectPoint.z) > 100000) {
+        console.error('❌ 测量预览坐标异常，跳过更新:', intersectPoint);
+        return;
+      }
+      updateMeasureLine(intersectPoint);
     }
     return;
   }
@@ -5047,6 +5355,10 @@ function resetView() {
     startDrawingAlignmentLine,
     stopDrawingAlignmentLine,
     cancelDrawingAlignmentLine,
+    // 测量工具相关方法
+    startMeasuring,
+    stopMeasuring,
+    cancelMeasuring,
     // 对象边界计算相关方法
     getObjectBounds,
     getObjectEdges,
