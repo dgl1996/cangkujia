@@ -205,8 +205,15 @@
                     </div>
                     <div v-show="expandedObjectCategories.facility" class="category-items-compact">
                       <div class="sub-menu-row-compact">
-                        <div class="draggable-item-compact" draggable="true" @dragstart="onDoorDragStart($event)" :class="{ disabled: currentView !== '3d' }">🚪 门</div>
-                        <div class="draggable-item-compact" draggable="true" @dragstart="onWindowDragStart($event)" :class="{ disabled: currentView !== '3d' }">🪟 窗</div>
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDoorDragStart($event)" :class="{ disabled: currentView !== '3d' }">🚪 门 (2.0×2.2m)</div>
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onLiftDoorDragStart($event)" :class="{ disabled: currentView !== '3d' }">🚛 提升门 (3.5×4.2m)</div>
+                      </div>
+                      <div class="sub-menu-row-compact">
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onLiftDoor27DragStart($event)" :class="{ disabled: currentView !== '3d' }">🚛 提升门 (2.7×3.0m)</div>
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onWindowDragStart($event)" :class="{ disabled: currentView !== '3d' }">🪟 窗 (1.5×1.2m)</div>
+                      </div>
+                      <div class="sub-menu-row-compact">
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onPillarDragStart($event)" :class="{ disabled: currentView !== '3d' }">🏛️ 立柱 (40×30cm)</div>
                       </div>
                     </div>
                   </div>
@@ -218,8 +225,9 @@
                       <span class="toggle-icon" :class="{ expanded: expandedObjectCategories['my-models'] }">▼</span>
                     </div>
                     <div v-show="expandedObjectCategories['my-models']" class="category-items-compact">
-                      <div v-for="model in myModels" :key="model.id" class="sub-menu-row-compact">
+                      <div v-for="model in myModels" :key="model.id" class="sub-menu-row-compact my-model-item">
                         <div class="draggable-item-compact" draggable="true" @dragstart="onCustomModelDragStart($event, model)" :class="{ disabled: currentView !== '3d' }" :title="model.name">{{ model.shortId || model.id }} {{ model.name }}</div>
+                        <button class="delete-my-model-btn" @click="deleteMyModel(model.id)" title="删除此模型">🗑️</button>
                       </div>
                       <div v-if="myModels.length === 0" class="sub-menu-row-compact">
                         <div class="draggable-item-compact disabled">暂无自定义模型，请在P2页创建</div>
@@ -260,7 +268,7 @@
                   <!-- 中型货架 -->
                   <div class="object-category-compact">
                     <div class="category-title-compact" @click="toggleObjectCategory('medium-shelf')">
-                      <span>📦 中型货架(8)</span>
+                      <span>📦 中型货架(6)</span>
                       <span class="toggle-icon" :class="{ expanded: expandedObjectCategories['medium-shelf'] }">▼</span>
                     </div>
                     <div v-show="expandedObjectCategories['medium-shelf']" class="category-items-compact">
@@ -270,15 +278,11 @@
                       </div>
                       <div class="sub-menu-row-compact">
                         <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'B20-6')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('B20-6')">{{ getModelFullName('B20-6') }}</div>
-                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'C23-3')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('C23-3')">{{ getModelFullName('C23-3') }}</div>
-                      </div>
-                      <div class="sub-menu-row-compact">
                         <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'B20-4-pair')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('B20-4-pair')">{{ getModelFullName('B20-4-pair') }}</div>
-                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'B20-5-pair')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('B20-5-pair')">{{ getModelFullName('B20-5-pair') }}</div>
                       </div>
                       <div class="sub-menu-row-compact">
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'B20-5-pair')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('B20-5-pair')">{{ getModelFullName('B20-5-pair') }}</div>
                         <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'B20-6-pair')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('B20-6-pair')">{{ getModelFullName('B20-6-pair') }}</div>
-                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'C23-3-pair')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('C23-3-pair')">{{ getModelFullName('C23-3-pair') }}</div>
                       </div>
                     </div>
                   </div>
@@ -286,17 +290,21 @@
                   <!-- 高位货架 -->
                   <div class="object-category-compact">
                     <div class="category-title-compact" @click="toggleObjectCategory('heavy-shelf')">
-                      <span>📦 高位货架(22)</span>
+                      <span>📦 高位货架(24)</span>
                       <span class="toggle-icon" :class="{ expanded: expandedObjectCategories['heavy-shelf'] }">▼</span>
                     </div>
                     <div v-show="expandedObjectCategories['heavy-shelf']" class="category-items-compact">
                       <!-- C23系列 -->
                       <div class="sub-menu-row-compact">
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'C23-3')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('C23-3')">{{ getModelFullName('C23-3') }}</div>
                         <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'C23-4')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('C23-4')">{{ getModelFullName('C23-4') }}</div>
-                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'C23-5')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('C23-5')">{{ getModelFullName('C23-5') }}</div>
                       </div>
                       <div class="sub-menu-row-compact">
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'C23-5')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('C23-5')">{{ getModelFullName('C23-5') }}</div>
                         <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'C23-6')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('C23-6')">{{ getModelFullName('C23-6') }}</div>
+                      </div>
+                      <div class="sub-menu-row-compact">
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'C23-3-pair')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('C23-3-pair')">{{ getModelFullName('C23-3-pair') }}</div>
                         <div class="draggable-item-compact" draggable="true" @dragstart="onDragStart($event, 'C23-4-pair')" :class="{ disabled: currentView !== '3d' }" :title="getModelFullName('C23-4-pair')">{{ getModelFullName('C23-4-pair') }}</div>
                       </div>
                       <div class="sub-menu-row-compact">
@@ -991,6 +999,9 @@
                 <button @click="deleteSelectedObject" :disabled="!selectedObject" class="operation-btn warning-btn">
                   <span class="btn-icon">🗑️</span>删除
                 </button>
+                <button v-if="selectedObject && selectedObject.type === 'pillar'" @click="editPillarHeight" :disabled="!selectedObject" class="operation-btn">
+                  <span class="btn-icon">📏</span>编辑高度
+                </button>
               </div>
             </div>
 
@@ -1264,6 +1275,34 @@
       </div>
     </div>
 
+    <!-- 立柱高度编辑弹窗 -->
+    <div v-if="showPillarHeightDialog" class="modal-overlay" @click.self="cancelPillarHeightEdit">
+      <div class="modal-dialog pillar-height-dialog" @mousedown="onModalDragStart($event, 'pillarHeight')">
+        <h3 class="modal-title">编辑立柱高度</h3>
+        <div class="modal-content">
+          <div class="form-group">
+            <label>高度 (米):</label>
+            <input 
+              type="number" 
+              v-model.number="pillarHeightInput" 
+              min="3" 
+              max="12" 
+              step="0.1"
+              placeholder="请输入高度"
+              @keyup.enter="confirmPillarHeightEdit"
+            >
+          </div>
+          <p class="hint-text">
+            高度范围: 3米 - 12米
+          </p>
+        </div>
+        <div class="modal-actions">
+          <button @click="cancelPillarHeightEdit" class="cancel-btn">取消</button>
+          <button @click="confirmPillarHeightEdit" class="confirm-btn" :disabled="pillarHeightInput < 3 || pillarHeightInput > 12">确认</button>
+        </div>
+      </div>
+    </div>
+
     <!-- 自定义轻型货架弹窗 -->
     <div v-if="showCustomLightShelfModal" class="modal-overlay" @click.self="closeCustomLightShelfModal">
       <div class="modal-dialog custom-shelf-dialog" @mousedown="onModalDragStart($event, 'customShelf')">
@@ -1346,6 +1385,10 @@ const selectedAlignmentLineId = ref(null); // 当前选中的对齐线ID
 const showRotationDialog = ref(false);
 const rotationAngle = ref(0);
 const rotationOriginalAngle = ref(0);
+
+// 立柱高度编辑对话框状态
+const showPillarHeightDialog = ref(false);
+const pillarHeightInput = ref(5);
 const isRotationPreview = ref(false);
 const isProjectSaved = ref(false);
 const projectReport = ref(null);
@@ -1360,6 +1403,8 @@ const is3DGenerated = ref(false);
 const isAddingDoor = ref(false);
 const isAddingWindow = ref(false);
 const doorConfig = ref({ width: 2, height: 2.2 });
+const liftDoorConfig = ref({ width: 3.5, height: 4.2 });
+const liftDoor27Config = ref({ width: 2.7, height: 3.0 });
 const windowConfig = ref({ width: 1.5, height: 1.2, sillHeight: 1 });
 
 // 3D生成加载状态
@@ -1372,9 +1417,37 @@ const myModels = ref([]);
 const loadMyModels = () => {
   const saved = localStorage.getItem('myModels');
   if (saved) {
-    myModels.value = JSON.parse(saved);
-    console.log('从 localStorage 加载我的模型:', myModels.value.length, '个');
+    const allModels = JSON.parse(saved);
+    // 过滤掉与预设模型重复的条目（如C27-5-pair等已存在于高位货架的模型）
+    const presetModelIds = Object.keys(modelFullNames);
+    myModels.value = allModels.filter(model => {
+      const isDuplicate = presetModelIds.includes(model.id) || presetModelIds.includes(model.shortId);
+      if (isDuplicate) {
+        console.log(`过滤重复的我的模型: ${model.name} (${model.id || model.shortId})`);
+      }
+      return !isDuplicate;
+    });
+    console.log('从 localStorage 加载我的模型:', myModels.value.length, '个（已过滤重复）');
   }
+};
+
+// 删除我的模型
+const deleteMyModel = (modelId) => {
+  const model = myModels.value.find(m => m.id === modelId || m.shortId === modelId);
+  if (!model) return;
+
+  // 确认对话框
+  if (!confirm(`确定要删除模型 "${model.name}" 吗？`)) {
+    return;
+  }
+
+  // 从数组中移除
+  myModels.value = myModels.value.filter(m => m.id !== modelId && m.shortId !== modelId);
+
+  // 更新 localStorage
+  localStorage.setItem('myModels', JSON.stringify(myModels.value));
+
+  console.log(`已删除模型: ${model.name}`);
 };
 
 // 对象分类展开状态
@@ -1490,21 +1563,21 @@ const modelFullNames = {
   'A20-5-pair': '5层轻型货架-L2.0xD0.4xH2.0-配组',
   'A20-6-pair': '6层轻型货架-L2.0xD0.4xH2.0-配组',
   
-  // ========== 中型货架（8个）- 短ID格式 ==========
+  // ========== 中型货架（6个）- 短ID格式 ==========
   'B20-4': '4层中型货架-L2.0xD0.6xH2.0',
   'B20-5': '5层中型货架-L2.0xD0.6xH2.5',
   'B20-6': '6层中型货架-L2.0xD0.6xH3.0',
-  'C23-3': '3层高位货架-L2.3xD1.0xH3.0',
   'B20-4-pair': '4层中型货架-L2.0xD0.6xH2.0-配组',
   'B20-5-pair': '5层中型货架-L2.0xD0.6xH2.5-配组',
   'B20-6-pair': '6层中型货架-L2.0xD0.6xH3.0-配组',
-  'C23-3-pair': '3层高位货架-L2.3xD1.0xH3.0-配组',
   
-  // ========== 高位货架（22个）- 短ID格式 ==========
+  // ========== 高位货架（24个）- 短ID格式 ==========
   // C23系列
+  'C23-3': '3层高位货架-L2.3xD1.0xH3.0',
   'C23-4': '4层高位货架-L2.3xD1.0xH4.5',
   'C23-5': '5层高位货架-L2.3xD1.0xH6.0',
   'C23-6': '6层高位货架-L2.3xD1.0xH7.0',
+  'C23-3-pair': '3层高位货架-L2.3xD1.0xH3.0-配组',
   'C23-4-pair': '4层高位货架-L2.3xD1.0xH4.5-配组',
   'C23-5-pair': '5层高位货架-L2.3xD1.0xH6.0-配组',
   'C23-6-pair': '6层高位货架-L2.3xD1.0xH7.0-配组',
@@ -1669,19 +1742,30 @@ const placedObjectsCount = computed(() => {
   return threeScene.value?.getObjectsCount?.() || 0;
 });
 
-// 判断选中的对象是否是货架（批量复制仅对货架有效）
+// 判断选中的对象是否是货架、托盘或拣货车（批量复制对这些对象有效）
 const isSelectedObjectShelf = computed(() => {
   if (!selectedObject.value) return false;
   const type = selectedObject.value.type || '';
   const modelType = selectedObject.value.modelType || '';
   const category = selectedObject.value.category || '';
-  // 检查 type 是否为 'shelf' 或 modelType 包含货架关键词 或 category 是货架类型
-  return type === 'shelf' || 
-         modelType.includes('shelf') || 
+  // 检查是否为货架
+  const isShelf = type === 'shelf' ||
+         modelType.includes('shelf') ||
          modelType.includes('light-duty') ||
          modelType.includes('medium-duty') ||
          modelType.includes('high-duty') ||
          category.includes('shelf');
+  // 检查是否为托盘
+  const isPallet = type === 'pallet' ||
+         modelType.includes('pallet');
+  // 检查是否为拣货车
+  const isCart = type === 'cart' ||
+         modelType.includes('cart') ||
+         modelType.includes('picking');
+  // 检查是否为立柱
+  const isPillar = type === 'pillar' ||
+         modelType === 'pillar';
+  return isShelf || isPallet || isCart || isPillar;
 });
 
 // 判断选中的对象是否是人员模型（人员模型不显示复制按钮）
@@ -2478,6 +2562,41 @@ function toggleEditMode() {
 function editSelectedLine() {
   if (selectedLineIndex.value === null) return;
   editLine(selectedLineIndex.value);
+}
+
+// 编辑立柱高度
+function editPillarHeight() {
+  if (!selectedObject.value || selectedObject.value.type !== 'pillar') return;
+  
+  // 获取当前高度（转换为米）
+  const currentHeight = selectedObject.value.height || 500;
+  pillarHeightInput.value = currentHeight / 100; // 转换为米
+  
+  showPillarHeightDialog.value = true;
+}
+
+// 确认立柱高度编辑
+function confirmPillarHeightEdit() {
+  if (!selectedObject.value || selectedObject.value.type !== 'pillar') return;
+  
+  const newHeightCm = pillarHeightInput.value * 100; // 转换为厘米
+  
+  // 调用 ThreeScene 的 updatePillarHeight 函数
+  if (threeScene.value && threeScene.value.updatePillarHeight) {
+    const result = threeScene.value.updatePillarHeight(selectedObject.value, newHeightCm);
+    if (result) {
+      // 更新选中对象的高度值
+      selectedObject.value.height = newHeightCm;
+      console.log('立柱高度已更新为:', pillarHeightInput.value, '米');
+    }
+  }
+  
+  showPillarHeightDialog.value = false;
+}
+
+// 取消立柱高度编辑
+function cancelPillarHeightEdit() {
+  showPillarHeightDialog.value = false;
 }
 
 // 删除选中的线条
@@ -3414,34 +3533,64 @@ function loadImportedObjects(objects) {
     console.error('加载导入对象失败: threeScene未准备好');
     return;
   }
-  
+
   console.log('开始加载导入的对象:', objects.length, '个');
-  
+
   objects.forEach((objData, index) => {
     setTimeout(() => {
+      // 处理门/窗对象
+      if (objData.type === 'door' || objData.type === 'window') {
+        console.log(`加载${objData.type === 'door' ? '门' : '窗'} ${index + 1}/${objects.length}:`, `墙体${objData.wallIndex}`);
+
+        const config = {
+          width: objData.width / 100, // cm -> m
+          height: objData.height / 100 // cm -> m
+        };
+        if (objData.type === 'window' && objData.sillHeight) {
+          config.sillHeight = objData.sillHeight / 100; // cm -> m
+        }
+
+        let placedObject;
+        // 获取墙体类型，支持办公区墙体
+        const wallType = objData.wallType || 'wall';
+        if (objData.type === 'door') {
+          placedObject = threeScene.value.createDoor(objData.wallIndex, objData.wallPosition / 100, config, wallType);
+        } else {
+          placedObject = threeScene.value.createWindow(objData.wallIndex, objData.wallPosition / 100, config, wallType);
+        }
+
+        if (placedObject) {
+          console.log(`${objData.type === 'door' ? '门' : '窗'}加载成功`);
+        } else {
+          console.error(`${objData.type === 'door' ? '门' : '窗'}加载失败`);
+        }
+        return;
+      }
+
+      // 处理普通模型对象
       const modelType = objData.modelType || objData.modelName;
-      
+
       console.log(`加载对象 ${index + 1}/${objects.length}:`, modelType);
-      
+
       // 使用ThreeScene的addModelInternal方法添加对象
       const placedObject = threeScene.value.addModelInternal(modelType, objData.position);
-      
+
       if (placedObject) {
         // 设置旋转
         placedObject.rotation.x = objData.rotation.x;
         placedObject.rotation.y = objData.rotation.y;
         placedObject.rotation.z = objData.rotation.z;
-        
+
         // 设置缩放
         if (objData.scale) {
           placedObject.scale.set(objData.scale.x, objData.scale.y, objData.scale.z);
         }
-        
+
         // 恢复中文名称（如果存在）
         if (objData.name) {
           placedObject.userData.name = objData.name;
         }
-        
+
         console.log('加载对象成功:', modelType);
       } else {
         console.error('加载对象失败:', modelType);
@@ -3609,6 +3758,8 @@ function importProject() {
             // 存储对象数据，等待3D场景初始化后加载
             window.pendingObjects = project.objects;
             console.log('导入对象数据:', project.objects.length, '个对象待加载');
+            const doorWindowInImport = project.objects.filter(obj => obj.type === 'door' || obj.type === 'window');
+            console.log('导入数据门/窗数量:', doorWindowInImport.length, '个');
           }
           
           // 保存对齐线数据，在生成3D仓库后加载
@@ -3655,27 +3806,43 @@ async function confirmSaveProject() {
     const sceneObjects = threeScene.value.getSceneObjects();
     console.log('获取到场景对象:', sceneObjects.length, '个');
     sceneObjectsData = sceneObjects
-      .filter(obj => obj.userData.modelType || obj.userData.modelName) // 只保存模型对象
-      .map(obj => ({
-        modelType: obj.userData.modelType || obj.userData.modelName,
-        modelName: obj.userData.modelName,
-        name: obj.userData.name, // 中文名称
-        position: {
-          x: obj.position.x,
-          y: obj.position.y,
-          z: obj.position.z
-        },
-        rotation: {
-          x: obj.rotation.x,
-          y: obj.rotation.y,
-          z: obj.rotation.z
-        },
-        scale: {
-          x: obj.scale.x,
-          y: obj.scale.y,
-          z: obj.scale.z
+      .filter(obj => obj.userData.modelType || obj.userData.modelName ||
+                     obj.userData.type === 'door' || obj.userData.type === 'window') // 保存模型对象和门/窗
+      .map(obj => {
+        const baseData = {
+          modelType: obj.userData.modelType || obj.userData.modelName,
+          modelName: obj.userData.modelName,
+          name: obj.userData.name, // 中文名称
+          position: {
+            x: obj.position.x,
+            y: obj.position.y,
+            z: obj.position.z
+          },
+          rotation: {
+            x: obj.rotation.x,
+            y: obj.rotation.y,
+            z: obj.rotation.z
+          },
+          scale: {
+            x: obj.scale.x,
+            y: obj.scale.y,
+            z: obj.scale.z
+          }
+        };
+        // 门/窗对象保存额外属性
+        if (obj.userData.type === 'door' || obj.userData.type === 'window') {
+          baseData.type = obj.userData.type;
+          baseData.wallType = obj.userData.wallType || 'wall'; // 保存墙体类型，支持办公区墙体
+          baseData.wallIndex = obj.userData.wallIndex;
+          baseData.wallPosition = obj.userData.position;
+          baseData.width = obj.userData.width;
+          baseData.height = obj.userData.height;
+          if (obj.userData.type === 'window') {
+            baseData.sillHeight = obj.userData.sillHeight;
+          }
         }
-      }));
+        return baseData;
+      });
     console.log('保存场景对象:', sceneObjectsData.length, '个');
   } else {
     console.warn('3D场景未准备好，无法保存对象。当前视图:', currentView.value, 'is3DGenerated:', is3DGenerated.value);
@@ -3700,6 +3867,10 @@ async function confirmSaveProject() {
     objects: sceneObjectsData, // 保存3D场景中的对象
     alignmentLines: alignmentLinesData // 保存对齐线数据
   };
+  
+  console.log('项目数据对象数量:', projectData.objects.length, '个');
+  const doorWindowInProject = projectData.objects.filter(obj => obj.type === 'door' || obj.type === 'window');
+  console.log('项目数据门/窗数量:', doorWindowInProject.length, '个');
 
   // 导出JSON文件
   const projectJson = JSON.stringify(projectData, null, 2);
@@ -4475,6 +4646,34 @@ function onDoorDragStart(event) {
   console.log('开始拖动门');
 }
 
+// 提升门拖拽开始
+function onLiftDoorDragStart(event) {
+  event.dataTransfer.setData('objectType', 'liftDoor');
+  event.dataTransfer.setData('doorWidth', liftDoorConfig.value.width);
+  event.dataTransfer.setData('doorHeight', liftDoorConfig.value.height);
+  event.dataTransfer.effectAllowed = 'copy';
+
+  // 设置自定义拖拽图像（更大一些体现提升门）
+  const preview = createDragPreview(5, 4, '#654321', '🚪');
+  event.dataTransfer.setDragImage(preview, 50, 40);
+
+  console.log('开始拖动提升门');
+}
+
+// 提升门(2.7x3.0m)拖拽开始
+function onLiftDoor27DragStart(event) {
+  event.dataTransfer.setData('objectType', 'liftDoor27');
+  event.dataTransfer.setData('doorWidth', liftDoor27Config.value.width);
+  event.dataTransfer.setData('doorHeight', liftDoor27Config.value.height);
+  event.dataTransfer.effectAllowed = 'copy';
+
+  // 设置自定义拖拽图像
+  const preview = createDragPreview(4, 3.5, '#654321', '🚪');
+  event.dataTransfer.setDragImage(preview, 40, 35);
+
+  console.log('开始拖动提升门(2.7x3.0m)');
+}
+
 // 窗拖拽开始
 function onWindowDragStart(event) {
   event.dataTransfer.setData('objectType', 'window');
@@ -4488,6 +4687,18 @@ function onWindowDragStart(event) {
   event.dataTransfer.setDragImage(preview, 30, 25);
   
   console.log('开始拖动窗');
+}
+
+// 立柱拖拽开始
+function onPillarDragStart(event) {
+  event.dataTransfer.setData('objectType', 'pillar');
+  event.dataTransfer.effectAllowed = 'copy';
+
+  // 设置自定义拖拽图像
+  const preview = createDragPreview(2, 3, '#888888', '🏛️');
+  event.dataTransfer.setDragImage(preview, 20, 30);
+
+  console.log('开始拖动立柱');
 }
 
 function onModelAdded(model) {
@@ -4608,6 +4819,9 @@ defineExpose({
   addShelf,
   addConveyor,
   onDoorDragStart,
+  onLiftDoorDragStart,
+  onLiftDoor27DragStart,
+  onPillarDragStart,
   onWindowDragStart,
   createDragPreview,
   expandedObjectCategories,
@@ -6165,6 +6379,37 @@ defineExpose({
 .draggable-item-compact.disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* 我的模型删除按钮 */
+.my-model-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.my-model-item .draggable-item-compact {
+  flex: 1;
+}
+
+.delete-my-model-btn {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 6px;
+  font-size: 12px;
+  border-radius: 3px;
+  transition: all 0.2s;
+}
+
+.my-model-item:hover .delete-my-model-btn {
+  display: inline-block;
+}
+
+.delete-my-model-btn:hover {
+  background: #ff4444;
+  color: white;
 }
 
 /* 完成项目 */

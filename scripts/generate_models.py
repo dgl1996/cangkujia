@@ -182,52 +182,162 @@ def generate_plastic_pallet(length=1200, width=1000, height=150):
 
 def generate_foldable_container(length=600, width=400, height=300):
     """
-    生成可折叠周转箱
+    生成可折叠周转箱 - 棱廓淡蓝色，表面红色
     """
     meshes = []
     wall_thickness = 5
+    frame_thickness = 8  # 棱廓厚度
     
-    # 底板
+    # 颜色定义
+    COLOR_FRAME = [0.53, 0.81, 0.92]    # 淡蓝色棱廓 #87CEEB
+    COLOR_SURFACE = [1.0, 0.0, 0.0]      # 红色表面 #FF0000
+    
+    # 1. 底部面板（红色表面）
     base = trimesh.creation.box(
-        extents=[length, width, wall_thickness]
+        extents=[length - 2*frame_thickness, width - 2*frame_thickness, wall_thickness]
     )
     base.apply_translation([0, 0, wall_thickness/2])
+    set_mesh_color(base, COLOR_SURFACE)
     meshes.append(base)
     
-    # 四壁
-    # 前壁
-    front = trimesh.creation.box(
-        extents=[length, wall_thickness, height]
-    )
-    front.apply_translation([0, -width/2 + wall_thickness/2, height/2])
-    meshes.append(front)
+    # 2. 底部棱廓框架（淡蓝色）
+    # 前边框
+    base_front = trimesh.creation.box(extents=[length, frame_thickness, wall_thickness])
+    base_front.apply_translation([0, -width/2 + frame_thickness/2, wall_thickness/2])
+    set_mesh_color(base_front, COLOR_FRAME)
+    meshes.append(base_front)
     
-    # 后壁
-    back = trimesh.creation.box(
-        extents=[length, wall_thickness, height]
-    )
-    back.apply_translation([0, width/2 - wall_thickness/2, height/2])
-    meshes.append(back)
+    # 后边框
+    base_back = trimesh.creation.box(extents=[length, frame_thickness, wall_thickness])
+    base_back.apply_translation([0, width/2 - frame_thickness/2, wall_thickness/2])
+    set_mesh_color(base_back, COLOR_FRAME)
+    meshes.append(base_back)
     
-    # 左壁
-    left = trimesh.creation.box(
-        extents=[wall_thickness, width - 2*wall_thickness, height]
-    )
-    left.apply_translation([-length/2 + wall_thickness/2, 0, height/2])
-    meshes.append(left)
+    # 左边框
+    base_left = trimesh.creation.box(extents=[frame_thickness, width - 2*frame_thickness, wall_thickness])
+    base_left.apply_translation([-length/2 + frame_thickness/2, 0, wall_thickness/2])
+    set_mesh_color(base_left, COLOR_FRAME)
+    meshes.append(base_left)
     
-    # 右壁
-    right = trimesh.creation.box(
-        extents=[wall_thickness, width - 2*wall_thickness, height]
+    # 右边框
+    base_right = trimesh.creation.box(extents=[frame_thickness, width - 2*frame_thickness, wall_thickness])
+    base_right.apply_translation([length/2 - frame_thickness/2, 0, wall_thickness/2])
+    set_mesh_color(base_right, COLOR_FRAME)
+    meshes.append(base_right)
+    
+    # 3. 四壁棱廓框架（淡蓝色）
+    # 前壁左右立柱
+    front_left_post = trimesh.creation.box(extents=[frame_thickness, frame_thickness, height])
+    front_left_post.apply_translation([-length/2 + frame_thickness/2, -width/2 + frame_thickness/2, height/2])
+    set_mesh_color(front_left_post, COLOR_FRAME)
+    meshes.append(front_left_post)
+    
+    front_right_post = trimesh.creation.box(extents=[frame_thickness, frame_thickness, height])
+    front_right_post.apply_translation([length/2 - frame_thickness/2, -width/2 + frame_thickness/2, height/2])
+    set_mesh_color(front_right_post, COLOR_FRAME)
+    meshes.append(front_right_post)
+    
+    # 后壁左右立柱
+    back_left_post = trimesh.creation.box(extents=[frame_thickness, frame_thickness, height])
+    back_left_post.apply_translation([-length/2 + frame_thickness/2, width/2 - frame_thickness/2, height/2])
+    set_mesh_color(back_left_post, COLOR_FRAME)
+    meshes.append(back_left_post)
+    
+    back_right_post = trimesh.creation.box(extents=[frame_thickness, frame_thickness, height])
+    back_right_post.apply_translation([length/2 - frame_thickness/2, width/2 - frame_thickness/2, height/2])
+    set_mesh_color(back_right_post, COLOR_FRAME)
+    meshes.append(back_right_post)
+    
+    # 上下边框
+    # 前壁上边框
+    front_top = trimesh.creation.box(extents=[length - 2*frame_thickness, frame_thickness, frame_thickness])
+    front_top.apply_translation([0, -width/2 + frame_thickness/2, height - frame_thickness/2])
+    set_mesh_color(front_top, COLOR_FRAME)
+    meshes.append(front_top)
+    
+    # 前壁下边框
+    front_bottom = trimesh.creation.box(extents=[length - 2*frame_thickness, frame_thickness, frame_thickness])
+    front_bottom.apply_translation([0, -width/2 + frame_thickness/2, frame_thickness/2])
+    set_mesh_color(front_bottom, COLOR_FRAME)
+    meshes.append(front_bottom)
+    
+    # 后壁上边框
+    back_top = trimesh.creation.box(extents=[length - 2*frame_thickness, frame_thickness, frame_thickness])
+    back_top.apply_translation([0, width/2 - frame_thickness/2, height - frame_thickness/2])
+    set_mesh_color(back_top, COLOR_FRAME)
+    meshes.append(back_top)
+    
+    # 后壁下边框
+    back_bottom = trimesh.creation.box(extents=[length - 2*frame_thickness, frame_thickness, frame_thickness])
+    back_bottom.apply_translation([0, width/2 - frame_thickness/2, frame_thickness/2])
+    set_mesh_color(back_bottom, COLOR_FRAME)
+    meshes.append(back_bottom)
+    
+    # 左壁上下边框
+    left_top = trimesh.creation.box(extents=[frame_thickness, width - 2*frame_thickness, frame_thickness])
+    left_top.apply_translation([-length/2 + frame_thickness/2, 0, height - frame_thickness/2])
+    set_mesh_color(left_top, COLOR_FRAME)
+    meshes.append(left_top)
+    
+    left_bottom = trimesh.creation.box(extents=[frame_thickness, width - 2*frame_thickness, frame_thickness])
+    left_bottom.apply_translation([-length/2 + frame_thickness/2, 0, frame_thickness/2])
+    set_mesh_color(left_bottom, COLOR_FRAME)
+    meshes.append(left_bottom)
+    
+    # 右壁上下边框
+    right_top = trimesh.creation.box(extents=[frame_thickness, width - 2*frame_thickness, frame_thickness])
+    right_top.apply_translation([length/2 - frame_thickness/2, 0, height - frame_thickness/2])
+    set_mesh_color(right_top, COLOR_FRAME)
+    meshes.append(right_top)
+    
+    right_bottom = trimesh.creation.box(extents=[frame_thickness, width - 2*frame_thickness, frame_thickness])
+    right_bottom.apply_translation([length/2 - frame_thickness/2, 0, frame_thickness/2])
+    set_mesh_color(right_bottom, COLOR_FRAME)
+    meshes.append(right_bottom)
+    
+    # 4. 四壁表面面板（红色）
+    # 前壁面板
+    front_surface = trimesh.creation.box(
+        extents=[length - 2*frame_thickness, wall_thickness, height - 2*frame_thickness]
     )
-    right.apply_translation([length/2 - wall_thickness/2, 0, height/2])
-    meshes.append(right)
+    front_surface.apply_translation([0, -width/2 + wall_thickness/2, height/2])
+    set_mesh_color(front_surface, COLOR_SURFACE)
+    meshes.append(front_surface)
+    
+    # 后壁面板
+    back_surface = trimesh.creation.box(
+        extents=[length - 2*frame_thickness, wall_thickness, height - 2*frame_thickness]
+    )
+    back_surface.apply_translation([0, width/2 - wall_thickness/2, height/2])
+    set_mesh_color(back_surface, COLOR_SURFACE)
+    meshes.append(back_surface)
+    
+    # 左壁面板
+    left_surface = trimesh.creation.box(
+        extents=[wall_thickness, width - 2*frame_thickness, height - 2*frame_thickness]
+    )
+    left_surface.apply_translation([-length/2 + wall_thickness/2, 0, height/2])
+    set_mesh_color(left_surface, COLOR_SURFACE)
+    meshes.append(left_surface)
+    
+    # 右壁面板
+    right_surface = trimesh.creation.box(
+        extents=[wall_thickness, width - 2*frame_thickness, height - 2*frame_thickness]
+    )
+    right_surface.apply_translation([length/2 - wall_thickness/2, 0, height/2])
+    set_mesh_color(right_surface, COLOR_SURFACE)
+    meshes.append(right_surface)
     
     # 合并
     container = trimesh.util.concatenate(meshes)
     
-    # 设置颜色 (灰色塑料)
-    container.visual.vertex_colors = [120, 120, 120, 255]
+    # 坐标转换：Trimesh(Z轴向上) -> Three.js(Y轴向上)
+    rotation_matrix = trimesh.transformations.rotation_matrix(
+        angle=-np.pi / 2,
+        direction=[1, 0, 0],
+        point=[0, 0, 0]
+    )
+    container.apply_transform(rotation_matrix)
     
     return container, {
         "id": "container-foldable",
@@ -1074,70 +1184,150 @@ def generate_plastic_pallet_grid(length=1200, width=1000, height=150):
 
 def generate_tote_box(length=600, width=400, height=300, color=None):
     """
-    生成可堆叠周转箱（EU箱标准）
+    生成可堆叠周转箱（EU箱标准）- 棱廓淡蓝色，表面红色
     
     Args:
         length: 长度 (mm)
         width: 宽度 (mm)
         height: 高度 (mm)
-        color: 颜色RGB列表，默认根据尺寸自动选择
+        color: 颜色RGB列表（已废弃，保留参数兼容性）
     """
     meshes = []
     
-    # 根据尺寸选择颜色
-    if color is None:
-        if length >= 600:
-            COLOR_BOX = [0.29, 0.56, 0.89]  # 蓝色 #4A90E2
-        else:
-            COLOR_BOX = [0.96, 0.68, 0.33]  # 橙色 #F6AD55
-    else:
-        COLOR_BOX = color
+    # 颜色定义 - 新配色方案
+    COLOR_FRAME = [0.53, 0.81, 0.92]    # 淡蓝色棱廓 #87CEEB
+    COLOR_SURFACE = [1.0, 0.0, 0.0]      # 红色表面 #FF0000
     
     # 壁厚
     wall_thickness = 8
+    frame_thickness = 12  # 棱廓厚度
     
-    # 外框（底部）
-    bottom = trimesh.creation.box(
-        extents=[length, width, wall_thickness]
+    # 1. 底部中心面板（红色表面）
+    bottom_surface = trimesh.creation.box(
+        extents=[length - 2*frame_thickness, width - 2*frame_thickness, wall_thickness]
     )
-    bottom.apply_translation([0, 0, wall_thickness/2])
-    set_mesh_color(bottom, COLOR_BOX)
-    meshes.append(bottom)
+    bottom_surface.apply_translation([0, 0, wall_thickness/2])
+    set_mesh_color(bottom_surface, COLOR_SURFACE)
+    meshes.append(bottom_surface)
     
-    # 四壁
-    # 前壁
-    front_wall = trimesh.creation.box(
-        extents=[length, wall_thickness, height]
+    # 2. 底部棱廓框架（淡蓝色）
+    # 前边框
+    bottom_front = trimesh.creation.box(extents=[length, frame_thickness, wall_thickness])
+    bottom_front.apply_translation([0, -width/2 + frame_thickness/2, wall_thickness/2])
+    set_mesh_color(bottom_front, COLOR_FRAME)
+    meshes.append(bottom_front)
+    
+    # 后边框
+    bottom_back = trimesh.creation.box(extents=[length, frame_thickness, wall_thickness])
+    bottom_back.apply_translation([0, width/2 - frame_thickness/2, wall_thickness/2])
+    set_mesh_color(bottom_back, COLOR_FRAME)
+    meshes.append(bottom_back)
+    
+    # 左边框
+    bottom_left = trimesh.creation.box(extents=[frame_thickness, width - 2*frame_thickness, wall_thickness])
+    bottom_left.apply_translation([-length/2 + frame_thickness/2, 0, wall_thickness/2])
+    set_mesh_color(bottom_left, COLOR_FRAME)
+    meshes.append(bottom_left)
+    
+    # 右边框
+    bottom_right = trimesh.creation.box(extents=[frame_thickness, width - 2*frame_thickness, wall_thickness])
+    bottom_right.apply_translation([length/2 - frame_thickness/2, 0, wall_thickness/2])
+    set_mesh_color(bottom_right, COLOR_FRAME)
+    meshes.append(bottom_right)
+    
+    # 3. 四壁棱廓框架（淡蓝色）
+    # 四角立柱
+    corner_posts = [
+        [-length/2 + frame_thickness/2, -width/2 + frame_thickness/2],
+        [length/2 - frame_thickness/2, -width/2 + frame_thickness/2],
+        [-length/2 + frame_thickness/2, width/2 - frame_thickness/2],
+        [length/2 - frame_thickness/2, width/2 - frame_thickness/2]
+    ]
+    for i, (x, y) in enumerate(corner_posts):
+        post = trimesh.creation.box(extents=[frame_thickness, frame_thickness, height])
+        post.apply_translation([x, y, height/2])
+        set_mesh_color(post, COLOR_FRAME)
+        meshes.append((f'corner_post_{i}', post))
+    
+    # 上下边框
+    # 前壁上下边框
+    front_top = trimesh.creation.box(extents=[length - 2*frame_thickness, frame_thickness, frame_thickness])
+    front_top.apply_translation([0, -width/2 + frame_thickness/2, height - frame_thickness/2])
+    set_mesh_color(front_top, COLOR_FRAME)
+    meshes.append(front_top)
+    
+    front_bottom = trimesh.creation.box(extents=[length - 2*frame_thickness, frame_thickness, frame_thickness])
+    front_bottom.apply_translation([0, -width/2 + frame_thickness/2, frame_thickness/2])
+    set_mesh_color(front_bottom, COLOR_FRAME)
+    meshes.append(front_bottom)
+    
+    # 后壁上下边框
+    back_top = trimesh.creation.box(extents=[length - 2*frame_thickness, frame_thickness, frame_thickness])
+    back_top.apply_translation([0, width/2 - frame_thickness/2, height - frame_thickness/2])
+    set_mesh_color(back_top, COLOR_FRAME)
+    meshes.append(back_top)
+    
+    back_bottom = trimesh.creation.box(extents=[length - 2*frame_thickness, frame_thickness, frame_thickness])
+    back_bottom.apply_translation([0, width/2 - frame_thickness/2, frame_thickness/2])
+    set_mesh_color(back_bottom, COLOR_FRAME)
+    meshes.append(back_bottom)
+    
+    # 左壁上下边框
+    left_top = trimesh.creation.box(extents=[frame_thickness, width - 2*frame_thickness, frame_thickness])
+    left_top.apply_translation([-length/2 + frame_thickness/2, 0, height - frame_thickness/2])
+    set_mesh_color(left_top, COLOR_FRAME)
+    meshes.append(left_top)
+    
+    left_bottom = trimesh.creation.box(extents=[frame_thickness, width - 2*frame_thickness, frame_thickness])
+    left_bottom.apply_translation([-length/2 + frame_thickness/2, 0, frame_thickness/2])
+    set_mesh_color(left_bottom, COLOR_FRAME)
+    meshes.append(left_bottom)
+    
+    # 右壁上下边框
+    right_top = trimesh.creation.box(extents=[frame_thickness, width - 2*frame_thickness, frame_thickness])
+    right_top.apply_translation([length/2 - frame_thickness/2, 0, height - frame_thickness/2])
+    set_mesh_color(right_top, COLOR_FRAME)
+    meshes.append(right_top)
+    
+    right_bottom = trimesh.creation.box(extents=[frame_thickness, width - 2*frame_thickness, frame_thickness])
+    right_bottom.apply_translation([length/2 - frame_thickness/2, 0, frame_thickness/2])
+    set_mesh_color(right_bottom, COLOR_FRAME)
+    meshes.append(right_bottom)
+    
+    # 4. 四壁表面面板（红色）
+    # 前壁面板
+    front_surface = trimesh.creation.box(
+        extents=[length - 2*frame_thickness, wall_thickness, height - 2*frame_thickness]
     )
-    front_wall.apply_translation([0, -width/2 + wall_thickness/2, height/2])
-    set_mesh_color(front_wall, COLOR_BOX)
-    meshes.append(front_wall)
+    front_surface.apply_translation([0, -width/2 + wall_thickness/2, height/2])
+    set_mesh_color(front_surface, COLOR_SURFACE)
+    meshes.append(front_surface)
     
-    # 后壁
-    back_wall = trimesh.creation.box(
-        extents=[length, wall_thickness, height]
+    # 后壁面板
+    back_surface = trimesh.creation.box(
+        extents=[length - 2*frame_thickness, wall_thickness, height - 2*frame_thickness]
     )
-    back_wall.apply_translation([0, width/2 - wall_thickness/2, height/2])
-    set_mesh_color(back_wall, COLOR_BOX)
-    meshes.append(back_wall)
+    back_surface.apply_translation([0, width/2 - wall_thickness/2, height/2])
+    set_mesh_color(back_surface, COLOR_SURFACE)
+    meshes.append(back_surface)
     
-    # 左壁
-    left_wall = trimesh.creation.box(
-        extents=[wall_thickness, width - 2*wall_thickness, height]
+    # 左壁面板
+    left_surface = trimesh.creation.box(
+        extents=[wall_thickness, width - 2*frame_thickness, height - 2*frame_thickness]
     )
-    left_wall.apply_translation([-length/2 + wall_thickness/2, 0, height/2])
-    set_mesh_color(left_wall, COLOR_BOX)
-    meshes.append(left_wall)
+    left_surface.apply_translation([-length/2 + wall_thickness/2, 0, height/2])
+    set_mesh_color(left_surface, COLOR_SURFACE)
+    meshes.append(left_surface)
     
-    # 右壁
-    right_wall = trimesh.creation.box(
-        extents=[wall_thickness, width - 2*wall_thickness, height]
+    # 右壁面板
+    right_surface = trimesh.creation.box(
+        extents=[wall_thickness, width - 2*frame_thickness, height - 2*frame_thickness]
     )
-    right_wall.apply_translation([length/2 - wall_thickness/2, 0, height/2])
-    set_mesh_color(right_wall, COLOR_BOX)
-    meshes.append(right_wall)
+    right_surface.apply_translation([length/2 - wall_thickness/2, 0, height/2])
+    set_mesh_color(right_surface, COLOR_SURFACE)
+    meshes.append(right_surface)
     
-    # 加强筋（侧面）
+    # 5. 加强筋（淡蓝色棱廓）
     rib_count = 3
     for i in range(rib_count):
         y_pos = -width/2 + wall_thickness + (width - 2*wall_thickness) * (i + 0.5) / rib_count
@@ -1146,7 +1336,7 @@ def generate_tote_box(length=600, width=400, height=300, color=None):
             extents=[wall_thickness + 5, 20, height * 0.8]
         )
         rib_left.apply_translation([-length/2 + wall_thickness/2, y_pos, height * 0.4])
-        set_mesh_color(rib_left, COLOR_BOX)
+        set_mesh_color(rib_left, COLOR_FRAME)
         meshes.append(rib_left)
         
         # 右侧面加强筋
@@ -1154,11 +1344,10 @@ def generate_tote_box(length=600, width=400, height=300, color=None):
             extents=[wall_thickness + 5, 20, height * 0.8]
         )
         rib_right.apply_translation([length/2 - wall_thickness/2, y_pos, height * 0.4])
-        set_mesh_color(rib_right, COLOR_BOX)
+        set_mesh_color(rib_right, COLOR_FRAME)
         meshes.append(rib_right)
     
-    # 把手（侧面凹槽）- 用稍暗的颜色表示
-    COLOR_HANDLE = [c * 0.8 for c in COLOR_BOX]
+    # 6. 把手（淡蓝色棱廓）
     handle_width = 80
     handle_height = 30
     # 左侧把手
@@ -1166,7 +1355,7 @@ def generate_tote_box(length=600, width=400, height=300, color=None):
         extents=[wall_thickness + 2, handle_width, handle_height]
     )
     handle_left.apply_translation([-length/2 + wall_thickness/2, 0, height * 0.6])
-    set_mesh_color(handle_left, COLOR_HANDLE)
+    set_mesh_color(handle_left, COLOR_FRAME)
     meshes.append(handle_left)
     
     # 右侧把手
@@ -1174,15 +1363,15 @@ def generate_tote_box(length=600, width=400, height=300, color=None):
         extents=[wall_thickness + 2, handle_width, handle_height]
     )
     handle_right.apply_translation([length/2 - wall_thickness/2, 0, height * 0.6])
-    set_mesh_color(handle_right, COLOR_HANDLE)
+    set_mesh_color(handle_right, COLOR_FRAME)
     meshes.append(handle_right)
     
-    # 标签卡槽（前面）
+    # 7. 标签卡槽（淡蓝色棱廓）
     label_slot = trimesh.creation.box(
         extents=[60, wall_thickness + 2, 30]
     )
     label_slot.apply_translation([0, -width/2 + wall_thickness/2, height * 0.75])
-    set_mesh_color(label_slot, [c * 0.9 for c in COLOR_BOX])
+    set_mesh_color(label_slot, COLOR_FRAME)
     meshes.append(label_slot)
     
     # 合并所有部件
@@ -1216,7 +1405,7 @@ def generate_reach_truck(length=2900, width=1100, height=2500, lift_height=9000)
     COLOR_ORANGE = [0.96, 0.62, 0.04]    # 工业橙 #F59E0B
     COLOR_BLACK = [0.15, 0.15, 0.15]      # 黑色部件
     COLOR_GREY = [0.4, 0.4, 0.4]          # 灰色金属
-    COLOR_SILVER = [0.75, 0.75, 0.75]     # 银色货叉
+    COLOR_FORK = [0.9, 0.2, 0.2]          # 红色货叉
     
     # 尺寸参数
     body_length = 1700      # 车身长度（不含货叉）
@@ -1294,14 +1483,14 @@ def generate_reach_truck(length=2900, width=1100, height=2500, lift_height=9000)
     set_mesh_color(carriage, COLOR_GREY)
     meshes.append(('carriage', carriage))
     
-    # 6. 货叉（2根，银色）
+    # 6. 货叉（2根，红色）
     fork_spacing = 300
     for i, y_offset in enumerate([-fork_spacing/2, fork_spacing/2]):
         fork = trimesh.creation.box(
             extents=[fork_length, fork_width, fork_thickness]
         )
         fork.apply_translation([-fork_length/2, y_offset, 750])
-        set_mesh_color(fork, COLOR_SILVER)
+        set_mesh_color(fork, COLOR_FORK)
         meshes.append((f'fork_{i}', fork))
     
     # 7. 后轮（2个）
@@ -1390,7 +1579,7 @@ def generate_counterbalance_forklift(length=3200, width=1200, height=2200, lift_
     COLOR_YELLOW = [0.98, 0.80, 0.08]     # 柠檬黄 #FACC15
     COLOR_BLACK = [0.15, 0.15, 0.15]       # 黑色部件
     COLOR_GREY = [0.4, 0.4, 0.4]           # 灰色金属
-    COLOR_SILVER = [0.75, 0.75, 0.75]      # 银色货叉
+    COLOR_FORK = [0.9, 0.2, 0.2]            # 红色货叉
     COLOR_TIRE = [0.2, 0.2, 0.2]           # 轮胎黑色
     
     # 尺寸参数
@@ -1478,14 +1667,14 @@ def generate_counterbalance_forklift(length=3200, width=1200, height=2200, lift_
     set_mesh_color(carriage, COLOR_GREY)
     meshes.append(('carriage', carriage))
     
-    # 8. 货叉（2根，银色）
+    # 8. 货叉（2根，红色）
     fork_spacing = 360
     for i, y_offset in enumerate([-fork_spacing/2, fork_spacing/2]):
         fork = trimesh.creation.box(
             extents=[fork_length, fork_width, fork_thickness]
         )
         fork.apply_translation([-fork_length/2, y_offset, 650])
-        set_mesh_color(fork, COLOR_SILVER)
+        set_mesh_color(fork, COLOR_FORK)
         meshes.append((f'fork_{i}', fork))
     
     # 9. 前轮（2个，大轮胎）
@@ -1570,7 +1759,7 @@ def generate_electric_pallet_truck(length=1850, width=680, height=1350):
     COLOR_RED = [0.94, 0.27, 0.27]       # 中国红 #EF4444
     COLOR_BLACK = [0.15, 0.15, 0.15]      # 黑色部件
     COLOR_GREY = [0.4, 0.4, 0.4]          # 灰色金属
-    COLOR_SILVER = [0.75, 0.75, 0.75]     # 银色货叉
+    COLOR_FORK = [0.9, 0.2, 0.2]            # 红色货叉
     COLOR_TIRE = [0.25, 0.25, 0.25]       # 轮胎灰色
     
     # 尺寸参数
@@ -1620,13 +1809,13 @@ def generate_electric_pallet_truck(length=1850, width=680, height=1350):
         set_mesh_color(grip, COLOR_BLACK)
         meshes.append((f'handle_grip_{i}', grip))
     
-    # 6. 货叉（2根，银色）
+    # 6. 货叉（2根，红色）
     for i, y_offset in enumerate([-fork_spacing/2, fork_spacing/2]):
         fork = trimesh.creation.box(
             extents=[fork_length, fork_width, fork_thickness]
         )
         fork.apply_translation([fork_length/2, y_offset, fork_thickness/2 + 85])
-        set_mesh_color(fork, COLOR_SILVER)
+        set_mesh_color(fork, COLOR_FORK)
         meshes.append((f'fork_{i}', fork))
     
     # 7. 货叉滚轮（每个货叉2个）
@@ -1703,7 +1892,8 @@ def generate_manual_pallet_jack(length=1550, width=550, height=1200):
     # 颜色定义
     COLOR_ORANGE = [0.98, 0.45, 0.09]     # 标准橙 #F97316
     COLOR_BLACK = [0.15, 0.15, 0.15]       # 黑色部件
-    COLOR_SILVER = [0.75, 0.75, 0.75]      # 银色货叉
+    COLOR_FORK = [0.9, 0.2, 0.2]            # 红色货叉
+    COLOR_GREY = [0.4, 0.4, 0.4]           # 灰色金属
     COLOR_NYLON = [0.3, 0.3, 0.3]          # 尼龙轮灰色
     
     # 尺寸参数
@@ -1723,10 +1913,10 @@ def generate_manual_pallet_jack(length=1550, width=550, height=1200):
     set_mesh_color(pump_body, COLOR_ORANGE)
     meshes.append(('pump_body', pump_body))
     
-    # 2. 液压油缸（银色圆柱）
+    # 2. 液压油缸（灰色圆柱）
     cylinder = trimesh.creation.cylinder(radius=40, height=150)
     cylinder.apply_translation([fork_length + pump_length/2 - 50, 0, pump_height + 50 + 75])
-    set_mesh_color(cylinder, COLOR_SILVER)
+    set_mesh_color(cylinder, COLOR_GREY)
     meshes.append(('hydraulic_cylinder', cylinder))
     
     # 3. 手柄杆（黑色，长杆）
@@ -1744,13 +1934,13 @@ def generate_manual_pallet_jack(length=1550, width=550, height=1200):
     set_mesh_color(handle_head, COLOR_BLACK)
     meshes.append(('handle_head', handle_head))
     
-    # 5. 货叉（2根，银色）
+    # 5. 货叉（2根，红色）
     for i, y_offset in enumerate([-fork_spacing/2, fork_spacing/2]):
         fork = trimesh.creation.box(
             extents=[fork_length, fork_width, fork_thickness]
         )
         fork.apply_translation([fork_length/2, y_offset, fork_thickness/2 + 85])
-        set_mesh_color(fork, COLOR_SILVER)
+        set_mesh_color(fork, COLOR_FORK)
         meshes.append((f'fork_{i}', fork))
     
     # 6. 前轮（小尼龙轮，每个货叉1个）
@@ -1781,7 +1971,7 @@ def generate_manual_pallet_jack(length=1550, width=550, height=1200):
         angle=np.pi/2, direction=[0, 1, 0], point=[0, 0, 0]
     ))
     connector.apply_translation([fork_length, 0, 100])
-    set_mesh_color(connector, COLOR_SILVER)
+    set_mesh_color(connector, COLOR_GREY)
     meshes.append(('connector', connector))
     
     # 使用Scene并应用坐标转换
@@ -1812,10 +2002,11 @@ def generate_picking_cart(length=900, width=450, height=1200, tiers=3):
     """
     meshes = []
     
-    # 颜色定义 - 镀铬银
-    COLOR_CHROME = [0.75, 0.75, 0.75]    # 银色 #C0C0C0
-    COLOR_DARK = [0.5, 0.5, 0.5]          # 深灰色连接件
-    COLOR_WHEEL = [0.25, 0.25, 0.25]      # 轮子灰色
+    # 颜色定义 - 新配色方案
+    COLOR_POST = [1.0, 0.0, 0.0]          # 红色立柱 #FF0000
+    COLOR_TIER = [1.0, 0.65, 0.0]         # 橙黄色层板 #FFA500
+    COLOR_WHEEL = [0.0, 0.0, 0.0]         # 黑色轮子 #000000
+    COLOR_DARK = [0.5, 0.5, 0.5]          # 深灰色连接件（保持不变）
     
     # 尺寸参数
     tube_radius = 12        # 立柱管径
@@ -1834,7 +2025,7 @@ def generate_picking_cart(length=900, width=450, height=1200, tiers=3):
     for i, (x, y) in enumerate(corner_positions):
         post = trimesh.creation.cylinder(radius=tube_radius, height=height - 100)
         post.apply_translation([x, y, (height - 100)/2 + 100])
-        set_mesh_color(post, COLOR_CHROME)
+        set_mesh_color(post, COLOR_POST)  # 红色立柱
         meshes.append((f'post_{i}', post))
     
     # 2. 三层网格层板
@@ -1847,25 +2038,25 @@ def generate_picking_cart(length=900, width=450, height=1200, tiers=3):
         # 前边
         front_bar = trimesh.creation.box(extents=[length, frame_thickness, tier_thickness])
         front_bar.apply_translation([0, -width/2 + frame_thickness/2, z_pos])
-        set_mesh_color(front_bar, COLOR_CHROME)
+        set_mesh_color(front_bar, COLOR_TIER)  # 橙黄色层板
         meshes.append((f'tier_{tier}_front', front_bar))
         
         # 后边
         back_bar = trimesh.creation.box(extents=[length, frame_thickness, tier_thickness])
         back_bar.apply_translation([0, width/2 - frame_thickness/2, z_pos])
-        set_mesh_color(back_bar, COLOR_CHROME)
+        set_mesh_color(back_bar, COLOR_TIER)  # 橙黄色层板
         meshes.append((f'tier_{tier}_back', back_bar))
         
         # 左边
         left_bar = trimesh.creation.box(extents=[frame_thickness, width - 2*frame_thickness, tier_thickness])
         left_bar.apply_translation([-length/2 + frame_thickness/2, 0, z_pos])
-        set_mesh_color(left_bar, COLOR_CHROME)
+        set_mesh_color(left_bar, COLOR_TIER)  # 橙黄色层板
         meshes.append((f'tier_{tier}_left', left_bar))
         
         # 右边
         right_bar = trimesh.creation.box(extents=[frame_thickness, width - 2*frame_thickness, tier_thickness])
         right_bar.apply_translation([length/2 - frame_thickness/2, 0, z_pos])
-        set_mesh_color(right_bar, COLOR_CHROME)
+        set_mesh_color(right_bar, COLOR_TIER)  # 橙黄色层板
         meshes.append((f'tier_{tier}_right', right_bar))
         
         # 网格（用多个细条模拟）
@@ -1874,52 +2065,41 @@ def generate_picking_cart(length=900, width=450, height=1200, tiers=3):
             x_pos = -length/2 + 50 + i * grid_spacing + grid_spacing/2
             grid_bar = trimesh.creation.box(extents=[8, width - 60, 5])
             grid_bar.apply_translation([x_pos, 0, z_pos + 5])
-            set_mesh_color(grid_bar, COLOR_CHROME)
+            set_mesh_color(grid_bar, COLOR_TIER)  # 橙黄色层板
             meshes.append((f'tier_{tier}_grid_{i}', grid_bar))
     
-    # 3. U型扶手（后侧）
-    handle_height = 1100
+    # 3. U型扶手（后侧）- 修复：扶手改为水平方向
     handle_radius = 15
+    handle_height = 1200  # 扶手高度
     
-    # 左侧扶手杆
-    left_handle = trimesh.creation.cylinder(radius=handle_radius, height=handle_height)
-    left_handle.apply_translation([-length/2 + 50, -width/2 + 50, handle_height/2 + 100])
-    set_mesh_color(left_handle, COLOR_CHROME)
+    # 左侧扶手杆 - 水平方向（沿X轴）
+    left_handle = trimesh.creation.cylinder(radius=handle_radius, height=length - 100)
+    left_handle.apply_transform(trimesh.transformations.rotation_matrix(
+        angle=np.pi/2, direction=[0, 1, 0], point=[0, 0, 0]  # 绕Y轴旋转90度，使其水平
+    ))
+    left_handle.apply_translation([0, -width/2 + 50, handle_height])
+    set_mesh_color(left_handle, COLOR_POST)  # 红色立柱
     meshes.append(('handle_left', left_handle))
     
-    # 右侧扶手杆
-    right_handle = trimesh.creation.cylinder(radius=handle_radius, height=handle_height)
-    right_handle.apply_translation([-length/2 + 50, width/2 - 50, handle_height/2 + 100])
-    set_mesh_color(right_handle, COLOR_CHROME)
+    # 右侧扶手杆 - 水平方向（沿X轴）
+    right_handle = trimesh.creation.cylinder(radius=handle_radius, height=length - 100)
+    right_handle.apply_transform(trimesh.transformations.rotation_matrix(
+        angle=np.pi/2, direction=[0, 1, 0], point=[0, 0, 0]  # 绕Y轴旋转90度，使其水平
+    ))
+    right_handle.apply_translation([0, width/2 - 50, handle_height])
+    set_mesh_color(right_handle, COLOR_POST)  # 红色立柱
     meshes.append(('handle_right', right_handle))
     
-    # 扶手横梁
+    # 扶手横梁 - 连接左右扶手（沿Y轴）
     handle_bar = trimesh.creation.cylinder(radius=handle_radius, height=width - 100)
     handle_bar.apply_transform(trimesh.transformations.rotation_matrix(
-        angle=np.pi/2, direction=[0, 0, 1], point=[0, 0, 0]
+        angle=np.pi/2, direction=[0, 0, 1], point=[0, 0, 0]  # 绕Z轴旋转90度
     ))
-    handle_bar.apply_translation([-length/2 + 50, 0, handle_height + 100])
-    set_mesh_color(handle_bar, COLOR_CHROME)
+    handle_bar.apply_translation([-length/2 + 50, 0, handle_height])
+    set_mesh_color(handle_bar, COLOR_POST)  # 红色立柱
     meshes.append(('handle_bar', handle_bar))
     
-    # 4. 底部横梁（连接立柱）
-    # 前横梁
-    front_beam = trimesh.creation.cylinder(radius=tube_radius, height=width - 2*tube_radius)
-    front_beam.apply_transform(trimesh.transformations.rotation_matrix(
-        angle=np.pi/2, direction=[0, 0, 1], point=[0, 0, 0]
-    ))
-    front_beam.apply_translation([0, 0, 100])
-    set_mesh_color(front_beam, COLOR_CHROME)
-    meshes.append(('front_beam', front_beam))
-    
-    # 后横梁
-    back_beam = trimesh.creation.cylinder(radius=tube_radius, height=width - 2*tube_radius)
-    back_beam.apply_transform(trimesh.transformations.rotation_matrix(
-        angle=np.pi/2, direction=[0, 0, 1], point=[0, 0, 0]
-    ))
-    back_beam.apply_translation([0, 0, 100])
-    set_mesh_color(back_beam, COLOR_CHROME)
-    meshes.append(('back_beam', back_beam))
+    # 4. 底部横梁已删除 - 避免与轮子冲突
     
     # 5. 万向轮（4个，带刹车）
     wheel_positions = [
@@ -2275,9 +2455,9 @@ def generate_curve_conveyor(width=1200, height=800, inner_radius=400, belt_width
     meshes = []
     
     # 颜色定义
-    COLOR_STEEL = [0.75, 0.75, 0.75]      # 不锈钢银 #C0C0C0
+    COLOR_STEEL = [0.9, 0.2, 0.2]         # 红色框架
     COLOR_BELT = [0.9, 0.3, 0.3]          # PVC红色
-    COLOR_GUARD = [0.7, 0.7, 0.7]         # 护栏银灰
+    COLOR_GUARD = [0.9, 0.2, 0.2]         # 红色护栏
     COLOR_MOTOR = [0.2, 0.2, 0.2]         # 电机黑色
     
     # 尺寸参数
@@ -3065,9 +3245,9 @@ def generate_cage_cart(length=800, width=600, height=1700):
     """
     meshes = []
     
-    # 颜色定义 - 物流蓝
-    COLOR_FRAME = [0.15, 0.39, 0.92]      # 物流蓝 #2563EB
-    COLOR_SHELF = [0.15, 0.39, 0.92]      # 层板蓝
+    # 颜色定义 - 红色
+    COLOR_FRAME = [0.9, 0.2, 0.2]         # 红色框架
+    COLOR_SHELF = [0.9, 0.2, 0.2]         # 红色层板
     COLOR_WHEEL = [0.3, 0.3, 0.3]         # 轮子灰
     COLOR_WHEEL_RED = [0.8, 0.2, 0.2]     # 红色刹车轮
     
@@ -3078,11 +3258,11 @@ def generate_cage_cart(length=800, width=600, height=1700):
     grid_spacing = 50                       # 网格间距
     wheel_radius = 62                       # 5寸轮半径
     
-    # 1. 底部平台（花纹钢板）
+    # 1. 底部平台（花纹钢板）- 降低高度使轮子着地
     base_platform = trimesh.creation.box(
         extents=[length, width, 30]
     )
-    base_platform.apply_translation([0, 0, 30])
+    base_platform.apply_translation([0, 0, 15])  # 平台底部在高度0，轮子可着地
     set_mesh_color(base_platform, COLOR_SHELF)
     meshes.append(('base_platform', base_platform))
     
@@ -3120,16 +3300,6 @@ def generate_cage_cart(length=800, width=600, height=1700):
             set_mesh_color(bar, COLOR_FRAME)
             meshes.append((f'front_grid_{i}', bar))
     
-    # 前面横杆（3根）
-    for h in [50, tier_height + 50, height - 50]:
-        cross_bar = trimesh.creation.cylinder(radius=6, height=width - 2*tube_radius)
-        cross_bar.apply_transform(trimesh.transformations.rotation_matrix(
-            angle=np.pi/2, direction=[0, 0, 1], point=[0, 0, 0]
-        ))
-        cross_bar.apply_translation([-length/2, 0, h])
-        set_mesh_color(cross_bar, COLOR_FRAME)
-        meshes.append((f'front_cross_{h}', cross_bar))
-    
     # 后面网格
     for i in range(int(width / grid_spacing) + 1):
         y_pos = -width/2 + i * grid_spacing
@@ -3138,16 +3308,6 @@ def generate_cage_cart(length=800, width=600, height=1700):
             bar.apply_translation([length/2, y_pos, front_grid_height/2 + 50])
             set_mesh_color(bar, COLOR_FRAME)
             meshes.append((f'back_grid_{i}', bar))
-    
-    # 后面横杆
-    for h in [50, tier_height + 50, height - 50]:
-        cross_bar = trimesh.creation.cylinder(radius=6, height=width - 2*tube_radius)
-        cross_bar.apply_transform(trimesh.transformations.rotation_matrix(
-            angle=np.pi/2, direction=[0, 0, 1], point=[0, 0, 0]
-        ))
-        cross_bar.apply_translation([length/2, 0, h])
-        set_mesh_color(cross_bar, COLOR_FRAME)
-        meshes.append((f'back_cross_{h}', cross_bar))
     
     # 左侧网格
     for i in range(int(length / grid_spacing) + 1):
@@ -3158,16 +3318,6 @@ def generate_cage_cart(length=800, width=600, height=1700):
             set_mesh_color(bar, COLOR_FRAME)
             meshes.append((f'left_grid_{i}', bar))
     
-    # 左侧横杆
-    for h in [50, tier_height + 50, height - 50]:
-        cross_bar = trimesh.creation.cylinder(radius=6, height=length - 2*tube_radius)
-        cross_bar.apply_transform(trimesh.transformations.rotation_matrix(
-            angle=np.pi/2, direction=[1, 0, 0], point=[0, 0, 0]
-        ))
-        cross_bar.apply_translation([0, -width/2, h])
-        set_mesh_color(cross_bar, COLOR_FRAME)
-        meshes.append((f'left_cross_{h}', cross_bar))
-    
     # 右侧网格
     for i in range(int(length / grid_spacing) + 1):
         x_pos = -length/2 + i * grid_spacing
@@ -3176,16 +3326,6 @@ def generate_cage_cart(length=800, width=600, height=1700):
             bar.apply_translation([x_pos, width/2, front_grid_height/2 + 50])
             set_mesh_color(bar, COLOR_FRAME)
             meshes.append((f'right_grid_{i}', bar))
-    
-    # 右侧横杆
-    for h in [50, tier_height + 50, height - 50]:
-        cross_bar = trimesh.creation.cylinder(radius=6, height=length - 2*tube_radius)
-        cross_bar.apply_transform(trimesh.transformations.rotation_matrix(
-            angle=np.pi/2, direction=[1, 0, 0], point=[0, 0, 0]
-        ))
-        cross_bar.apply_translation([0, width/2, h])
-        set_mesh_color(cross_bar, COLOR_FRAME)
-        meshes.append((f'right_cross_{h}', cross_bar))
     
     # 5. 折叠门（前面中间部分）
     door_width = 400

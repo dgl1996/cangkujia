@@ -393,6 +393,55 @@ function highlightAlignmentLine(lineId) {
   }
 }
 
+// 吸附时高亮对齐线（变绿）
+let snappedLineIdForMove = null;
+
+function highlightAlignmentLineForSnap(lineId, isGreen) {
+  // 如果已经高亮同一条线，不需要重复设置
+  if (snappedLineIdForMove === lineId && isGreen) return;
+  
+  // 先恢复之前高亮的线
+  if (snappedLineIdForMove && snappedLineIdForMove !== lineId) {
+    const oldLineObject = alignmentLineObjects.get(snappedLineIdForMove);
+    if (oldLineObject) {
+      oldLineObject.material = createAlignmentLineMaterial();
+      oldLineObject.computeLineDistances();
+    }
+  }
+  
+  // 高亮新的线
+  if (lineId && isGreen) {
+    const lineObject = alignmentLineObjects.get(lineId);
+    if (lineObject) {
+      // 绿色高亮材质（表示已吸附）
+      const greenMaterial = new THREE.LineBasicMaterial({
+        color: 0x00ff00, // 绿色
+        linewidth: 4,
+        transparent: true,
+        opacity: 1.0
+      });
+      lineObject.material = greenMaterial;
+      console.log('🟢 对齐线已变绿（吸附）:', lineId);
+    }
+    snappedLineIdForMove = lineId;
+  } else if (!isGreen) {
+    snappedLineIdForMove = null;
+  }
+}
+
+// 恢复所有对齐线颜色（红色虚线）
+function restoreAllAlignmentLineColors() {
+  if (snappedLineIdForMove) {
+    const lineObject = alignmentLineObjects.get(snappedLineIdForMove);
+    if (lineObject) {
+      lineObject.material = createAlignmentLineMaterial();
+      lineObject.computeLineDistances();
+    }
+    snappedLineIdForMove = null;
+    console.log('🔴 对齐线颜色已恢复');
+  }
+}
+
 // 创建对齐线几何体（无限长直线）
 function createAlignmentLineGeometry(start, end) {
   console.log('创建对齐线几何体，起点:', start, '终点:', end);
@@ -1023,6 +1072,144 @@ function applySnap(position, object, moveDirection) {
 // 获取当前吸附状态
 function getSnapState() {
   return { ...currentSnapState };
+}
+
+// 步骤1：获取对象的世界坐标边界框（强制更新矩阵）
+function getObjectWorldBounds(object) {
+  if (!object) return null;
+  
+  // 强制更新世界矩阵，确保边界框准确
+  object.updateMatrixWorld();
+  
+  // 使用 Box3 计算世界坐标边界
+  const box = new THREE.Box3().setFromObject(object);
+  
+  console.log('📦 边界框计算:', {
+    min: { x: box.min.x.toFixed(2), z: box.min.z.toFixed(2) },
+    max: { x: box.max.x.toFixed(2), z: box.max.z.toFixed(2) }
+  });
+  
+  return {
+    min: box.min,
+    max: box.max,
+    center: box.getCenter(new THREE.Vector3())
+  };
+}
+
+// 步骤2：获取对象4条边的中点（世界坐标）
+function getObjectEdgeMidpoints(object) {
+  const bounds = getObjectWorldBounds(object);
+  if (!bounds) return null;
+  
+  // 4条边的中点（XZ平面，Y=0）
+  const edges = {
+    front: {  // Z正向（前面）
+      x: (bounds.min.x + bounds.max.x) / 2,
+      z: bounds.max.z,
+      name: 'front'
+    },
+    back: {   // Z负向（后面）
+      x: (bounds.min.x + bounds.max.x) / 2,
+      z: bounds.min.z,
+      name: 'back'
+    },
+    left: {   // X负向（左面）
+      x: bounds.min.x,
+      z: (bounds.min.z + bounds.max.z) / 2,
+      name: 'left'
+    },
+    right: {  // X正向（右面）
+      x: bounds.max.x,
+      z: (bounds.min.z + bounds.max.z) / 2,
+      name: 'right'
+    }
+  };
+  
+  console.log('📐 边中点计算:', {
+    front: `(${edges.front.x.toFixed(2)}, ${edges.front.z.toFixed(2)})`,
+    back: `(${edges.back.x.toFixed(2)}, ${edges.back.z.toFixed(2)})`,
+    left: `(${edges.left.x.toFixed(2)}, ${edges.left.z.toFixed(2)})`,
+    right: `(${edges.right.x.toFixed(2)}, ${edges.right.z.toFixed(2)})`
+  });
+  
+  return edges;
+}
+
+// 步骤3：检查对齐线吸附（重构版）
+function checkAlignmentLineSnap(objectPosition, object, threshold = 10) {
+  if (!objectPosition || !object || alignmentLines.length === 0) {
+    return null;
+  }
+  
+  // 获取4条边的中点
+  const edges = getObjectEdgeMidpoints(object);
+  if (!edges) return null;
+  
+  let bestSnap = null;
+  let minDistance = threshold;
+  
+  // 遍历4条边
+  for (const [edgeName, edgePoint] of Object.entries(edges)) {
+    // 遍历所有对齐线
+    for (const line of alignmentLines) {
+      if (!line.visible) continue;
+      
+      const lineStart = line.originalStart;
+      const lineEnd = line.originalEnd;
+      
+      // 创建向量
+      const point = new THREE.Vector3(edgePoint.x, 0, edgePoint.z);
+      const line0 = new THREE.Vector3(lineStart.x, 0, lineStart.z);
+      const line1 = new THREE.Vector3(lineEnd.x, 0, lineEnd.z);
+      
+      // 计算点到无限长直线的投影（关键修复：使用直线而非线段）
+      const lineVector = new THREE.Vector3().subVectors(line1, line0);
+      const lineLength = lineVector.length();
+      
+      if (lineLength < 0.001) continue;
+      
+      const lineDir = lineVector.clone().normalize();
+      const pointVector = new THREE.Vector3().subVectors(point, line0);
+      const projection = pointVector.dot(lineDir);
+      
+      // 关键修复：始终使用投影点（不考虑线段端点限制）
+      // 这样即使货架在对齐线延长线上也能触发吸附
+      const closestPoint = new THREE.Vector3()
+        .copy(line0)
+        .add(lineDir.clone().multiplyScalar(projection));
+      
+      // 计算距离（点到直线的垂直距离）
+      const distance = point.distanceTo(closestPoint);
+      
+      console.log(`🔍 检测: 边=${edgeName}, 距离=${distance.toFixed(2)}cm, 阈值=${threshold}cm`);
+      
+      // 记录最佳吸附
+      if (distance < minDistance) {
+        minDistance = distance;
+        bestSnap = {
+          edgeName: edgeName,
+          edgePoint: edgePoint,
+          snapPoint: closestPoint,
+          lineId: line.id,
+          lineName: line.name,
+          offset: {
+            x: closestPoint.x - edgePoint.x,
+            z: closestPoint.z - edgePoint.z
+          }
+        };
+      }
+    }
+  }
+  
+  if (bestSnap) {
+    console.log('🎯 最佳吸附:', {
+      edge: bestSnap.edgeName,
+      distance: minDistance.toFixed(2) + 'cm',
+      offset: `(${bestSnap.offset.x.toFixed(2)}, ${bestSnap.offset.z.toFixed(2)})`
+    });
+  }
+  
+  return bestSnap;
 }
 
 // 设置吸附配置
@@ -1665,7 +1852,7 @@ const modelDatabase = {
   'C23-3': {
     shortId: 'C23-3', longId: 'high-duty-C23-3',
     name: '3层高位货架-L2.3xD1.0xH3.0',
-    category: 'medium-shelf', fileName: 'high-duty-C23-3.glb',
+    category: 'high-shelf', fileName: 'high-duty-C23-3.glb',
     params: { length: 2300, width: 1000, height: 3000, levels: 3, type: 'shelf', color: 0xFF4500 }
   },
   'B20-4-pair': {
@@ -1689,7 +1876,7 @@ const modelDatabase = {
   'C23-3-pair': {
     shortId: 'C23-3-pair', longId: 'high-duty-C23-3-pair',
     name: '3层高位货架-L2.3xD1.0xH3.0-配组',
-    category: 'medium-shelf', fileName: 'high-duty-C23-3-pair.glb',
+    category: 'high-shelf', fileName: 'high-duty-C23-3-pair.glb',
     params: { length: 2300, width: 2000, height: 3000, levels: 3, type: 'shelf', color: 0xFF4500 }
   },
 
@@ -2622,20 +2809,40 @@ function onClick(event) {
   });
   
   if (intersects.length > 0) {
-    const closestObject = intersects[0].object;
-    console.log('最近对象:', closestObject.uuid, '类型:', closestObject.userData.type || '未知');
-    let rootObject = closestObject;
-    while (rootObject.parent && rootObject.parent !== scene) {
-      rootObject = rootObject.parent;
+    // 优先查找门/窗对象（它们可能在墙体后面，但应该优先被选中）
+    let targetObject = null;
+    let targetRootObject = null;
+    
+    for (const intersect of intersects) {
+      let rootObj = intersect.object;
+      while (rootObj.parent && rootObj.parent !== scene) {
+        rootObj = rootObj.parent;
+      }
+      // 如果是门或窗，优先选择
+      if (rootObj.userData.type === 'door' || rootObj.userData.type === 'window') {
+        targetObject = intersect.object;
+        targetRootObject = rootObj;
+        break;
+      }
     }
     
-    console.log('根对象:', rootObject.uuid, '类型:', rootObject.userData.type || '未知');
+    // 如果没有找到门/窗，使用最近的对象
+    if (!targetObject) {
+      targetObject = intersects[0].object;
+      targetRootObject = targetObject;
+      while (targetRootObject.parent && targetRootObject.parent !== scene) {
+        targetRootObject = targetRootObject.parent;
+      }
+    }
+    
+    console.log('选中对象:', targetObject.uuid, '类型:', targetObject.userData.type || '未知');
+    console.log('根对象:', targetRootObject.uuid, '类型:', targetRootObject.userData.type || '未知');
     
     if (event.ctrlKey || event.metaKey) {
-      toggleObjectSelection(rootObject);
+      toggleObjectSelection(targetRootObject);
     } else {
       clearSelection();
-      selectObject(rootObject);
+      selectObject(targetRootObject);
     }
   } else {
     console.log('没有点击到任何对象');
@@ -2756,6 +2963,9 @@ function moveSelectedObjects(delta) {
     }
   }
   
+  // 确保delta的Y分量为0，避免对象陷入地面
+  delta.y = 0;
+  
   selectedObjects.forEach(obj => {
     obj.position.add(delta);
   });
@@ -2799,22 +3009,53 @@ function onMouseMove(event) {
     return;
   }
   
-  // 移动模式
+  // 移动模式（通过【移动】按钮触发）+ 吸附功能
   if (isMoving && selectedObjects.length > 0) {
-    if (raycaster.ray.intersectPlane(movePlane, moveIntersectPoint)) {
-      const targetPosition = moveIntersectPoint.clone().sub(moveOffset);
-      targetPosition.x = Math.round(targetPosition.x * 10) / 10;
-      targetPosition.z = Math.round(targetPosition.z * 10) / 10;
-
-      const firstObj = selectedObjects[0];
-      const deltaX = targetPosition.x - firstObj.position.x;
-      const deltaZ = targetPosition.z - firstObj.position.z;
+    const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const intersectPoint = new THREE.Vector3();
+    
+    if (raycaster.ray.intersectPlane(groundPlane, intersectPoint)) {
+      // 防御性检查
+      if (Math.abs(intersectPoint.x) > 100000 || Math.abs(intersectPoint.z) > 100000) {
+        console.error('❌ 移动模式坐标异常:', intersectPoint);
+        return;
+      }
       
-      console.log('🟡 移动中:', targetPosition.x, targetPosition.z, 'delta:', deltaX, deltaZ);
+      // 对象中心直接跟随鼠标位置（无偏移）
+      let targetPosition = new THREE.Vector3(
+        Math.round(intersectPoint.x * 10) / 10,
+        0,
+        Math.round(intersectPoint.z * 10) / 10
+      );
 
-      // 调用移动函数
-      const delta = new THREE.Vector3(deltaX, 0, deltaZ);
-      moveSelectedObjects(delta);
+      // 步骤4：直接将对象移动到目标位置（对象中心跟随鼠标）
+      const firstObj = selectedObjects[0];
+      // 只更新X和Z坐标，保持Y坐标不变（避免立柱等对象陷入地面）
+      firstObj.position.x = targetPosition.x;
+      firstObj.position.z = targetPosition.z;
+      
+      // 步骤4：计算吸附（基于对象边界边线）
+      let snappedLineId = null;
+      if (alignmentLines.length > 0) {
+        const snapResult = checkAlignmentLineSnap(targetPosition, firstObj, 10);
+        if (snapResult) {
+          // 关键修正：将对象整体偏移，使边线对齐到吸附点
+          firstObj.position.x += snapResult.offset.x;
+          firstObj.position.z += snapResult.offset.z;
+          snappedLineId = snapResult.lineId;
+          console.log('🎯 吸附到对齐线:', snapResult.lineId, '边:', snapResult.edgeName);
+        }
+      }
+      
+      console.log('🟡 移动中:', targetPosition.x, targetPosition.z);
+
+      // 视觉反馈：高亮吸附的对齐线（变绿）
+      if (snappedLineId) {
+        highlightAlignmentLineForSnap(snappedLineId, true);
+      } else {
+        // 恢复所有对齐线颜色
+        restoreAllAlignmentLineColors();
+      }
     }
     updateCornerMarkers();
     return;
@@ -2880,27 +3121,8 @@ function onMouseDown(event) {
   
   raycaster.setFromCamera(mouse, camera);
   
-  // 如果点击了选中的对象，开始拖拽
-  if (selectedObjects.length > 0) {
-    const intersects = raycaster.intersectObjects(selectedObjects, true);
-    if (intersects.length > 0) {
-      isMoving = true;
-      
-      // 创建移动平面
-      const firstObj = selectedObjects[0];
-      movePlane.setFromNormalAndCoplanarPoint(
-        new THREE.Vector3(0, 1, 0),
-        firstObj.position
-      );
-      
-      // 计算moveOffset
-      raycaster.ray.intersectPlane(movePlane, moveIntersectPoint);
-      moveOffset.subVectors(moveIntersectPoint, firstObj.position);
-      
-      container.value.style.cursor = 'move';
-      console.log('🟢 拖拽开始');
-    }
-  }
+  // 注意：直接拖拽功能已禁用，只能通过【移动】按钮来移动对象
+  // 这样可以避免与OrbitControls的左键旋转冲突
 }
 
 function onMouseUp() {
@@ -2911,6 +3133,9 @@ function onMouseUp() {
     
     // 移动完成时隐藏吸附提示
     hideSnapIndicator();
+    
+    // 移动完成时恢复对齐线颜色
+    restoreAllAlignmentLineColors();
   }
   if (isRotating) {
     isRotating = false;
@@ -3042,11 +3267,11 @@ function onDrop(event) {
   
   // 检查是否是门或窗
   const objectType = event.dataTransfer.getData('objectType');
-  if (objectType === 'door' || objectType === 'window') {
-    // 检测墙体
+  if (objectType === 'door' || objectType === 'liftDoor' || objectType === 'liftDoor27' || objectType === 'window') {
+    // 检测墙体（支持仓库墙体和办公区墙体）
     raycaster.setFromCamera(new THREE.Vector2(mouseX, mouseY), camera);
     const wallIntersects = raycaster.intersectObjects(
-      sceneObjects.filter(obj => obj.userData.type === 'wall'),
+      sceneObjects.filter(obj => obj.userData.type === 'wall' || obj.userData.type === 'officeWall'),
       false
     );
     
@@ -3066,20 +3291,39 @@ function onDrop(event) {
       const toIntersect = new THREE.Vector3().subVectors(intersectPoint, wallCenter);
       const position = toIntersect.dot(wallDirection) / 100; // 转换为米
       
-      if (objectType === 'door') {
+      if (objectType === 'door' || objectType === 'liftDoor' || objectType === 'liftDoor27') {
         const width = parseFloat(event.dataTransfer.getData('doorWidth')) || 2;
         const height = parseFloat(event.dataTransfer.getData('doorHeight')) || 2.2;
-        createDoor(wallIndex, position, { width, height });
+        createDoor(wallIndex, position, { width, height }, wall.userData.type);
       } else if (objectType === 'window') {
         const width = parseFloat(event.dataTransfer.getData('windowWidth')) || 1.5;
         const height = parseFloat(event.dataTransfer.getData('windowHeight')) || 1.2;
         const sillHeight = parseFloat(event.dataTransfer.getData('windowSillHeight')) || 1.0;
-        createWindow(wallIndex, position, { width, height, sillHeight });
+        createWindow(wallIndex, position, { width, height, sillHeight }, wall.userData.type);
       }
     }
     return;
   }
-  
+
+  // 处理立柱
+  if (objectType === 'pillar') {
+    // 发射射线检测地面
+    raycaster.setFromCamera(new THREE.Vector2(mouseX, mouseY), camera);
+    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const intersectPoint = new THREE.Vector3();
+
+    if (raycaster.ray.intersectPlane(plane, intersectPoint)) {
+      // 对齐到网格
+      intersectPoint.x = Math.round(intersectPoint.x * 10) / 10;
+      intersectPoint.z = Math.round(intersectPoint.z * 10) / 10;
+
+      // 创建立柱
+      createPillar({ x: intersectPoint.x, z: intersectPoint.z });
+      console.log('立柱放置到位置:', intersectPoint);
+    }
+    return;
+  }
+
   // 处理普通模型
   const modelName = event.dataTransfer.getData('modelName');
   if (!modelName) return;
@@ -3524,20 +3768,34 @@ function createForkliftModel(group, length, width, height, color) {
 
 // 创建推车模型
 function createCartModel(group, length, width, height, color) {
-  const frameMaterial = new THREE.MeshStandardMaterial({ color: color, roughness: 0.5, metalness: 0.4 });
-  const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8, metalness: 0.2 });
+  // 修改：为不同部件定义不同材质
+  const postMaterial = new THREE.MeshStandardMaterial({ 
+    color: 0xFF0000,  // 红色立柱
+    roughness: 0.5, 
+    metalness: 0.4 
+  });
+  const deckMaterial = new THREE.MeshStandardMaterial({ 
+    color: 0xFFA500,  // 橙黄色层板
+    roughness: 0.5, 
+    metalness: 0.4 
+  });
+  const wheelMaterial = new THREE.MeshStandardMaterial({ 
+    color: 0x000000,  // 黑色轮子
+    roughness: 0.8, 
+    metalness: 0.2 
+  });
   
-  // 层板
+  // 层板 - 使用橙黄色材质
   const levels = 3;
   for (let i = 0; i < levels; i++) {
     const y = (i + 1) * height / (levels + 1);
     const deckGeo = new THREE.BoxGeometry(length, 2, width);
-    const deck = new THREE.Mesh(deckGeo, frameMaterial);
+    const deck = new THREE.Mesh(deckGeo, deckMaterial);
     deck.position.y = y;
     group.add(deck);
   }
   
-  // 立柱
+  // 立柱 - 使用红色材质
   const postGeo = new THREE.BoxGeometry(3, height, 3);
   const postPositions = [
     { x: -length/2 + 5, z: -width/2 + 5 },
@@ -3546,12 +3804,12 @@ function createCartModel(group, length, width, height, color) {
     { x: length/2 - 5, z: width/2 - 5 }
   ];
   postPositions.forEach(pos => {
-    const post = new THREE.Mesh(postGeo, frameMaterial);
+    const post = new THREE.Mesh(postGeo, postMaterial);
     post.position.set(pos.x, height/2, pos.z);
     group.add(post);
   });
   
-  // 轮子
+  // 轮子 - 使用黑色材质
   const wheelGeo = new THREE.CylinderGeometry(5, 5, 3, 16);
   wheelGeo.rotateZ(Math.PI / 2);
   postPositions.forEach(pos => {
@@ -3963,7 +4221,34 @@ function clearAllZones() {
     }
   });
   zones = [];
-  console.log('清空所有区域');
+  
+  // 清理办公区墙体及其门/窗
+  const officeWallsToRemove = sceneObjects.filter(obj => 
+    obj.userData.type === 'officeWall'
+  );
+  
+  officeWallsToRemove.forEach(wall => {
+    // 清理墙体上的门/窗
+    if (wall.userData.openings && wall.userData.openings.length > 0) {
+      wall.userData.openings.forEach(opening => {
+        if (opening.mesh) {
+          scene.remove(opening.mesh);
+          const openingIndex = sceneObjects.indexOf(opening.mesh);
+          if (openingIndex > -1) {
+            sceneObjects.splice(openingIndex, 1);
+          }
+        }
+      });
+    }
+    // 清理墙体
+    scene.remove(wall);
+    const wallIndex = sceneObjects.indexOf(wall);
+    if (wallIndex > -1) {
+      sceneObjects.splice(wallIndex, 1);
+    }
+  });
+  
+  console.log('清空所有区域，清理了', officeWallsToRemove.length, '个办公区墙体');
 }
 
 // 删除指定区域
@@ -3999,7 +4284,34 @@ function deleteZone(zoneId) {
       console.log('已删除名称标签:', label.userData.text);
     });
     
-    console.log('删除区域完成:', zoneId, '同时删除', labelsToRemove.length, '个名称标签');
+    // 删除关联的办公区墙体及其门/窗
+    const officeWallsToRemove = sceneObjects.filter(obj => 
+      obj.userData.type === 'officeWall' && obj.userData.zoneId === zoneId
+    );
+    console.log('找到', officeWallsToRemove.length, '个需要删除的办公区墙体');
+    
+    officeWallsToRemove.forEach(wall => {
+      // 清理墙体上的门/窗
+      if (wall.userData.openings && wall.userData.openings.length > 0) {
+        wall.userData.openings.forEach(opening => {
+          if (opening.mesh) {
+            scene.remove(opening.mesh);
+            const openingIndex = sceneObjects.indexOf(opening.mesh);
+            if (openingIndex > -1) {
+              sceneObjects.splice(openingIndex, 1);
+            }
+          }
+        });
+      }
+      // 清理墙体
+      scene.remove(wall);
+      const wallIndex = sceneObjects.indexOf(wall);
+      if (wallIndex > -1) {
+        sceneObjects.splice(wallIndex, 1);
+      }
+    });
+    
+    console.log('删除区域完成:', zoneId, '同时删除', labelsToRemove.length, '个名称标签和', officeWallsToRemove.length, '个办公区墙体');
   } else {
     console.warn('未找到功能区:', zoneId);
   }
@@ -4007,7 +4319,8 @@ function deleteZone(zoneId) {
 
 // 获取场景对象
 function getSceneObjects() {
-  return sceneObjects.filter(obj => obj.userData.modelType || obj.userData.type);
+  return sceneObjects.filter(obj => obj.userData.modelType || obj.userData.modelName ||
+                                     obj.userData.type === 'door' || obj.userData.type === 'window');
 }
 
 // 获取选中对象数量
@@ -4362,10 +4675,124 @@ function createWarehouseFromShape(shapePoints, config, zones = [], textLabels = 
   return walls;
 }
 
+// 创建立柱
+function createPillar(position, pillarHeight = 500) {
+  const width = 40;  // cm
+  const depth = 30;  // cm
+  const height = pillarHeight; // 默认500cm，可调整
+  
+  // 创建Group作为立柱根对象
+  const pillarGroup = new THREE.Group();
+  
+  // 创建立柱主体几何体 - 红色
+  const pillarGeometry = new THREE.BoxGeometry(width, height, depth);
+  const pillarMaterial = new THREE.MeshStandardMaterial({
+    color: 0xFF0000,  // 红色
+    transparent: true,
+    opacity: 0.9,
+    roughness: 0.6,
+    metalness: 0.2
+  });
+  const pillarMesh = new THREE.Mesh(pillarGeometry, pillarMaterial);
+  pillarGroup.add(pillarMesh);
+  
+  // 创建白色棱廓线
+  const edges = new THREE.EdgesGeometry(pillarGeometry);
+  const lineMaterial = new THREE.LineBasicMaterial({ color: 0xFFFFFF, linewidth: 2 });
+  const wireframe = new THREE.LineSegments(edges, lineMaterial);
+  pillarGroup.add(wireframe);
+  
+  // 设置位置 - 底部对齐地面
+  const baseHeight = warehouseConfig?.baseHeight || 0;
+  pillarGroup.position.set(position.x, baseHeight + height / 2, position.z);
+  
+  // 设置 userData
+  pillarGroup.userData.type = 'pillar';
+  pillarGroup.userData.modelType = 'pillar';
+  pillarGroup.userData.name = '立柱';
+  pillarGroup.userData.width = width;
+  pillarGroup.userData.height = height;
+  pillarGroup.userData.depth = depth;
+  pillarGroup.userData.editableHeight = true;  // 标记可编辑高度
+  pillarGroup.userData.baseHeight = baseHeight;
+  
+  // 添加到场景
+  scene.add(pillarGroup);
+  sceneObjects.push(pillarGroup);
+  
+  console.log('创建立柱成功:', { x: position.x, z: position.z, width, height, depth });
+  
+  return pillarGroup;
+}
+
+// 更新立柱高度
+function updatePillarHeight(pillar, newHeight) {
+  if (!pillar || pillar.userData.type !== 'pillar') {
+    console.error('无效的立柱对象');
+    return false;
+  }
+  
+  // 高度范围限制：300cm - 1200cm
+  const minHeight = 300;
+  const maxHeight = 1200;
+  const clampedHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
+  
+  const width = pillar.userData.width || 40;
+  const depth = pillar.userData.depth || 30;
+  const baseHeight = pillar.userData.baseHeight || 0;
+  
+  // 清除旧的子对象
+  while (pillar.children.length > 0) {
+    const child = pillar.children[0];
+    if (child.geometry) child.geometry.dispose();
+    if (child.material) child.material.dispose();
+    pillar.remove(child);
+  }
+  
+  // 创建新的主体几何体
+  const pillarGeometry = new THREE.BoxGeometry(width, clampedHeight, depth);
+  const pillarMaterial = new THREE.MeshStandardMaterial({
+    color: 0xFF0000,
+    transparent: true,
+    opacity: 0.9,
+    roughness: 0.6,
+    metalness: 0.2
+  });
+  const pillarMesh = new THREE.Mesh(pillarGeometry, pillarMaterial);
+  pillar.add(pillarMesh);
+  
+  // 创建新的棱廓线
+  const edges = new THREE.EdgesGeometry(pillarGeometry);
+  const lineMaterial = new THREE.LineBasicMaterial({ color: 0xFFFFFF, linewidth: 2 });
+  const wireframe = new THREE.LineSegments(edges, lineMaterial);
+  pillar.add(wireframe);
+  
+  // 更新位置和userData
+  pillar.position.y = baseHeight + clampedHeight / 2;
+  pillar.userData.height = clampedHeight;
+  
+  console.log('立柱高度更新成功:', { newHeight: clampedHeight });
+  return true;
+}
+
 // 在3D场景中创建功能区域
 function createZonesIn3D(zonesData, baseHeight, scaleFactor) {
   // 清空现有的zones数组并重新填充
   zones = [];
+  
+  // 获取仓库墙体高度和材质参数
+  const wallHeight = warehouseConfig?.height || 500; // 默认5米
+  const wallThickness = warehouseConfig?.wallThickness || 20; // 默认20cm
+  const wallOpacity = warehouseConfig?.wallOpacity !== undefined ? warehouseConfig.wallOpacity : 0.8;
+  
+  // 创建墙体材质（与仓库墙体相同）
+  const wallMaterial = new THREE.MeshStandardMaterial({ 
+    color: 0x888888, 
+    transparent: true,
+    opacity: wallOpacity,
+    roughness: 0.9,
+    metalness: 0.1
+  });
   
   zonesData.forEach((zone, index) => {
     if (!zone.points || zone.points.length < 3) return;
@@ -4412,8 +4839,69 @@ function createZonesIn3D(zonesData, baseHeight, scaleFactor) {
     const fontSize = Math.max(48, Math.min(96, minDimension / 5)); // 根据区域大小自动调整字体
     createZoneLabel(zone.name, centerX, baseHeight + Math.max(200, minDimension / 3), centerZ, borderColor, fontSize, width, depth, zone.id);
     
-    console.log(`创建功能区 ${index}: ${zone.name}, 尺寸: ${(width/100).toFixed(1)}m x ${(depth/100).toFixed(1)}m, 字体: ${fontSize}px`);
+    // 为办公区生成墙体
+    if (zone.type === 'office' && zone.points && zone.points.length >= 3) {
+      createOfficeZoneWalls(zone, zone.points, baseHeight, scaleFactor, wallHeight, wallThickness, wallMaterial);
+    }
+    
+    console.log(`创建功能区 ${index}: ${zone.name}, 类型: ${zone.type || 'unknown'}, 尺寸: ${(width/100).toFixed(1)}m x ${(depth/100).toFixed(1)}m, 字体: ${fontSize}px`);
   });
+}
+
+// 为办公区创建墙体
+function createOfficeZoneWalls(zone, points, baseHeight, scaleFactor, wallHeight, wallThickness, wallMaterial) {
+  console.log(`为办公区 ${zone.name} 创建墙体，点数: ${points.length}`);
+  
+  // 确保点是闭合的（首尾相连）
+  let wallPoints = [...points];
+  if (wallPoints.length > 0) {
+    const firstPoint = wallPoints[0];
+    const lastPoint = wallPoints[wallPoints.length - 1];
+    // 如果首尾不相连，添加闭合点
+    if (firstPoint.x !== lastPoint.x || firstPoint.y !== lastPoint.y) {
+      wallPoints.push(firstPoint);
+    }
+  }
+  
+  // 为每条边创建墙体
+  for (let i = 0; i < wallPoints.length - 1; i++) {
+    const p1 = wallPoints[i];
+    const p2 = wallPoints[i + 1];
+    
+    // 计算墙体参数
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    const length = Math.sqrt(dx * dx + dy * dy) * scaleFactor;
+    const angle = Math.atan2(dy, dx);
+    
+    // 墙体中心点
+    const centerX = (p1.x + p2.x) / 2 * scaleFactor;
+    const centerZ = (p1.y + p2.y) / 2 * scaleFactor;
+    
+    // 创建墙体几何体
+    const wallGeometry = new THREE.BoxGeometry(length, wallHeight, wallThickness);
+    const wallMesh = new THREE.Mesh(wallGeometry, wallMaterial);
+    
+    // 设置位置和旋转
+    wallMesh.position.set(centerX, baseHeight + wallHeight / 2, centerZ);
+    wallMesh.rotation.y = -angle;
+    
+    // 存储墙体信息
+    wallMesh.userData.type = 'officeWall';
+    wallMesh.userData.zoneId = zone.id;
+    wallMesh.userData.wallIndex = i;
+    wallMesh.userData.startPoint = p1;
+    wallMesh.userData.endPoint = p2;
+    wallMesh.userData.length = length;
+    wallMesh.userData.baseHeight = baseHeight;
+    wallMesh.userData.height = wallHeight;
+    wallMesh.userData.openings = []; // 存储门窗等开口
+    
+    scene.add(wallMesh);
+    sceneObjects.push(wallMesh);
+    
+    console.log(`创建办公区墙体 ${i}: 长度=${(length/100).toFixed(2)}m, 角度=${(angle * 180 / Math.PI).toFixed(2)}°`);
+  }
 }
 
 // 创建虚线边框 - 水平躺在地面上
@@ -4590,10 +5078,11 @@ function calculateBounds(points) {
 }
 
 // 创建门并吸附到墙体
-function createDoor(wallIndex, position, config = {}) {
-  const wall = sceneObjects.find(obj => obj.userData.type === 'wall' && obj.userData.wallIndex === wallIndex);
+function createDoor(wallIndex, position, config = {}, wallType = 'wall') {
+  // 支持普通墙体和办公区墙体
+  const wall = sceneObjects.find(obj => obj.userData.type === wallType && obj.userData.wallIndex === wallIndex);
   if (!wall) {
-    console.error('未找到指定墙体:', wallIndex);
+    console.error('未找到指定墙体:', wallIndex, '类型:', wallType);
     return null;
   }
 
@@ -4618,8 +5107,8 @@ function createDoor(wallIndex, position, config = {}) {
 
   // 创建门板
   const doorGeometry = new THREE.BoxGeometry(doorWidth, doorHeight, wallThickness);
-  const doorMaterial = new THREE.MeshStandardMaterial({ 
-    color: doorColor,
+  const doorMaterial = new THREE.MeshStandardMaterial({
+    color: doorColor,  // 默认棕色
     roughness: 0.6,
     metalness: 0.1
   });
@@ -4652,6 +5141,7 @@ function createDoor(wallIndex, position, config = {}) {
   // 存储门的信息
   doorGroup.userData = {
     type: 'door',
+    wallType: wallType,
     wallIndex: wallIndex,
     position: clampedPosition,
     width: doorWidth,
@@ -4679,10 +5169,11 @@ function createDoor(wallIndex, position, config = {}) {
 }
 
 // 创建窗并吸附到墙体
-function createWindow(wallIndex, position, config = {}) {
-  const wall = sceneObjects.find(obj => obj.userData.type === 'wall' && obj.userData.wallIndex === wallIndex);
+function createWindow(wallIndex, position, config = {}, wallType = 'wall') {
+  // 支持普通墙体和办公区墙体
+  const wall = sceneObjects.find(obj => obj.userData.type === wallType && obj.userData.wallIndex === wallIndex);
   if (!wall) {
-    console.error('未找到指定墙体:', wallIndex);
+    console.error('未找到指定墙体:', wallIndex, '类型:', wallType);
     return null;
   }
 
@@ -4708,8 +5199,8 @@ function createWindow(wallIndex, position, config = {}) {
 
   // 创建玻璃
   const glassGeometry = new THREE.BoxGeometry(windowWidth, windowHeight, 5);
-  const glassMaterial = new THREE.MeshStandardMaterial({ 
-    color: windowColor,
+  const glassMaterial = new THREE.MeshStandardMaterial({
+    color: windowColor,  // 默认浅蓝色
     transparent: true,
     opacity: 0.6,
     roughness: 0.1,
@@ -4741,6 +5232,7 @@ function createWindow(wallIndex, position, config = {}) {
   // 存储窗的信息
   windowGroup.userData = {
     type: 'window',
+    wallType: wallType,
     wallIndex: wallIndex,
     position: clampedPosition,
     width: windowWidth,
@@ -4774,7 +5266,8 @@ function deleteOpening(openingObject) {
   if (!openingObject || !openingObject.userData) return;
 
   const wallIndex = openingObject.userData.wallIndex;
-  const wall = sceneObjects.find(obj => obj.userData.type === 'wall' && obj.userData.wallIndex === wallIndex);
+  const wallType = openingObject.userData.wallType || 'wall';
+  const wall = sceneObjects.find(obj => obj.userData.type === wallType && obj.userData.wallIndex === wallIndex);
   
   if (wall && wall.userData.openings) {
     // 从墙体的开口列表中移除
@@ -4812,19 +5305,15 @@ function disableBatchPlaceMode() {
   console.log('禁用批量放置模式');
 }
 
-// 移动对象
+// 移动对象（通过【移动】按钮触发）
 function moveObject(enable) {
   isMoving = enable;
-  if (enable && selectedObjects.length > 0) {
-    // 创建移动平面
-    const firstObj = selectedObjects[0];
-    movePlane.setFromNormalAndCoplanarPoint(
-      new THREE.Vector3(0, 1, 0),
-      firstObj.position
-    );
-    console.log('开始移动对象');
+  if (enable) {
+    console.log('开始移动对象（按钮触发）');
   } else {
     console.log('结束移动对象');
+    // 移动结束时恢复对齐线颜色
+    restoreAllAlignmentLineColors();
   }
 }
 
@@ -5307,6 +5796,8 @@ function resetView() {
     createWarehouseFromShape,
     createDoor,
     createWindow,
+    createPillar,
+    updatePillarHeight,
     deleteOpening,
     addModel,
     addModelInternal,
