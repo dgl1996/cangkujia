@@ -13,7 +13,7 @@
         <button @click="saveProject" class="top-bar-btn" title="保存项目">
           <span class="btn-icon">💾</span>保存
         </button>
-        <button @click="exportImage" :disabled="currentView !== '3d'" class="top-bar-btn" title="导出3D效果图">
+        <button class="top-bar-btn disabled-btn" disabled title="导出3D效果图（暂不可用，建议直接截屏）">
           <span class="btn-icon">📷</span>效果图
         </button>
         <button @click="exportReport" :disabled="warehouseShape.length < 3" class="top-bar-btn" title="导出项目报告">
@@ -40,19 +40,23 @@
         </button>
         <div class="top-bar-divider"></div>
         <!-- 选择模式按钮 -->
-        <button @click="setSelectMode" :class="{ active: !isAddingText && !isMeasuring && !isAlignLineMode }" class="top-bar-btn" title="选择模式">
+        <button @click="setSelectMode" :class="{ active: !isAddingText && !isMeasuring && !isAlignLineMode && !isDistanceLineMode }" class="top-bar-btn" title="选择模式">
           <span class="btn-icon">🖱️</span>选择
         </button>
         <!-- 测量工具按钮（占位） -->
         <button @click="startMeasure" :class="{ active: isMeasuring }" class="top-bar-btn" title="测量工具">
           <span class="btn-icon">📏</span>测量
         </button>
+        <!-- 距离线按钮 -->
+        <button @click="startDistanceLine" :class="{ active: isDistanceLineMode }" class="top-bar-btn" title="距离线">
+          <span class="btn-icon">📍</span>距离线
+        </button>
         <!-- 对齐线按钮（占位） -->
         <button @click="addAlignLine" :class="{ active: isAlignLineMode }" class="top-bar-btn" title="添加对齐线">
           <span class="btn-icon">➕</span>对齐线
         </button>
         <!-- 自定义货架按钮 -->
-        <button @click="openCustomShelf" class="top-bar-btn" title="创建自定义货架">
+        <button class="top-bar-btn disabled-btn" disabled title="创建自定义货架（已有40个模型满足需求）">
           <span class="btn-icon">➕📦</span>
         </button>
         <!-- 对齐工具按钮（MVP禁用） -->
@@ -214,6 +218,7 @@
                       </div>
                       <div class="sub-menu-row-compact">
                         <div class="draggable-item-compact" draggable="true" @dragstart="onPillarDragStart($event)" :class="{ disabled: currentView !== '3d' }">🏛️ 立柱 (40×30cm)</div>
+                        <div class="draggable-item-compact" draggable="true" @dragstart="onWallSignDragStart($event)" :class="{ disabled: currentView !== '3d' }">🏷️ 外墙标语</div>
                       </div>
                     </div>
                   </div>
@@ -787,6 +792,8 @@
             @add-door="onAddDoor"
             @add-window="onAddWindow"
             @alignment-lines-updated="handleAlignmentLinesUpdated"
+            @show-distance-line-dialog="showDistanceLineDialog = true"
+            @distance-line-created="onDistanceLineCreated"
           />
         </div>
       </div>
@@ -991,7 +998,7 @@
                 <button @click="moveSelectedObject" :disabled="!selectedObject" class="operation-btn">
                   <span class="btn-icon">↔️</span>移动
                 </button>
-                <button @click="toggleRotateMode" :class="{ active: isRotating }" :disabled="!selectedObject" class="operation-btn">
+                <button v-if="selectedObject && selectedObject.type !== 'wallSign'" @click="toggleRotateMode" :class="{ active: isRotating }" :disabled="!selectedObject" class="operation-btn">
                   <span class="btn-icon">🔄</span>{{ isRotating ? '旋转中' : '旋转' }}
                 </button>
               </div>
@@ -1001,6 +1008,9 @@
                 </button>
                 <button v-if="selectedObject && selectedObject.type === 'pillar'" @click="editPillarHeight" :disabled="!selectedObject" class="operation-btn">
                   <span class="btn-icon">📏</span>编辑高度
+                </button>
+                <button v-if="selectedObject && selectedObject.type === 'wallSign'" @click="editWallSign" :disabled="!selectedObject" class="operation-btn">
+                  <span class="btn-icon">✏️</span>编辑标语
                 </button>
               </div>
             </div>
@@ -1303,6 +1313,87 @@
       </div>
     </div>
 
+    <!-- 距离线输入弹窗 -->
+    <div v-if="showDistanceLineDialog" class="modal-overlay" @click.self="cancelDistanceLine">
+      <div class="modal-dialog distance-line-dialog" @mousedown="onModalDragStart($event, 'distanceLine')">
+        <h3 class="modal-title">输入距离</h3>
+        <div class="modal-content">
+          <div class="form-group">
+            <label>距离 (米):</label>
+            <input 
+              type="number" 
+              v-model.number="distanceLineValue" 
+              min="0.1" 
+              max="100" 
+              step="0.1"
+              placeholder="请输入距离"
+              @keyup.enter="confirmDistanceLine"
+            >
+          </div>
+          <p class="hint-text">
+            距离范围: 0.1米 - 100米
+          </p>
+        </div>
+        <div class="modal-actions">
+          <button @click="cancelDistanceLine" class="cancel-btn">取消</button>
+          <button @click="confirmDistanceLine" class="confirm-btn" :disabled="distanceLineValue < 0.1 || distanceLineValue > 100">确认</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 外墙标语编辑弹窗 -->
+    <div v-if="showWallSignDialog" class="modal-overlay" @click.self="cancelWallSignEdit">
+      <div class="modal-dialog wall-sign-dialog" @mousedown="onModalDragStart($event, 'wallSign')">
+        <h3 class="modal-title">编辑外墙标语</h3>
+        <div class="modal-content">
+          <div class="form-group">
+            <label>文字内容:</label>
+            <input 
+              type="text" 
+              v-model="wallSignText" 
+              placeholder="请输入标语文字"
+              @keyup.enter="confirmWallSignEdit"
+            >
+          </div>
+          <div class="form-group">
+            <label>字体大小 (px):</label>
+            <input 
+              type="number" 
+              v-model.number="wallSignFontSize" 
+              min="12" 
+              max="72" 
+              step="2"
+            >
+          </div>
+          <div class="form-group">
+            <label>文字颜色:</label>
+            <input type="color" v-model="wallSignTextColor">
+          </div>
+          <div class="form-group">
+            <label>背景颜色:</label>
+            <input type="color" v-model="wallSignBgColor">
+          </div>
+          <div class="form-group">
+            <label>离地高度 (cm):</label>
+            <input 
+              type="number" 
+              v-model.number="wallSignHeight" 
+              min="50" 
+              max="1500" 
+              step="10"
+            >
+          </div>
+          <p class="hint-text">
+            字体大小范围: 12px - 72px，离地高度范围: 0.5M - 15M
+          </p>
+        </div>
+        <div class="modal-actions">
+          <button @click="cancelWallSignEdit" class="cancel-btn">取消</button>
+          <button @click="confirmWallSignEdit" class="confirm-btn" :disabled="!wallSignText.trim()">确认</button>
+        </div>
+      </div>
+    </div>
+
     <!-- 自定义轻型货架弹窗 -->
     <div v-if="showCustomLightShelfModal" class="modal-overlay" @click.self="closeCustomLightShelfModal">
       <div class="modal-dialog custom-shelf-dialog" @mousedown="onModalDragStart($event, 'customShelf')">
@@ -1359,7 +1450,7 @@
 </template>
 
 <script setup>
-import { ref, computed, nextTick, onMounted } from 'vue';
+import { ref, computed, nextTick, onMounted, toRaw } from 'vue';
 import { useRouter } from 'vue-router';
 import * as THREE from 'three';
 import ThreeScene from '../components/3d/ThreeScene.vue';
@@ -1376,6 +1467,7 @@ const showBatchPanel = ref(false);
 // 顶部工具栏工具状态
 const isMeasuring = ref(false);
 const isAlignLineMode = ref(false);
+const isDistanceLineMode = ref(false);
 
 // 对齐线数据
 const alignLines = ref([]);
@@ -1389,6 +1481,18 @@ const rotationOriginalAngle = ref(0);
 // 立柱高度编辑对话框状态
 const showPillarHeightDialog = ref(false);
 const pillarHeightInput = ref(5);
+
+// 外墙标语编辑
+const showWallSignDialog = ref(false);
+const wallSignText = ref('外墙标语');
+const wallSignFontSize = ref(24);
+const wallSignTextColor = ref('#FFFFFF');
+const wallSignBgColor = ref('#0066CC');
+const wallSignHeight = ref(150); // 离地高度（cm），默认1.5米
+
+// 距离线功能
+const showDistanceLineDialog = ref(false);
+const distanceLineValue = ref(1.5); // 距离值（米），默认1.5米
 const isRotationPreview = ref(false);
 const isProjectSaved = ref(false);
 const projectReport = ref(null);
@@ -2578,25 +2682,113 @@ function editPillarHeight() {
 // 确认立柱高度编辑
 function confirmPillarHeightEdit() {
   if (!selectedObject.value || selectedObject.value.type !== 'pillar') return;
-  
+
   const newHeightCm = pillarHeightInput.value * 100; // 转换为厘米
-  
+
   // 调用 ThreeScene 的 updatePillarHeight 函数
   if (threeScene.value && threeScene.value.updatePillarHeight) {
-    const result = threeScene.value.updatePillarHeight(selectedObject.value, newHeightCm);
+    // 通过 UUID 查找真正的 Three.js 对象（selectedObject.value 只是信息对象，不是真正的3D对象）
+    const sceneObjects = threeScene.value.getSceneObjects();
+    const realPillar = sceneObjects.find(obj => obj.uuid === selectedObject.value.uuid);
+
+    if (!realPillar) {
+      console.error('未找到立柱对象:', selectedObject.value.uuid);
+      return;
+    }
+
+    const result = threeScene.value.updatePillarHeight(toRaw(realPillar), newHeightCm);
     if (result) {
       // 更新选中对象的高度值
       selectedObject.value.height = newHeightCm;
       console.log('立柱高度已更新为:', pillarHeightInput.value, '米');
     }
   }
-  
+
   showPillarHeightDialog.value = false;
 }
 
 // 取消立柱高度编辑
 function cancelPillarHeightEdit() {
   showPillarHeightDialog.value = false;
+}
+
+// 编辑外墙标语
+function editWallSign() {
+  if (!selectedObject.value || selectedObject.value.type !== 'wallSign') return;
+
+  // 通过 UUID 查找真正的 Three.js 对象获取最新值
+  if (threeScene.value && threeScene.value.getSceneObjects) {
+    const sceneObjects = threeScene.value.getSceneObjects();
+    const realSign = sceneObjects.find(obj => obj.uuid === selectedObject.value.uuid);
+
+    if (realSign) {
+      // 从真正的对象获取最新配置
+      wallSignText.value = realSign.userData.text || '外墙标语';
+      wallSignFontSize.value = realSign.userData.fontSize || 24;
+      wallSignTextColor.value = realSign.userData.textColor || '#FFFFFF';
+      wallSignBgColor.value = realSign.userData.bgColor || '#0066CC';
+      wallSignHeight.value = realSign.userData.signHeight !== undefined ? realSign.userData.signHeight : 150;
+    } else {
+      // 回退到 selectedObject.value
+      wallSignText.value = selectedObject.value.text || '外墙标语';
+      wallSignFontSize.value = selectedObject.value.fontSize || 24;
+      wallSignTextColor.value = selectedObject.value.textColor || '#FFFFFF';
+      wallSignBgColor.value = selectedObject.value.bgColor || '#0066CC';
+      wallSignHeight.value = selectedObject.value.signHeight !== undefined ? selectedObject.value.signHeight : 150;
+    }
+  } else {
+    // 回退到 selectedObject.value
+    wallSignText.value = selectedObject.value.text || '外墙标语';
+    wallSignFontSize.value = selectedObject.value.fontSize || 24;
+    wallSignTextColor.value = selectedObject.value.textColor || '#FFFFFF';
+    wallSignBgColor.value = selectedObject.value.bgColor || '#0066CC';
+    wallSignHeight.value = selectedObject.value.signHeight !== undefined ? selectedObject.value.signHeight : 150;
+  }
+
+  showWallSignDialog.value = true;
+}
+
+// 确认外墙标语编辑
+function confirmWallSignEdit() {
+  if (!selectedObject.value || selectedObject.value.type !== 'wallSign') return;
+
+  const config = {
+    text: wallSignText.value,
+    fontSize: wallSignFontSize.value,
+    textColor: wallSignTextColor.value,
+    bgColor: wallSignBgColor.value,
+    signHeight: wallSignHeight.value // 添加离地高度配置
+  };
+
+  // 调用 ThreeScene 的 updateWallSign 函数
+  if (threeScene.value && threeScene.value.updateWallSign) {
+    // 通过 UUID 查找真正的 Three.js 对象（selectedObject.value 只是信息对象）
+    const sceneObjects = threeScene.value.getSceneObjects();
+    const realSign = sceneObjects.find(obj => obj.uuid === selectedObject.value.uuid);
+
+    if (!realSign) {
+      console.error('未找到标语对象:', selectedObject.value.uuid);
+      return;
+    }
+
+    const result = threeScene.value.updateWallSign(toRaw(realSign), config);
+    if (result) {
+      // 更新选中对象的值
+      selectedObject.value.text = config.text;
+      selectedObject.value.fontSize = config.fontSize;
+      selectedObject.value.textColor = config.textColor;
+      selectedObject.value.bgColor = config.bgColor;
+      selectedObject.value.signHeight = config.signHeight; // 更新高度值
+      console.log('外墙标语已更新:', config);
+    }
+  }
+
+  showWallSignDialog.value = false;
+}
+
+// 取消外墙标语编辑
+function cancelWallSignEdit() {
+  showWallSignDialog.value = false;
 }
 
 // 删除选中的线条
@@ -2777,6 +2969,17 @@ function handleKeyDown(event) {
       // 自动切换到选择模式
       setSelectMode();
       console.log('ESC：退出测量模式，切换到选择模式');
+    } else if (isDistanceLineMode.value) {
+      // 退出距离线模式
+      isDistanceLineMode.value = false;
+      if (threeScene.value) {
+        threeScene.value.stopDistanceLineMode();
+      }
+      // 关闭弹窗（如果打开）
+      showDistanceLineDialog.value = false;
+      // 自动切换到选择模式
+      setSelectMode();
+      console.log('ESC：退出距离线模式，切换到选择模式');
     }
   }
   
@@ -3530,17 +3733,24 @@ function generate3DWarehouseInternal() {
 // 加载导入的对象到3D场景
 function loadImportedObjects(objects) {
   if (!threeScene.value) {
-    console.error('加载导入对象失败: threeScene未准备好');
+    console.error('【调试-导入】加载导入对象失败: threeScene未准备好');
     return;
   }
 
-  console.log('开始加载导入的对象:', objects.length, '个');
+  console.log('【调试-导入】开始加载导入的对象:', objects.length, '个');
+  
+  // 统计导入数据中的门/窗
+  const doorWindowInImport = objects.filter(obj => obj.type === 'door' || obj.type === 'window');
+  console.log('【调试-导入】导入数据中的门/窗数量:', doorWindowInImport.length);
+  doorWindowInImport.forEach((obj, i) => {
+    console.log(`【调试-导入】导入数据门/窗[${i}]: type=${obj.type}, wallIndex=${obj.wallIndex}, wallType=${obj.wallType}`);
+  });
 
   objects.forEach((objData, index) => {
     setTimeout(() => {
       // 处理门/窗对象
       if (objData.type === 'door' || objData.type === 'window') {
-        console.log(`加载${objData.type === 'door' ? '门' : '窗'} ${index + 1}/${objects.length}:`, `墙体${objData.wallIndex}`);
+        console.log(`【调试-导入】加载${objData.type === 'door' ? '门' : '窗'} ${index + 1}/${objects.length}:`, `墙体${objData.wallIndex}, wallType=${objData.wallType || 'wall'}`);
 
         const config = {
           width: objData.width / 100, // cm -> m
@@ -3560,9 +3770,85 @@ function loadImportedObjects(objects) {
         }
 
         if (placedObject) {
-          console.log(`${objData.type === 'door' ? '门' : '窗'}加载成功`);
+          console.log(`【调试-导入】${objData.type === 'door' ? '门' : '窗'}加载成功: wallIndex=${objData.wallIndex}`);
         } else {
-          console.error(`${objData.type === 'door' ? '门' : '窗'}加载失败`);
+          console.error(`【调试-导入】${objData.type === 'door' ? '门' : '窗'}加载失败: wallIndex=${objData.wallIndex}, wallType=${wallType}`);
+        }
+        return;
+      }
+
+      // 处理外墙标语对象
+      if (objData.type === 'wallSign') {
+        console.log(`【调试-导入】加载外墙标语 ${index + 1}/${objects.length}:`, {
+          text: objData.text,
+          wallIndex: objData.wallIndex,
+          wallType: objData.wallType,
+          offsetAlongWall: objData.offsetAlongWall,
+          savedPosition: objData.position
+        });
+
+        const config = {
+          text: objData.text,
+          fontSize: objData.fontSize,
+          textColor: objData.textColor,
+          bgColor: objData.bgColor,
+          offsetAlongWall: objData.offsetAlongWall || 0,  // 恢复沿墙体偏移量
+          signHeight: objData.signHeight !== undefined ? objData.signHeight : 150  // 恢复离地高度
+        };
+
+        // 导入时查找墙体对象
+        const wallIndex = objData.wallIndex !== undefined ? objData.wallIndex : 0;
+        const wall = threeScene.value.getWallByIndex ?
+          threeScene.value.getWallByIndex(wallIndex) :
+          threeScene.value.getSceneObjects().find(obj =>
+            obj.userData.type === 'wall' && obj.userData.wallIndex === wallIndex
+          );
+
+        if (!wall) {
+          console.error('【调试-导入】导入标语时未找到墙体:', wallIndex);
+          return;
+        }
+        
+        console.log('【调试-导入】找到墙体:', {
+          wallIndex: wall.userData.wallIndex,
+          wallType: wall.userData.wallType,
+          wallPosition: { x: wall.position.x, z: wall.position.z }
+        });
+
+        // 使用墙体对象和配置创建标语（传递 null 作为 referencePoint，使用 offsetAlongWall 定位）
+        const placedObject = threeScene.value.createWallSign(wall, null, config);
+
+        if (placedObject) {
+          console.log('【调试-导入】外墙标语加载成功:', {
+            text: objData.text,
+            newPosition: {
+              x: placedObject.position.x,
+              y: placedObject.position.y,
+              z: placedObject.position.z
+            },
+            offsetAlongWall: placedObject.userData.offsetAlongWall
+          });
+        } else {
+          console.error('【调试-导入】外墙标语加载失败:', objData.text);
+        }
+        return;
+      }
+
+      // 处理立柱对象
+      if (objData.type === 'pillar') {
+        console.log(`加载立柱 ${index + 1}/${objects.length}:`, objData);
+
+        // 调用 ThreeScene 的 createPillar 方法创建立柱
+        // createPillar(position, pillarHeight) 接收 {x, z} 格式的位置参数
+        const savedPos = objData.position || { x: 0, y: 0, z: 0 };
+        const position = { x: savedPos.x, z: savedPos.z };
+        const pillarHeight = objData.height || 500;
+        const placedObject = threeScene.value.createPillar(position, pillarHeight);
+
+        if (placedObject) {
+          console.log('立柱加载成功:', objData);
+        } else {
+          console.error('立柱加载失败:', objData);
         }
         return;
       }
@@ -3758,7 +4044,25 @@ function importProject() {
             // 存储对象数据，等待3D场景初始化后加载
             window.pendingObjects = project.objects;
             console.log('导入对象数据:', project.objects.length, '个对象待加载');
-            const doorWindowInImport = project.objects.filter(obj => obj.type === 'door' || obj.type === 'window');
+            
+            // 加固导入逻辑：容错性过滤 + 诊断日志
+            const doorWindowInImport = project.objects.filter((obj, idx) => {
+              // 尝试读取 type 或 businessType 备用字段
+              const rawType = obj.type || obj.businessType;
+              const isMatch = String(rawType).toLowerCase().trim() === 'door' || 
+                              String(rawType).toLowerCase().trim() === 'window';
+              
+              if (!isMatch) {
+                console.warn(`【诊断】对象[${idx}]未匹配到门窗类型:`, {
+                  actualType: obj.type,
+                  businessType: obj.businessType,
+                  wallIndex: obj.wallIndex,
+                  allKeys: Object.keys(obj)
+                });
+              }
+              return isMatch;
+            });
+            
             console.log('导入数据门/窗数量:', doorWindowInImport.length, '个');
           }
           
@@ -3803,47 +4107,143 @@ async function confirmSaveProject() {
   console.log('保存项目 - 当前视图:', currentView.value, '3D已生成:', is3DGenerated.value, 'threeScene:', !!threeScene.value);
   
   if (threeScene.value && is3DGenerated.value) {
+    // 兜底保险：保存前同步选中对象的数据到场景对象
+    // 确保 selectedObjects 中的修改同步到 sceneObjects
+    const selectedObjects = threeScene.value.getSelectedObjects ? threeScene.value.getSelectedObjects() : [];
+    if (selectedObjects.length > 0) {
+      console.log('【兜底同步】保存前同步选中对象数据:', selectedObjects.length, '个');
+      // 触发同步（通过调用场景的方法）
+      if (threeScene.value.syncSelectedObjects) {
+        threeScene.value.syncSelectedObjects();
+      }
+    }
+
     const sceneObjects = threeScene.value.getSceneObjects();
-    console.log('获取到场景对象:', sceneObjects.length, '个');
-    sceneObjectsData = sceneObjects
-      .filter(obj => obj.userData.modelType || obj.userData.modelName ||
-                     obj.userData.type === 'door' || obj.userData.type === 'window') // 保存模型对象和门/窗
-      .map(obj => {
+    console.log('【调试-保存】获取到场景对象:', sceneObjects.length, '个');
+
+    // 使用 toRaw 解除响应式，避免 Vue Proxy 干扰
+    // 注意：不要替换 userData 对象本身，只解除 obj 的响应式包装
+    // 替换 userData 会导致引用丢失，造成移动后的数据无法保存
+    const rawObjects = sceneObjects.map(obj => {
+      return toRaw(obj);
+    });
+    
+    // 统计所有对象类型
+    const typeCount = {};
+    rawObjects.forEach(obj => {
+      const type = obj.userData?.type || 'unknown';
+      typeCount[type] = (typeCount[type] || 0) + 1;
+    });
+    console.log('【调试-保存】场景对象类型分布:', typeCount);
+    
+    // 专门统计门/窗
+    const doorWindowObjects = rawObjects.filter(obj => 
+      obj.userData?.type === 'door' || obj.userData?.type === 'window'
+    );
+    console.log('【调试-保存】门/窗对象数量:', doorWindowObjects.length);
+    doorWindowObjects.forEach((obj, i) => {
+      console.log(`【调试-保存】门/窗[${i}]: type=${obj.userData.type}, wallIndex=${obj.userData.wallIndex}, wallType=${obj.userData.wallType}`);
+    });
+    
+    sceneObjectsData = rawObjects
+      .filter(obj => {
+        // 优先检查门/窗类型（确保门/窗对象一定能被保存）
+        const type = obj.userData?.type;
+        if (type === 'door' || type === 'window') {
+          return true;
+        }
+        // 检查立柱类型
+        if (type === 'pillar') {
+          return true;
+        }
+        // 检查外墙标语类型
+        if (type === 'wallSign') {
+          return true;
+        }
+        // 然后是模型对象
+        return obj.userData?.modelType || obj.userData?.modelName;
+      }) // 保存模型对象、门/窗、立柱和外墙标语
+      .map((obj, index) => {
+        const objType = obj.userData?.type;
+        console.log(`【调试-保存】处理对象[${index}]: type=${objType}, wallIndex=${obj.userData?.wallIndex}`);
+        
         const baseData = {
-          modelType: obj.userData.modelType || obj.userData.modelName,
-          modelName: obj.userData.modelName,
-          name: obj.userData.name, // 中文名称
+          modelType: obj.userData?.modelType || obj.userData?.modelName,
+          modelName: obj.userData?.modelName,
+          name: obj.userData?.name, // 中文名称
           position: {
-            x: obj.position.x,
-            y: obj.position.y,
-            z: obj.position.z
+            x: obj.position?.x,
+            y: obj.position?.y,
+            z: obj.position?.z
           },
           rotation: {
-            x: obj.rotation.x,
-            y: obj.rotation.y,
-            z: obj.rotation.z
+            x: obj.rotation?.x,
+            y: obj.rotation?.y,
+            z: obj.rotation?.z
           },
           scale: {
-            x: obj.scale.x,
-            y: obj.scale.y,
-            z: obj.scale.z
+            x: obj.scale?.x,
+            y: obj.scale?.y,
+            z: obj.scale?.z
           }
         };
         // 门/窗对象保存额外属性
-        if (obj.userData.type === 'door' || obj.userData.type === 'window') {
-          baseData.type = obj.userData.type;
-          baseData.wallType = obj.userData.wallType || 'wall'; // 保存墙体类型，支持办公区墙体
-          baseData.wallIndex = obj.userData.wallIndex;
-          baseData.wallPosition = obj.userData.position;
-          baseData.width = obj.userData.width;
-          baseData.height = obj.userData.height;
-          if (obj.userData.type === 'window') {
-            baseData.sillHeight = obj.userData.sillHeight;
+        if (objType === 'door' || objType === 'window') {
+          // 使用 trim() 去除可能的空格，并添加 businessType 备用字段
+          const cleanType = String(objType).trim();
+          baseData.type = cleanType;
+          baseData.businessType = cleanType; // 备用字段，防止 type 被覆盖
+          baseData.wallType = obj.userData?.wallType || 'wall'; // 保存墙体类型，支持办公区墙体
+          // 确保 wallIndex 即使是 0 也能正确保存为数字
+          baseData.wallIndex = (obj.userData?.wallIndex !== undefined) ? Number(obj.userData.wallIndex) : 0;
+          baseData.wallPosition = obj.userData?.position;
+          baseData.width = obj.userData?.width;
+          baseData.height = obj.userData?.height;
+          if (cleanType === 'window') {
+            baseData.sillHeight = obj.userData?.sillHeight;
           }
+          console.log(`【调试-保存】✓ 保存${cleanType}: wallIndex=${baseData.wallIndex}, wallType=${baseData.wallType}`);
+        } else {
+          console.log(`【调试-保存】✗ 非门/窗对象: type=${objType}`);
+        }
+        // 外墙标语保存额外属性
+        if (obj.userData?.type === 'wallSign') {
+          baseData.type = 'wallSign';
+          baseData.wallType = obj.userData?.wallType;
+          baseData.wallIndex = obj.userData?.wallIndex;
+          baseData.text = obj.userData?.text;
+          baseData.fontSize = obj.userData?.fontSize;
+          baseData.textColor = obj.userData?.textColor;
+          baseData.bgColor = obj.userData?.bgColor;
+          baseData.offsetAlongWall = obj.userData?.offsetAlongWall || 0; // 保存沿墙体偏移量
+          baseData.signHeight = obj.userData?.signHeight !== undefined ? obj.userData.signHeight : 150; // 保存离地高度
+          console.log(`【调试-保存】✓ 保存wallSign:`, {
+            uuid: obj.uuid,
+            wallIndex: baseData.wallIndex,
+            wallType: baseData.wallType,
+            offsetAlongWall: baseData.offsetAlongWall,
+            signHeight: baseData.signHeight,
+            text: baseData.text,
+            position: baseData.position
+          });
+        }
+        // 立柱保存额外属性
+        if (objType === 'pillar') {
+          baseData.type = 'pillar';
+          baseData.width = obj.userData?.width;
+          baseData.height = obj.userData?.height;
+          baseData.depth = obj.userData?.depth;
+          // 从 Three.js 对象 position 读取位置（而非 userData.position）
+          baseData.position = {
+            x: obj.position?.x,
+            y: obj.position?.y,
+            z: obj.position?.z
+          };
+          console.log(`【调试-保存】✓ 保存pillar: width=${baseData.width}, height=${baseData.height}, pos=${JSON.stringify(baseData.position)}`);
         }
         return baseData;
       });
-    console.log('保存场景对象:', sceneObjectsData.length, '个');
+    console.log('【调试-保存】保存场景对象:', sceneObjectsData.length, '个');
   } else {
     console.warn('3D场景未准备好，无法保存对象。当前视图:', currentView.value, 'is3DGenerated:', is3DGenerated.value);
   }
@@ -3871,6 +4271,9 @@ async function confirmSaveProject() {
   console.log('项目数据对象数量:', projectData.objects.length, '个');
   const doorWindowInProject = projectData.objects.filter(obj => obj.type === 'door' || obj.type === 'window');
   console.log('项目数据门/窗数量:', doorWindowInProject.length, '个');
+  doorWindowInProject.forEach((obj, i) => {
+    console.log(`【调试-保存】项目数据门/窗[${i}]: type=${obj.type}, wallIndex=${obj.wallIndex}, wallType=${obj.wallType}`);
+  });
 
   // 导出JSON文件
   const projectJson = JSON.stringify(projectData, null, 2);
@@ -3931,8 +4334,151 @@ function exportReport() {
     alert('请先创建仓库！');
     return;
   }
-  alert('项目报告导出中...');
-  console.log('导出项目报告');
+  
+  try {
+    // 获取当前时间
+    const now = new Date();
+    const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+    
+    // 第1部分：仓库概况
+    const dims = warehouseDimensions.value;
+    const warehouseArea = (dims.length * dims.width).toFixed(2);
+    
+    let report = `# ${projectName.value || '仓库项目'}报告\n\n`;
+    report += `生成时间：${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}\n\n`;
+    
+    report += `## 一、仓库概况\n\n`;
+    report += `- **仓库名称**：${projectName.value || '未命名仓库'}\n`;
+    report += `- **仓库长度**：${dims.length} 米\n`;
+    report += `- **仓库宽度**：${dims.width} 米\n`;
+    report += `- **仓库高度**：${dims.height} 米\n`;
+    report += `- **仓库总面积**：${warehouseArea} 平方米\n`;
+    report += `- **功能区数量**：${zones.value.length} 个\n`;
+    report += `- **3D物流对象总数**：${placedObjectsCount.value} 个\n\n`;
+    
+    // 第2部分：功能区清单
+    report += `## 二、功能区清单\n\n`;
+    if (zones.value.length === 0) {
+      report += `*暂无功能区*\n\n`;
+    } else {
+      report += `| 序号 | 功能区名称 | 类型 | 长度(m) | 宽度(m) | 面积(m²) |\n`;
+      report += `|------|-----------|------|---------|---------|----------|\n`;
+      
+      zones.value.forEach((zone, index) => {
+        const zoneLength = (zone.width / 10).toFixed(2); // 像素转米
+        const zoneWidth = (zone.height / 10).toFixed(2);
+        const zoneArea = ((zone.width / 10) * (zone.height / 10)).toFixed(2);
+        const zoneType = getZoneTypeName(zone.type);
+        
+        report += `| ${index + 1} | ${zone.name} | ${zoneType} | ${zoneLength} | ${zoneWidth} | ${zoneArea} |\n`;
+      });
+      report += `\n`;
+    }
+    
+    // 第3部分：3D物流对象清单
+    report += `## 三、3D物流对象清单\n\n`;
+    
+    // 获取3D对象数据
+    const sceneObjects = threeScene.value?.getSceneObjects?.() || [];
+    
+    // 过滤掉仓库设施，只保留物流对象
+    const logisticsObjects = sceneObjects.filter(obj => {
+      const type = obj.userData?.type || obj.type;
+      // 排除仓库设施
+      const excludedTypes = ['wall', 'officeWall', 'door', 'window', 'wallSign', 'pillar', 'zone', 'zoneLabel', 'gridHelper', 'textLabel', 'alignLine', 'directionLabel'];
+      return !excludedTypes.includes(type);
+    });
+    
+    if (logisticsObjects.length === 0) {
+      report += `*暂无3D物流对象*\n\n`;
+    } else {
+      // 按对象类型分组统计
+      const objectGroups = new Map();
+      
+      logisticsObjects.forEach(obj => {
+        const modelType = obj.userData?.modelType || obj.modelType || '未知';
+        const name = obj.userData?.name || obj.name || modelType;
+        
+        // 获取尺寸
+        let sizeStr = '-';
+        if (obj.geometry) {
+          const box = new THREE.Box3().setFromObject(obj);
+          const size = box.getSize(new THREE.Vector3());
+          const length = (size.x * 10).toFixed(0); // cm
+          const width = (size.y * 10).toFixed(0);
+          const height = (size.z * 10).toFixed(0);
+          if (length > 0 && width > 0 && height > 0) {
+            sizeStr = `${length}×${width}×${height}mm`;
+          }
+        }
+        
+        const key = `${name}_${modelType}_${sizeStr}`;
+        
+        if (objectGroups.has(key)) {
+          objectGroups.get(key).count++;
+        } else {
+          objectGroups.set(key, {
+            name: name,
+            modelType: modelType,
+            size: sizeStr,
+            count: 1
+          });
+        }
+      });
+      
+      report += `| 序号 | 对象名称 | 型号/规格 | 尺寸(长×宽×高) | 数量 |\n`;
+      report += `|------|---------|-----------|----------------|------|\n`;
+      
+      let index = 1;
+      objectGroups.forEach((group) => {
+        report += `| ${index} | ${group.name} | ${group.modelType} | ${group.size} | ${group.count} |\n`;
+        index++;
+      });
+      report += `\n`;
+    }
+    
+    report += `---\n\n`;
+    report += `*本报告由仓酷家自动生成*\n`;
+    
+    // 生成文件名
+    const fileName = projectName.value 
+      ? `${projectName.value}_项目报告.md`
+      : `仓库项目报告_${timestamp}.md`;
+    
+    // 创建并下载文件
+    const blob = new Blob([report], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    console.log('项目报告导出成功:', fileName);
+    
+  } catch (error) {
+    console.error('导出项目报告失败:', error);
+    alert('导出项目报告失败，请重试！');
+  }
+}
+
+// 获取功能区类型中文名称
+function getZoneTypeName(type) {
+  const typeMap = {
+    'receiving': '收货区',
+    'receiving-temp': '收货暂存区',
+    'storage': '存储区',
+    'production': '生产区',
+    'shipping': '发货区',
+    'shipping-temp': '发货暂存区',
+    'office': '办公区',
+    'restroom': '厕所',
+    'charging': '叉车充电区',
+    'auxiliary': '辅助功能区'
+  };
+  return typeMap[type] || type;
 }
 
 function closeProject() {
@@ -3976,10 +4522,15 @@ function setSelectMode() {
   if (isAlignLineMode.value && threeScene.value) {
     threeScene.value.stopDrawingAlignmentLine();
   }
+  // 如果当前在距离线模式，先停止距离线模式
+  if (isDistanceLineMode.value && threeScene.value) {
+    threeScene.value.stopDistanceLineMode();
+  }
   
   isAddingText.value = false;
   isMeasuring.value = false;
   isAlignLineMode.value = false;
+  isDistanceLineMode.value = false;
   console.log('切换到选择模式');
 }
 
@@ -4017,6 +4568,12 @@ function addAlignLine() {
     threeScene.value.stopMeasuring();
     console.log('退出测量模式，准备进入对齐线绘制模式');
   }
+  // 如果当前在距离线模式，先停止距离线模式（确保模式互斥）
+  if (isDistanceLineMode.value && threeScene.value) {
+    threeScene.value.stopDistanceLineMode();
+    isDistanceLineMode.value = false;
+    console.log('退出距离线模式，准备进入对齐线绘制模式');
+  }
   
   isAlignLineMode.value = !isAlignLineMode.value;
   isAddingText.value = false;
@@ -4037,6 +4594,93 @@ function addAlignLine() {
     // 自动切换到选择模式
     setSelectMode();
   }
+}
+
+// 开始距离线模式
+function startDistanceLine() {
+  console.log('【关键-debug】startDistanceLine 被调用');
+  
+  // 如果当前在测量模式，先停止测量（确保模式互斥）
+  if (isMeasuring.value && threeScene.value) {
+    threeScene.value.stopMeasuring();
+    console.log('退出测量模式，准备进入距离线模式');
+  }
+  // 如果当前在对齐线绘制模式，先停止绘制（确保模式互斥）
+  if (isAlignLineMode.value && threeScene.value) {
+    threeScene.value.stopDrawingAlignmentLine();
+    isAlignLineMode.value = false;
+    console.log('退出对齐线绘制模式，准备进入距离线模式');
+  }
+  
+  isDistanceLineMode.value = !isDistanceLineMode.value;
+  isAddingText.value = false;
+  isMeasuring.value = false;
+  isAlignLineMode.value = false;
+  
+  console.log('【关键-debug】isDistanceLineMode.value =', isDistanceLineMode.value);
+  
+  if (isDistanceLineMode.value) {
+    // 进入距离线模式
+    if (threeScene.value) {
+      console.log('【关键-debug】调用 threeScene.startDistanceLineMode()');
+      threeScene.value.startDistanceLineMode();
+      console.log('进入距离线模式');
+    } else {
+      console.error('【关键-debug】threeScene.value 为空，无法进入距离线模式');
+    }
+  } else {
+    // 退出距离线模式，自动切换到选择模式
+    if (threeScene.value) {
+      threeScene.value.stopDistanceLineMode();
+      console.log('退出距离线模式，切换到选择模式');
+    }
+    setSelectMode();
+  }
+}
+
+// 确认距离线输入
+function confirmDistanceLine() {
+  console.log('【关键-debug】CoreFunction.confirmDistanceLine() 被调用，值:', distanceLineValue.value);
+  
+  if (distanceLineValue.value < 0.1 || distanceLineValue.value > 100) {
+    console.warn('距离值超出范围:', distanceLineValue.value);
+    return;
+  }
+  
+  showDistanceLineDialog.value = false;
+  console.log('【关键-debug】弹窗已关闭');
+  
+  // 将距离值传递给 ThreeScene（转换为厘米）
+  if (threeScene.value) {
+    console.log('【关键-debug】调用 threeScene.setDistanceLineValue');
+    threeScene.value.setDistanceLineValue(distanceLineValue.value * 100); // 米转厘米
+    console.log('【关键-debug】距离线值已设置完成');
+  } else {
+    console.error('【关键-debug】threeScene.value 为空');
+  }
+}
+
+// 取消距离线输入
+function cancelDistanceLine() {
+  showDistanceLineDialog.value = false;
+  distanceLineValue.value = 1.5; // 重置默认值
+
+  // 退出距离线模式
+  if (threeScene.value) {
+    threeScene.value.stopDistanceLineMode();
+  }
+  isDistanceLineMode.value = false;
+  setSelectMode();
+  console.log('取消距离线输入，退出距离线模式');
+}
+
+// 距离线创建完成回调
+function onDistanceLineCreated() {
+  console.log('距离线创建完成，自动切换到选择模式');
+  // 退出距离线模式
+  isDistanceLineMode.value = false;
+  // 切换到选择模式
+  setSelectMode();
 }
 
 // 选中对齐线（高亮显示）
@@ -4701,6 +5345,18 @@ function onPillarDragStart(event) {
   console.log('开始拖动立柱');
 }
 
+// 外墙标语拖拽开始
+function onWallSignDragStart(event) {
+  event.dataTransfer.setData('objectType', 'wallSign');
+  event.dataTransfer.effectAllowed = 'copy';
+
+  // 设置自定义拖拽图像
+  const preview = createDragPreview(3, 1.5, '#0066CC', '🏷️');
+  event.dataTransfer.setDragImage(preview, 30, 20);
+
+  console.log('开始拖动外墙标语');
+}
+
 function onModelAdded(model) {
   console.log('模型添加成功:', model);
 }
@@ -4822,8 +5478,17 @@ defineExpose({
   onLiftDoorDragStart,
   onLiftDoor27DragStart,
   onPillarDragStart,
+  onWallSignDragStart,
   onWindowDragStart,
   createDragPreview,
+  showWallSignDialog,
+  wallSignText,
+  wallSignFontSize,
+  wallSignTextColor,
+  wallSignBgColor,
+  editWallSign,
+  confirmWallSignEdit,
+  cancelWallSignEdit,
   expandedObjectCategories,
   toggleObjectCategory,
   batchCount,
@@ -4863,7 +5528,13 @@ defineExpose({
   calculateWarehouseArea,
   myModels,
   loadMyModels,
-  onCustomModelDragStart
+  onCustomModelDragStart,
+  // 距离线功能
+  showDistanceLineDialog,
+  distanceLineValue,
+  startDistanceLine,
+  confirmDistanceLine,
+  cancelDistanceLine
 });
 </script>
 

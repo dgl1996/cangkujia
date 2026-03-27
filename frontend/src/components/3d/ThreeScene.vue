@@ -33,7 +33,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['model-added', 'object-selected', 'object-deselected', 'zone-selected', 'save-project', 'add-door', 'add-window', 'alignment-lines-updated']);
+const emit = defineEmits(['model-added', 'object-selected', 'object-deselected', 'zone-selected', 'save-project', 'add-door', 'add-window', 'alignment-lines-updated', 'show-distance-line-dialog', 'distance-line-created']);
 
 let scene, camera, renderer, controls, loader, raycaster, mouse;
 let sceneObjects = [];
@@ -66,14 +66,28 @@ let measureEndPoint = null;
 let measureLine = null;
 let measureResultDiv = null;
 
+// 距离线功能状态
+let isDistanceLineMode = false;
+let distanceLineStartPoint = null;
+let distanceLinePreview = null;
+let distanceLineValue = null; // 距离值（厘米）
+let isDistanceLineWaitingForEnd = false; // 是否正在等待确定终点
+let distanceLines = []; // 存储多个距离线对象
+let nextDistanceLineId = 1;
+
 // 对齐线数据结构和管理
 let alignmentLines = [];
 let nextLineId = 1;
 
 // 空间分区优化 - 网格索引
 let alignmentLineGrid = null;
-const GRID_CELL_SIZE = 500; // 网格单元大小500cm
+const ALIGNMENT_GRID_CELL_SIZE = 500; // 对齐线网格单元大小500cm
 const MAX_LINES_PER_CELL = 10; // 每个单元格最大对齐线数量，超过则细分
+
+// 地面网格常量 - 固定1米单元格
+const GRID_CELL_SIZE = 100; // 1米 = 100cm
+const GRID_TOTAL_SIZE = 10000; // 100米 = 10000cm
+const GRID_DIVISIONS = 100; // 100×100个单元格
 
 // 对齐线类
 class AlignmentLine {
@@ -226,10 +240,10 @@ function buildAlignmentLineGrid() {
     const maxZ = Math.max(line.originalStart.z, line.originalEnd.z);
     
     // 计算覆盖的网格单元
-    const startCellX = Math.floor(minX / GRID_CELL_SIZE);
-    const endCellX = Math.floor(maxX / GRID_CELL_SIZE);
-    const startCellZ = Math.floor(minZ / GRID_CELL_SIZE);
-    const endCellZ = Math.floor(maxZ / GRID_CELL_SIZE);
+    const startCellX = Math.floor(minX / ALIGNMENT_GRID_CELL_SIZE);
+    const endCellX = Math.floor(maxX / ALIGNMENT_GRID_CELL_SIZE);
+    const startCellZ = Math.floor(minZ / ALIGNMENT_GRID_CELL_SIZE);
+    const endCellZ = Math.floor(maxZ / ALIGNMENT_GRID_CELL_SIZE);
     
     // 将对齐线添加到所有覆盖的网格单元
     for (let x = startCellX; x <= endCellX; x++) {
@@ -255,11 +269,11 @@ function getNearbyAlignmentLines(point, radius = 1000) {
   const nearbyLines = new Set();
   
   // 计算点所在的网格单元
-  const centerCellX = Math.floor(point.x / GRID_CELL_SIZE);
-  const centerCellZ = Math.floor(point.z / GRID_CELL_SIZE);
+  const centerCellX = Math.floor(point.x / ALIGNMENT_GRID_CELL_SIZE);
+  const centerCellZ = Math.floor(point.z / ALIGNMENT_GRID_CELL_SIZE);
   
   // 计算需要检查的单元格范围（半径覆盖的单元格）
-  const cellRadius = Math.ceil(radius / GRID_CELL_SIZE);
+  const cellRadius = Math.ceil(radius / ALIGNMENT_GRID_CELL_SIZE);
   
   for (let x = centerCellX - cellRadius; x <= centerCellX + cellRadius; x++) {
     for (let z = centerCellZ - cellRadius; z <= centerCellZ + cellRadius; z++) {
@@ -672,6 +686,309 @@ function cancelMeasuring() {
   console.log('取消测量');
 }
 
+// ========== 距离线功能 ==========
+
+// 开始距离线模式
+function startDistanceLineMode() {
+  console.log('【关键-debug】startDistanceLineMode() 被调用');
+  isDistanceLineMode = true;
+  distanceLineStartPoint = null;
+  distanceLinePreview = null;
+  distanceLineValue = null;
+  isDistanceLineWaitingForEnd = false;
+  console.log('【关键-debug】ThreeScene 状态:', { isDistanceLineMode, isDistanceLineWaitingForEnd });
+  console.log('开始距离线模式');
+}
+
+// 结束距离线模式
+function stopDistanceLineMode() {
+  isDistanceLineMode = false;
+  clearDistanceLinePreview();
+  distanceLineStartPoint = null;
+  distanceLineValue = null;
+  isDistanceLineWaitingForEnd = false;
+  console.log('结束距离线模式');
+}
+
+// 设置距离线值（由CoreFunction调用）
+function setDistanceLineValue(value) {
+  console.log('【关键-debug】ThreeScene.setDistanceLineValue() 被调用:', value);
+  distanceLineValue = value; // 厘米
+  isDistanceLineWaitingForEnd = true;
+  console.log('【关键-debug】ThreeScene 状态更新:', {
+    isDistanceLineMode,
+    isDistanceLineWaitingForEnd,
+    hasStartPoint: !!distanceLineStartPoint,
+    distanceLineValue
+  });
+}
+
+// 清除距离线预览
+function clearDistanceLinePreview() {
+  if (distanceLinePreview) {
+    scene.remove(distanceLinePreview.line);
+    distanceLinePreview.line.geometry.dispose();
+    distanceLinePreview.line.material.dispose();
+    if (distanceLinePreview.label) {
+      scene.remove(distanceLinePreview.label);
+      if (distanceLinePreview.label.material.map) {
+        distanceLinePreview.label.material.map.dispose();
+      }
+      distanceLinePreview.label.material.dispose();
+    }
+    // 清除标记球
+    if (distanceLinePreview.sphere) {
+      scene.remove(distanceLinePreview.sphere);
+      distanceLinePreview.sphere.geometry.dispose();
+      distanceLinePreview.sphere.material.dispose();
+    }
+    distanceLinePreview = null;
+  }
+}
+
+// 创建距离线预览
+// 创建距离线预览（参考测量工具实现）
+function createDistanceLinePreview(start, end) {
+  console.log('【关键-debug】createDistanceLinePreview() 被调用');
+  
+  if (!start || !end) {
+    console.error('【关键-debug】起点或终点为空');
+    return;
+  }
+  
+  // 确保起点和终点在地面水平面（Y=0）
+  const startOnGround = new THREE.Vector3(start.x, 0, start.z);
+  const endOnGround = new THREE.Vector3(end.x, 0, end.z);
+  
+  // 如果预览线已存在，更新几何体；否则创建新线
+  if (distanceLinePreview && distanceLinePreview.line) {
+    const points = [startOnGround, endOnGround];
+    distanceLinePreview.line.geometry.setFromPoints(points);
+    distanceLinePreview.start = start;
+    distanceLinePreview.end = end;
+    // 更新标记球位置
+    if (distanceLinePreview.sphere) {
+      distanceLinePreview.sphere.position.copy(endOnGround);
+      distanceLinePreview.sphere.position.y = 0.5;
+    }
+    console.log('【关键-debug】预览线已更新');
+  } else {
+    const points = [startOnGround, endOnGround];
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+    
+    // 参考测量工具的材质设置
+    const material = new THREE.LineBasicMaterial({
+      color: 0xff0000, // 红色
+      linewidth: 2
+    });
+    
+    const line = new THREE.Line(geometry, material);
+  line.position.y = 0.2; // 在地面之上0.2cm（参考测量工具）
+  
+  if (!scene) {
+    console.error('【关键-debug】scene对象为空');
+    return;
+  }
+  
+  scene.add(line);
+  
+  // 添加一个明显的标记球在终点，帮助定位
+  const sphereGeometry = new THREE.SphereGeometry(0.5, 16, 16); // 0.5米半径的球
+  const sphereMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+  const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+  sphere.position.copy(endOnGround);
+  sphere.position.y = 0.5; // 在地面之上
+  scene.add(sphere);
+  
+  console.log('【关键-debug】预览线已添加到场景，并添加标记球');
+    
+    distanceLinePreview = {
+      line: line,
+      start: start,
+      end: end,
+      sphere: sphere // 存储标记球
+    };
+  }
+}
+
+// 更新距离线预览
+function updateDistanceLinePreview(direction) {
+  if (!distanceLineStartPoint || !distanceLineValue || !isDistanceLineWaitingForEnd) return;
+  
+  // 计算终点：起点 + 方向 * 距离
+  // 场景使用厘米单位，distanceLineValue已经是厘米，直接使用
+  const endPoint = distanceLineStartPoint.clone().add(
+    direction.clone().normalize().multiplyScalar(distanceLineValue)
+  );
+  
+  createDistanceLinePreview(distanceLineStartPoint, endPoint);
+}
+
+// 创建距离标签
+function createDistanceLabel(position, distance) {
+  // 创建Canvas纹理
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d');
+  canvas.width = 256;
+  canvas.height = 64;
+  
+  // 背景
+  context.fillStyle = 'rgba(0, 0, 0, 0.7)';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // 文字
+  context.font = 'bold 32px Arial';
+  context.fillStyle = '#ffffff';
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  const distanceInMeters = (distance / 100).toFixed(1);
+  context.fillText(distanceInMeters + '米', canvas.width / 2, canvas.height / 2);
+  
+  const texture = new THREE.CanvasTexture(canvas);
+  const material = new THREE.SpriteMaterial({ map: texture });
+  const sprite = new THREE.Sprite(material);
+  
+  sprite.position.copy(position);
+  sprite.position.y = 1.0; // 在距离线上方1米
+  sprite.scale.set(2, 0.5, 1);
+  
+  scene.add(sprite);
+  return sprite;
+}
+
+// 确认距离线（创建固定距离线）
+function confirmDistanceLine() {
+  console.log('【关键-debug】confirmDistanceLine() 被调用');
+  if (!distanceLineStartPoint || !distanceLineValue || !distanceLinePreview) {
+    console.error('【关键-debug】confirmDistanceLine 参数不完整');
+    return;
+  }
+  
+  const id = nextDistanceLineId++;
+  const endPoint = distanceLinePreview.end.clone();
+  
+  // 确保起点和终点在地面水平面（Y=0）
+  const startOnGround = new THREE.Vector3(distanceLineStartPoint.x, 0, distanceLineStartPoint.z);
+  const endOnGround = new THREE.Vector3(endPoint.x, 0, endPoint.z);
+  
+  // 创建固定距离线（实线）- 参考测量工具实现
+  const points = [startOnGround, endOnGround];
+  const geometry = new THREE.BufferGeometry().setFromPoints(points);
+  const material = new THREE.LineBasicMaterial({
+    color: 0x9370DB, // 紫色，提高可见性
+    linewidth: 2
+  });
+
+  const line = new THREE.Line(geometry, material);
+  line.position.y = 0.2; // 在地面之上0.2cm（参考测量工具）
+  scene.add(line);
+
+  // 添加一个明显的标记球在终点，帮助定位
+  const sphereGeometry = new THREE.SphereGeometry(0.5, 16, 16); // 0.5米半径的球
+  const sphereMaterial = new THREE.MeshBasicMaterial({ color: 0x9370DB }); // 紫色
+  const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+  sphere.position.copy(endOnGround);
+  sphere.position.y = 0.5; // 在地面之上
+  scene.add(sphere);
+  
+  console.log('【关键-debug】固定距离线已添加到场景，并添加标记球');
+  
+  // 创建距离标签（使用中点位置）
+  const midPoint = new THREE.Vector3().addVectors(startOnGround, endOnGround).multiplyScalar(0.5);
+  const label = createDistanceLabel(midPoint, distanceLineValue);
+  
+  // 存储距离线对象
+  const distanceLineObj = {
+    id: id,
+    startPoint: startOnGround,
+    endPoint: endOnGround,
+    distance: distanceLineValue,
+    line: line,
+    label: label,
+    sphere: sphere, // 存储标记球
+    createdAt: Date.now()
+  };
+  
+  distanceLines.push(distanceLineObj);
+  
+  // 先保存距离值用于日志
+  const savedDistance = distanceLineValue;
+  
+  // 清除预览
+  clearDistanceLinePreview();
+  
+  // 重置状态
+  distanceLineStartPoint = null;
+  distanceLineValue = null;
+  isDistanceLineWaitingForEnd = false;
+  isDistanceLineMode = false; // 退出距离线模式
+
+  console.log('距离线已创建:', id, '距离:', savedDistance, '厘米');
+
+  // 通知父组件距离线已创建，自动切换到选择模式
+  emit('distance-line-created');
+
+  // 15秒后自动清除
+  setTimeout(() => {
+    console.log('【调试】15秒倒计时结束，清除距离线:', id);
+    clearDistanceLine(id);
+  }, 15000);
+}
+
+// 清除指定距离线
+function clearDistanceLine(id) {
+  const index = distanceLines.findIndex(dl => dl.id === id);
+  if (index === -1) return;
+  
+  const dl = distanceLines[index];
+  
+  // 清除线
+  if (dl.line) {
+    scene.remove(dl.line);
+    dl.line.geometry.dispose();
+    dl.line.material.dispose();
+  }
+  
+  // 清除标签
+  if (dl.label) {
+    scene.remove(dl.label);
+    if (dl.label.material.map) {
+      dl.label.material.map.dispose();
+    }
+    dl.label.material.dispose();
+  }
+  
+  // 清除标记球
+  if (dl.sphere) {
+    scene.remove(dl.sphere);
+    dl.sphere.geometry.dispose();
+    dl.sphere.material.dispose();
+  }
+  
+  distanceLines.splice(index, 1);
+  console.log('距离线已清除:', id);
+}
+
+// 清理所有距离线
+function clearAllDistanceLines() {
+  distanceLines.forEach(dl => {
+    if (dl.line) {
+      scene.remove(dl.line);
+      dl.line.geometry.dispose();
+      dl.line.material.dispose();
+    }
+    if (dl.label) {
+      scene.remove(dl.label);
+      if (dl.label.material.map) {
+        dl.label.material.map.dispose();
+      }
+      dl.label.material.dispose();
+    }
+  });
+  distanceLines = [];
+  console.log('所有距离线已清除');
+}
+
 // 清除测量线
 function clearMeasureLine() {
   if (measureLine) {
@@ -741,10 +1058,10 @@ function showMeasureResult(distance) {
   measureResultDiv.textContent = `距离: ${distanceMeters} 米`;
   document.body.appendChild(measureResultDiv);
   
-  // 3秒后自动隐藏
+  // 10秒后自动隐藏
   setTimeout(() => {
     hideMeasureResult();
-  }, 3000);
+  }, 10000);
 }
 
 // 清除对齐线预览
@@ -2380,6 +2697,83 @@ function createDirectionLabels() {
   zNegArrow.rotation.x = -Math.PI / 2;
   scene.add(zNegArrow);
 
+  // 添加刻度标记 - 每1米一个短刻度，每10米一个长刻度+标签
+  const tickMaterial = new THREE.LineBasicMaterial({ color: 0x666666, transparent: true, opacity: 0.5 });
+  const majorTickMaterial = new THREE.LineBasicMaterial({ color: 0x444444, transparent: true, opacity: 0.7 });
+  
+  // X轴刻度（正方向和负方向）
+  for (let i = 100; i <= axisLength; i += 100) { // 每1米=100cm
+    const isMajor = i % 1000 === 0; // 每10米为长刻度
+    const tickLength = isMajor ? 150 : 80;
+    const tickMaterialToUse = isMajor ? majorTickMaterial : tickMaterial;
+    
+    // X轴正方向刻度
+    const xPosTickGeometry = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(i, 10, -tickLength / 2),
+      new THREE.Vector3(i, 10, tickLength / 2)
+    ]);
+    const xPosTick = new THREE.Line(xPosTickGeometry, tickMaterialToUse);
+    scene.add(xPosTick);
+    
+    // X轴负方向刻度
+    const xNegTickGeometry = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(-i, 10, -tickLength / 2),
+      new THREE.Vector3(-i, 10, tickLength / 2)
+    ]);
+    const xNegTick = new THREE.Line(xNegTickGeometry, tickMaterialToUse);
+    scene.add(xNegTick);
+    
+    // 每10米添加数字标签（只在正方向）
+    if (isMajor && i > 0) {
+      const labelCanvas = document.createElement('canvas');
+      const labelContext = labelCanvas.getContext('2d');
+      labelCanvas.width = 128;
+      labelCanvas.height = 64;
+      
+      labelContext.font = 'bold 40px Arial';
+      labelContext.fillStyle = '#666666';
+      labelContext.textAlign = 'center';
+      labelContext.textBaseline = 'middle';
+      labelContext.fillText(`${i / 100}m`, 64, 32);
+      
+      const labelTexture = new THREE.CanvasTexture(labelCanvas);
+      const labelMaterial = new THREE.SpriteMaterial({ map: labelTexture, transparent: true });
+      const labelSprite = new THREE.Sprite(labelMaterial);
+      labelSprite.position.set(i, 10, 250);
+      labelSprite.scale.set(300, 150, 1);
+      scene.add(labelSprite);
+      
+      // Z轴标签
+      const zLabelSprite = new THREE.Sprite(labelMaterial);
+      zLabelSprite.position.set(250, 10, i);
+      zLabelSprite.scale.set(300, 150, 1);
+      scene.add(zLabelSprite);
+    }
+  }
+  
+  // Z轴刻度（正方向和负方向）
+  for (let i = 100; i <= axisLength; i += 100) { // 每1米=100cm
+    const isMajor = i % 1000 === 0; // 每10米为长刻度
+    const tickLength = isMajor ? 150 : 80;
+    const tickMaterialToUse = isMajor ? majorTickMaterial : tickMaterial;
+    
+    // Z轴正方向刻度
+    const zPosTickGeometry = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(-tickLength / 2, 10, i),
+      new THREE.Vector3(tickLength / 2, 10, i)
+    ]);
+    const zPosTick = new THREE.Line(zPosTickGeometry, tickMaterialToUse);
+    scene.add(zPosTick);
+    
+    // Z轴负方向刻度
+    const zNegTickGeometry = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(-tickLength / 2, 10, -i),
+      new THREE.Vector3(tickLength / 2, 10, -i)
+    ]);
+    const zNegTick = new THREE.Line(zNegTickGeometry, tickMaterialToUse);
+    scene.add(zNegTick);
+  }
+
   // 添加字母标识 - 更大更清晰
   const labels = [
     { text: 'X+', pos: [axisLength + labelSize, 100, 0], color: '#ff4444' },
@@ -2419,7 +2813,7 @@ function createDirectionLabels() {
     scene.add(sprite);
   });
 
-  console.log('方向标识已创建，范围:', axisLength, 'cm');
+  console.log('方向标识已创建，范围:', axisLength, 'cm，包含刻度标记');
 }
 
 // 更新方向标识位置到仓库中心
@@ -2495,6 +2889,85 @@ function updateDirectionLabels(centerX, y, centerZ, warehouseSize) {
   zNegArrow.rotation.x = -Math.PI / 2;
   directionLabelsGroup.add(zNegArrow);
   
+  // 添加刻度标记 - 每1米一个短刻度，每10米一个长刻度+标签
+  const tickMaterial = new THREE.LineBasicMaterial({ color: 0x666666, transparent: true, opacity: 0.5 });
+  const majorTickMaterial = new THREE.LineBasicMaterial({ color: 0x444444, transparent: true, opacity: 0.7 });
+  
+  // X轴刻度（相对于仓库中心）
+  for (let i = 100; i <= axisLength; i += 100) { // 每1米=100cm
+    const isMajor = i % 1000 === 0; // 每10米为长刻度
+    const tickLength = isMajor ? 150 : 80;
+    const tickMaterialToUse = isMajor ? majorTickMaterial : tickMaterial;
+    
+    // X轴正方向刻度
+    const xPosTickGeometry = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(centerX + i, y, centerZ - tickLength / 2),
+      new THREE.Vector3(centerX + i, y, centerZ + tickLength / 2)
+    ]);
+    const xPosTick = new THREE.Line(xPosTickGeometry, tickMaterialToUse);
+    directionLabelsGroup.add(xPosTick);
+    
+    // X轴负方向刻度
+    const xNegTickGeometry = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(centerX - i, y, centerZ - tickLength / 2),
+      new THREE.Vector3(centerX - i, y, centerZ + tickLength / 2)
+    ]);
+    const xNegTick = new THREE.Line(xNegTickGeometry, tickMaterialToUse);
+    directionLabelsGroup.add(xNegTick);
+    
+    // 每10米添加数字标签（只在正方向）
+    if (isMajor && i > 0) {
+      const labelCanvas = document.createElement('canvas');
+      const labelContext = labelCanvas.getContext('2d');
+      labelCanvas.width = 128;
+      labelCanvas.height = 64;
+      
+      labelContext.font = 'bold 40px Arial';
+      labelContext.fillStyle = '#666666';
+      labelContext.textAlign = 'center';
+      labelContext.textBaseline = 'middle';
+      labelContext.fillText(`${i / 100}m`, 64, 32);
+      
+      const labelTexture = new THREE.CanvasTexture(labelCanvas);
+      const labelMaterial = new THREE.SpriteMaterial({ map: labelTexture, transparent: true });
+      
+      // X轴标签
+      const xLabelSprite = new THREE.Sprite(labelMaterial);
+      xLabelSprite.position.set(centerX + i, y, centerZ + 250);
+      xLabelSprite.scale.set(300, 150, 1);
+      directionLabelsGroup.add(xLabelSprite);
+      
+      // Z轴标签
+      const zLabelSprite = new THREE.Sprite(labelMaterial);
+      zLabelSprite.position.set(centerX + 250, y, centerZ + i);
+      zLabelSprite.scale.set(300, 150, 1);
+      directionLabelsGroup.add(zLabelSprite);
+    }
+  }
+  
+  // Z轴刻度（相对于仓库中心）
+  for (let i = 100; i <= axisLength; i += 100) { // 每1米=100cm
+    const isMajor = i % 1000 === 0; // 每10米为长刻度
+    const tickLength = isMajor ? 150 : 80;
+    const tickMaterialToUse = isMajor ? majorTickMaterial : tickMaterial;
+    
+    // Z轴正方向刻度
+    const zPosTickGeometry = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(centerX - tickLength / 2, y, centerZ + i),
+      new THREE.Vector3(centerX + tickLength / 2, y, centerZ + i)
+    ]);
+    const zPosTick = new THREE.Line(zPosTickGeometry, tickMaterialToUse);
+    directionLabelsGroup.add(zPosTick);
+    
+    // Z轴负方向刻度
+    const zNegTickGeometry = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(centerX - tickLength / 2, y, centerZ - i),
+      new THREE.Vector3(centerX + tickLength / 2, y, centerZ - i)
+    ]);
+    const zNegTick = new THREE.Line(zNegTickGeometry, tickMaterialToUse);
+    directionLabelsGroup.add(zNegTick);
+  }
+  
   // 添加标签
   const labels = [
     { text: 'X+', pos: [centerX + axisLength + labelSize, y + labelSize * 0.3, centerZ], color: '#ff4444' },
@@ -2533,7 +3006,7 @@ function updateDirectionLabels(centerX, y, centerZ, warehouseSize) {
   });
   
   scene.add(directionLabelsGroup);
-  console.log('方向标识已更新到仓库中心:', { x: centerX, z: centerZ });
+  console.log('方向标识已更新到仓库中心:', { x: centerX, z: centerZ }, '包含刻度标记');
 }
 
 // 键盘事件处理
@@ -2736,10 +3209,47 @@ function onClick(event) {
         measureStartPoint = null;
         measureEndPoint = null;
         
-        // 3秒后清除测量线
+        // 10秒后清除测量线
         setTimeout(() => {
           clearMeasureLine();
-        }, 3000);
+        }, 10000);
+      }
+    }
+    return;
+  }
+  
+  // 处理距离线模式 - 选择起点或确定终点
+  if (isDistanceLineMode) {
+    console.log('【关键-debug】onClick 距离线模式，isDistanceLineWaitingForEnd =', isDistanceLineWaitingForEnd);
+    const rect = container.value.getBoundingClientRect();
+    mouse.x = ((event.clientX - rect.left) / container.value.clientWidth) * 2 - 1;
+    mouse.y = -((event.clientY - rect.top) / container.value.clientHeight) * 2 + 1;
+    
+    raycaster.setFromCamera(mouse, camera);
+    
+    // 与地面Y=0平面相交
+    const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const intersectPoint = new THREE.Vector3();
+    
+    if (raycaster.ray.intersectPlane(groundPlane, intersectPoint)) {
+      // 防御性检查
+      if (Math.abs(intersectPoint.x) > 100000 || Math.abs(intersectPoint.z) > 100000) {
+        console.error('❌ 坐标异常，拒绝距离线:', intersectPoint);
+        return;
+      }
+      
+      if (!isDistanceLineWaitingForEnd) {
+        // 选择起点
+        distanceLineStartPoint = intersectPoint.clone();
+        console.log('【关键-debug】选择起点:', distanceLineStartPoint.x, distanceLineStartPoint.z);
+        console.log('【关键-debug】触发弹窗显示');
+        
+        // 触发弹窗显示（通过emit通知CoreFunction）
+        emit('show-distance-line-dialog');
+      } else {
+        // 确定终点，创建距离线
+        console.log('【关键-debug】确定终点，创建距离线');
+        confirmDistanceLine();
       }
     }
     return;
@@ -2756,12 +3266,12 @@ function onClick(event) {
     sceneObjects.filter(obj => obj.userData.type === 'wall'),
     false
   );
-  
+
   if (wallIntersects.length > 0 && (props.addingDoor || props.addingWindow)) {
     const wall = wallIntersects[0].object;
     const wallIndex = wall.userData.wallIndex;
     const intersectPoint = wallIntersects[0].point;
-    
+
     // 计算点击位置在墙体上的相对位置（从墙体中心开始的距离）
     const wallCenter = wall.position.clone();
     const wallDirection = new THREE.Vector3(
@@ -2769,11 +3279,11 @@ function onClick(event) {
       0,
       Math.sin(-wall.rotation.y)
     );
-    
+
     // 计算点击点相对于墙体中心的偏移
     const toIntersect = new THREE.Vector3().subVectors(intersectPoint, wallCenter);
     const position = toIntersect.dot(wallDirection) / 100; // 转换为米
-    
+
     if (props.addingDoor) {
       emit('add-door', wallIndex, position);
     } else if (props.addingWindow) {
@@ -2782,7 +3292,8 @@ function onClick(event) {
     return;
   }
   
-  // 处理移动模式
+  // 处理移动模式（点击事件中的备用逻辑）
+  // 【注意】主要移动逻辑在 onMouseMove 中处理，这里保留作为备用
   if (isMoving && selectedObjects.length > 0) {
     if (raycaster.ray.intersectPlane(movePlane, moveIntersectPoint)) {
       moveSelectedObjects(moveIntersectPoint.sub(moveOffset));
@@ -2809,7 +3320,7 @@ function onClick(event) {
   });
   
   if (intersects.length > 0) {
-    // 优先查找门/窗对象（它们可能在墙体后面，但应该优先被选中）
+    // 优先查找门/窗/外墙标语对象（它们可能在墙体后面，但应该优先被选中）
     let targetObject = null;
     let targetRootObject = null;
     
@@ -2818,15 +3329,15 @@ function onClick(event) {
       while (rootObj.parent && rootObj.parent !== scene) {
         rootObj = rootObj.parent;
       }
-      // 如果是门或窗，优先选择
-      if (rootObj.userData.type === 'door' || rootObj.userData.type === 'window') {
+      // 如果是门、窗或外墙标语，优先选择
+      if (rootObj.userData.type === 'door' || rootObj.userData.type === 'window' || rootObj.userData.type === 'wallSign') {
         targetObject = intersect.object;
         targetRootObject = rootObj;
         break;
       }
     }
     
-    // 如果没有找到门/窗，使用最近的对象
+    // 如果没有找到门/窗/标语，使用最近的对象
     if (!targetObject) {
       targetObject = intersects[0].object;
       targetRootObject = targetObject;
@@ -2860,7 +3371,17 @@ function selectObject(obj) {
     emit('zone-selected', zoneId);
     return;
   }
-  
+
+  // 关键修复：通过UUID从sceneObjects中查找原始引用，确保引用一致性
+  // 避免intersectObjects返回的对象与sceneObjects中的对象引用不一致
+  const originalObj = sceneObjects.find(o => o.uuid === obj.uuid);
+  if (originalObj) {
+    console.log('【引用修复】选中对象通过UUID匹配到原始引用:', obj.uuid, obj.userData.type);
+    obj = originalObj;
+  } else {
+    console.warn('【引用警告】未找到原始引用，使用传入对象:', obj.uuid);
+  }
+
   selectedObject = obj;
   selectedObjects.push(obj);
   
@@ -2896,6 +3417,17 @@ function selectObject(obj) {
     rotation: obj.rotation.y,
     dimensions: obj.userData.dimensions || calculateObjectDimensions(obj)
   };
+  
+  // 外墙标语特殊字段
+  if (obj.userData.type === 'wallSign') {
+    objectInfo.text = obj.userData.text;
+    objectInfo.fontSize = obj.userData.fontSize;
+    objectInfo.textColor = obj.userData.textColor;
+    objectInfo.bgColor = obj.userData.bgColor;
+    objectInfo.signHeight = obj.userData.signHeight;
+    objectInfo.wallIndex = obj.userData.wallIndex;
+    objectInfo.offsetAlongWall = obj.userData.offsetAlongWall;
+  }
   
   emit('object-selected', objectInfo);
   updateCornerMarkers();
@@ -2946,28 +3478,59 @@ function moveSelectedObjects(delta) {
     console.log('目标位置:', targetPosition.x, targetPosition.z);
     console.log('对齐线数量:', alignmentLines.length);
     
-    const snapResult = applySnap(targetPosition, firstObj);
+    // 【修复】使用 checkAlignmentLineSnap 替代 applySnap，确保使用4条边的中点进行吸附
+    const snapResult = checkAlignmentLineSnap(targetPosition, firstObj, SNAP_CONFIG.threshold);
     
-    if (snapResult.snapped) {
-      console.log('🎯 已吸附！吸附到位置:', snapResult.position.x, snapResult.position.z);
-      // 重新计算delta
-      delta.subVectors(snapResult.position, firstObj.position);
+    if (snapResult) {
+      console.log('🎯 已吸附！吸附到边:', snapResult.edgeName);
+      // 应用吸附偏移
+      firstObj.position.x += snapResult.offset.x;
+      firstObj.position.z += snapResult.offset.z;
+      
+      // 重新计算delta（基于实际移动后的位置）
+      const newPosition = firstObj.position.clone();
+      delta.subVectors(newPosition, firstObj.position.clone().sub(delta));
       
       // 显示吸附提示
-      if (snapResult.projection) {
-        updateSnapIndicator(snapResult.projection, snapResult.line, snapResult.distance);
+      if (snapResult.snapPoint) {
+        const line = alignmentLines.find(l => l.id === snapResult.lineId);
+        if (line) {
+          updateSnapIndicator(snapResult.snapPoint, line, 0);
+        }
+      }
+      
+      // 【重构】添加对齐线高亮视觉反馈（从原onMouseMove迁移）
+      if (snapResult.lineId) {
+        highlightAlignmentLineForSnap(snapResult.lineId, true);
       }
     } else {
       console.log('未吸附');
       hideSnapIndicator();
+      
+      // 【重构】恢复对齐线颜色（从原onMouseMove迁移）
+      restoreAllAlignmentLineColors();
     }
   }
   
-  // 确保delta的Y分量为0，避免对象陷入地面
-  delta.y = 0;
-  
-  selectedObjects.forEach(obj => {
-    obj.position.add(delta);
+  // 处理每个选中对象的移动
+  selectedObjects.forEach((obj, index) => {
+    // 关键修复：使用更健壮的类型判断，支持多种方式识别wallSign
+    const objType = obj.userData?.type || obj.userData?.modelType;
+    const isWallSign = objType === 'wallSign' || obj.userData?.type === 'wallSign';
+
+    console.log(`【移动对象${index}】类型:`, objType, '是否标语:', isWallSign, 'userData:', obj.userData);
+
+    if (isWallSign) {
+      // 外墙标语使用特殊移动逻辑
+      console.log('【moveWallSign】调用外墙标语移动逻辑');
+      moveWallSign(obj, delta);
+    } else {
+      // 其他对象正常移动，确保delta的Y分量为0，避免对象陷入地面
+      console.log('【普通移动】直接修改position');
+      const objDelta = delta.clone();
+      objDelta.y = 0;
+      obj.position.add(objDelta);
+    }
   });
   updateCornerMarkers();
 }
@@ -2978,6 +3541,17 @@ function onMouseMove(event) {
   mouse.y = -((event.clientY - rect.top) / container.value.clientHeight) * 2 + 1;
   
   raycaster.setFromCamera(mouse, camera);
+  
+  // 【关键-debug】打印鼠标移动时的状态（每10帧打印一次，避免刷屏）
+  if ((isDistanceLineMode || isDistanceLineWaitingForEnd) && Math.random() < 0.1) {
+    console.log('【关键-debug】onMouseMove 状态:', {
+      isDistanceLineMode,
+      isDistanceLineWaitingForEnd,
+      hasStartPoint: !!distanceLineStartPoint,
+      isDrawingAlignmentLine,
+      isMeasuring
+    });
+  }
   
   // 对齐线绘制预览
   if (isDrawingAlignmentLine && alignmentLineStartPoint) {
@@ -3009,7 +3583,28 @@ function onMouseMove(event) {
     return;
   }
   
+  // 距离线模式预览
+  if (isDistanceLineMode && isDistanceLineWaitingForEnd && distanceLineStartPoint) {
+    console.log('【关键-debug】进入距离线预览逻辑');
+    const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const intersectPoint = new THREE.Vector3();
+    if (raycaster.ray.intersectPlane(groundPlane, intersectPoint)) {
+      // 防御性检查：防止天文数字坐标
+      if (Math.abs(intersectPoint.x) > 100000 || Math.abs(intersectPoint.z) > 100000) {
+        console.error('❌ 距离线预览坐标异常，跳过更新:', intersectPoint);
+        return;
+      }
+      // 计算方向向量（从起点到鼠标位置）
+      const direction = new THREE.Vector3().subVectors(intersectPoint, distanceLineStartPoint);
+      direction.y = 0; // 确保水平方向
+      console.log('【关键-debug】更新距离线预览，方向:', direction.x, direction.z);
+      updateDistanceLinePreview(direction);
+    }
+    return;
+  }
+  
   // 移动模式（通过【移动】按钮触发）+ 吸附功能
+  // 【重构】统一使用 moveSelectedObjects 处理所有移动逻辑
   if (isMoving && selectedObjects.length > 0) {
     const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
     const intersectPoint = new THREE.Vector3();
@@ -3021,43 +3616,34 @@ function onMouseMove(event) {
         return;
       }
       
-      // 对象中心直接跟随鼠标位置（无偏移）
-      let targetPosition = new THREE.Vector3(
+      // 计算目标位置（对象中心跟随鼠标）
+      const targetPosition = new THREE.Vector3(
         Math.round(intersectPoint.x * 10) / 10,
         0,
         Math.round(intersectPoint.z * 10) / 10
       );
 
-      // 步骤4：直接将对象移动到目标位置（对象中心跟随鼠标）
+      // 【重构】计算 delta 并调用统一的 moveSelectedObjects 函数
+      // 不再直接操作 position，确保外墙标语等特殊对象能被正确处理
       const firstObj = selectedObjects[0];
-      // 只更新X和Z坐标，保持Y坐标不变（避免立柱等对象陷入地面）
-      firstObj.position.x = targetPosition.x;
-      firstObj.position.z = targetPosition.z;
+      const delta = new THREE.Vector3(
+        targetPosition.x - firstObj.position.x,
+        0, // Y方向由 moveSelectedObjects 根据对象类型处理
+        targetPosition.z - firstObj.position.z
+      );
       
-      // 步骤4：计算吸附（基于对象边界边线）
-      let snappedLineId = null;
-      if (alignmentLines.length > 0) {
-        const snapResult = checkAlignmentLineSnap(targetPosition, firstObj, 10);
-        if (snapResult) {
-          // 关键修正：将对象整体偏移，使边线对齐到吸附点
-          firstObj.position.x += snapResult.offset.x;
-          firstObj.position.z += snapResult.offset.z;
-          snappedLineId = snapResult.lineId;
-          console.log('🎯 吸附到对齐线:', snapResult.lineId, '边:', snapResult.edgeName);
-        }
-      }
+      console.log('【重构-移动】计算 delta:', { 
+        targetX: targetPosition.x, 
+        targetZ: targetPosition.z,
+        currentX: firstObj.position.x,
+        currentZ: firstObj.position.z,
+        deltaX: delta.x,
+        deltaZ: delta.z
+      });
       
-      console.log('🟡 移动中:', targetPosition.x, targetPosition.z);
-
-      // 视觉反馈：高亮吸附的对齐线（变绿）
-      if (snappedLineId) {
-        highlightAlignmentLineForSnap(snappedLineId, true);
-      } else {
-        // 恢复所有对齐线颜色
-        restoreAllAlignmentLineColors();
-      }
+      // 调用统一的移动函数（内部处理吸附和特殊对象类型）
+      moveSelectedObjects(delta);
     }
-    updateCornerMarkers();
     return;
   }
   
@@ -3130,10 +3716,10 @@ function onMouseUp() {
     isMoving = false;
     container.value.style.cursor = '';
     console.log('移动完成');
-    
+
     // 移动完成时隐藏吸附提示
     hideSnapIndicator();
-    
+
     // 移动完成时恢复对齐线颜色
     restoreAllAlignmentLineColors();
   }
@@ -3301,6 +3887,35 @@ function onDrop(event) {
         const sillHeight = parseFloat(event.dataTransfer.getData('windowSillHeight')) || 1.0;
         createWindow(wallIndex, position, { width, height, sillHeight }, wall.userData.type);
       }
+    }
+    return;
+  }
+
+  // 处理外墙标语
+  if (objectType === 'wallSign') {
+    // 发射射线检测墙体（使用递归模式检测子对象）
+    raycaster.setFromCamera(new THREE.Vector2(mouseX, mouseY), camera);
+    const wallObjects = sceneObjects.filter(obj => obj.userData.type === 'wall');
+    console.log('检测到的墙体数量:', wallObjects.length);
+    const intersects = raycaster.intersectObjects(wallObjects, true);
+
+    if (intersects.length > 0) {
+      // 找到最近的墙体（可能是子对象，需要向上查找到墙体根对象）
+      let wall = intersects[0].object;
+      while (wall && wall.userData.type !== 'wall' && wall.parent) {
+        wall = wall.parent;
+      }
+      
+      if (wall && wall.userData.type === 'wall') {
+        const intersectPoint = intersects[0].point;
+        // 创建外墙标语
+        createWallSign(wall, intersectPoint);
+        console.log('外墙标语放置到墙体:', wall.userData.wallIndex);
+      } else {
+        console.warn('未找到有效的墙体对象');
+      }
+    } else {
+      console.warn('未点击到墙体，无法放置外墙标语');
     }
     return;
   }
@@ -4319,8 +4934,24 @@ function deleteZone(zoneId) {
 
 // 获取场景对象
 function getSceneObjects() {
-  return sceneObjects.filter(obj => obj.userData.modelType || obj.userData.modelName ||
-                                     obj.userData.type === 'door' || obj.userData.type === 'window');
+  // 从 sceneObjects 获取基础对象（包含墙体、门、窗、立柱、标语）
+  const baseObjects = sceneObjects.filter(obj => obj.userData.modelType || obj.userData.modelName ||
+                                     obj.userData.type === 'door' || obj.userData.type === 'window' ||
+                                     obj.userData.type === 'pillar' || obj.userData.type === 'wallSign');
+  
+  // 【调试日志】记录外墙标语对象的数据
+  const wallSigns = baseObjects.filter(obj => obj.userData.type === 'wallSign');
+  if (wallSigns.length > 0) {
+    console.log('【getSceneObjects-外墙标语检查】', wallSigns.map(obj => ({
+      uuid: obj.uuid,
+      text: obj.userData.text,
+      wallIndex: obj.userData.wallIndex,
+      offsetAlongWall: obj.userData.offsetAlongWall,
+      position: { x: obj.position.x, y: obj.position.y, z: obj.position.z }
+    })));
+  }
+
+  return baseObjects;
 }
 
 // 获取选中对象数量
@@ -4331,6 +4962,66 @@ function getSelectedObjectsCount() {
 // 获取场景对象数量
 function getObjectsCount() {
   return sceneObjects.filter(obj => obj.userData.modelType || obj.userData.type === 'door' || obj.userData.type === 'window').length;
+}
+
+// 获取选中对象数组（用于保存前同步数据）
+function getSelectedObjects() {
+  return selectedObjects;
+}
+
+// 同步选中对象数据到场景对象（兜底保险）
+function syncSelectedObjects() {
+  console.log('【同步检查】选中对象数量:', selectedObjects.length);
+  let syncCount = 0;
+
+  selectedObjects.forEach(selectedObj => {
+    // 在 sceneObjects 中查找对应的对象
+    const sceneObj = sceneObjects.find(o => o.uuid === selectedObj.uuid);
+    
+    // 【调试日志】记录引用对比情况
+    const isSameRef = sceneObj === selectedObj;
+    console.log('【syncSelectedObjects-检查】', {
+      uuid: selectedObj.uuid,
+      type: selectedObj.userData?.type,
+      foundInScene: !!sceneObj,
+      isSameReference: isSameRef,
+      selectedOffset: selectedObj.userData?.offsetAlongWall,
+      sceneOffset: sceneObj?.userData?.offsetAlongWall
+    });
+    
+    if (sceneObj && sceneObj !== selectedObj) {
+      // 如果找到的对象引用不一致，同步关键数据
+      console.log('【同步数据】对象引用不一致，同步数据:', selectedObj.uuid, selectedObj.userData.type);
+
+      // 同步外墙标语的 offsetAlongWall
+      if (selectedObj.userData.type === 'wallSign' &&
+          selectedObj.userData.offsetAlongWall !== undefined) {
+        const oldSceneOffset = sceneObj.userData.offsetAlongWall;
+        sceneObj.userData.offsetAlongWall = selectedObj.userData.offsetAlongWall;
+        console.log('【同步数据】同步 offsetAlongWall:', {
+          uuid: selectedObj.uuid,
+          oldValue: oldSceneOffset,
+          newValue: selectedObj.userData.offsetAlongWall
+        });
+        syncCount++;
+      }
+
+      // 同步位置信息
+      if (selectedObj.position) {
+        sceneObj.position.copy(selectedObj.position);
+      }
+    } else if (sceneObj && isSameRef) {
+      // 【调试日志】引用一致的情况
+      console.log('【syncSelectedObjects-引用一致】无需同步，引用相同:', {
+        uuid: selectedObj.uuid,
+        type: selectedObj.userData?.type,
+        offsetAlongWall: selectedObj.userData?.offsetAlongWall
+      });
+    }
+  });
+
+  console.log('【同步完成】同步了', syncCount, '个对象的数据');
+  return syncCount;
 }
 
 // 计算对象尺寸
@@ -4412,10 +5103,11 @@ function createWarehouse(config) {
   };
   
   // 创建网格地面（使用GridHelper替代实体地面，更清晰显示坐标）
-  const gridSize = Math.max(length, width);
-  const gridDivisions = Math.floor(gridSize / 10); // 每10cm一个网格
-  const gridHelper = new THREE.GridHelper(gridSize, gridDivisions, 0x888888, 0xcccccc);
+  // 使用固定网格参数：每格1米，总共100×100米
+  const gridHelper = new THREE.GridHelper(GRID_TOTAL_SIZE, GRID_DIVISIONS, 0x888888, 0xcccccc);
   gridHelper.position.y = baseHeight;
+  gridHelper.position.x = 0; // 与仓库中心对齐（矩形仓库中心在原点）
+  gridHelper.position.z = 0; // 与仓库中心对齐
   gridHelper.userData.type = 'floor';
 
   // 设置GridHelper材质为透明
@@ -4486,11 +5178,12 @@ function createWarehouse(config) {
     scene.remove(existingGridHelper);
   }
 
-  // 网格尺寸应该与仓库尺寸匹配（cm单位）
-  const updateGridSize = Math.max(length, width);
-  const newGridHelper = new THREE.GridHelper(updateGridSize, 20, 0xaaaaaa, 0xdddddd);
+  // 使用固定网格参数：每格1米，总共100×100米
+  const newGridHelper = new THREE.GridHelper(GRID_TOTAL_SIZE, GRID_DIVISIONS, 0xaaaaaa, 0xdddddd);
   newGridHelper.name = 'gridHelper';
   newGridHelper.position.y = baseHeight;
+  newGridHelper.position.x = 0; // 与仓库中心对齐
+  newGridHelper.position.z = 0; // 与仓库中心对齐
   scene.add(newGridHelper);
   
   console.log('仓库创建成功:', config);
@@ -4544,13 +5237,12 @@ function createWarehouseFromShape(shapePoints, config, zones = [], textLabels = 
     width: boundsDepth
   };
 
-  // 创建网格地面（根据轮廓的边界框）
-  const gridSize = Math.max(boundsWidth, boundsDepth);
-  const gridDivisions = Math.floor(gridSize / 10); // 每10cm一个网格
-  const gridHelper = new THREE.GridHelper(gridSize, gridDivisions, 0x888888, 0xcccccc);
+  // 创建网格地面（使用固定网格参数）
+  // 每格1米，总共100×100米，中心与仓库中心对齐
+  const gridHelper = new THREE.GridHelper(GRID_TOTAL_SIZE, GRID_DIVISIONS, 0x888888, 0xcccccc);
   gridHelper.position.y = baseHeight;
-  gridHelper.position.x = centerX;
-  gridHelper.position.z = centerZ;
+  gridHelper.position.x = centerX; // 与仓库中心对齐
+  gridHelper.position.z = centerZ; // 与仓库中心对齐
   gridHelper.userData.type = 'floor';
 
   // 设置GridHelper材质为透明
@@ -4599,8 +5291,34 @@ function createWarehouseFromShape(shapePoints, config, zones = [], textLabels = 
     // 由于2D的Y向下，3D的Z向上，旋转方向相反
     wallMesh.rotation.y = -angle;
     
+    // 计算墙体类型（基于角度）
+    // 角度是墙体的方向，需要转换为墙体法线方向（面向仓库内部）
+    let wallType = 'front';
+    const angleDeg = (angle * 180 / Math.PI) % 360;
+    const normalizedAngle = angleDeg < 0 ? angleDeg + 360 : angleDeg;
+    
+    // 根据角度判断墙体类型
+    // 角度0°：墙体沿X轴正方向（从起点到终点是向右），这是前墙（面向Z负方向）
+    // 角度90°：墙体沿Z轴正方向（从起点到终点是向下），这是右墙（面向X负方向）
+    // 角度180°：墙体沿X轴负方向（从起点到终点是向左），这是后墙（面向Z正方向）
+    // 角度-90°/270°：墙体沿Z轴负方向（从起点到终点是向上），这是左墙（面向X正方向）
+    if (normalizedAngle >= 45 && normalizedAngle < 135) {
+      // 角度90°左右 - 墙体沿Z轴，这是右墙
+      wallType = 'right';
+    } else if (normalizedAngle >= 135 && normalizedAngle < 225) {
+      // 角度180°左右 - 墙体沿X轴负方向，这是后墙
+      wallType = 'back';
+    } else if (normalizedAngle >= 225 && normalizedAngle < 315) {
+      // 角度270°左右 - 墙体沿Z轴负方向，这是左墙
+      wallType = 'left';
+    } else {
+      // 角度0°左右 - 墙体沿X轴正方向，这是前墙
+      wallType = 'front';
+    }
+    
     // 存储墙体信息
     wallMesh.userData.type = 'wall';
+    wallMesh.userData.wallType = wallType;
     wallMesh.userData.wallIndex = i;
     wallMesh.userData.startPoint = p1;
     wallMesh.userData.endPoint = p2;
@@ -4621,14 +5339,12 @@ function createWarehouseFromShape(shapePoints, config, zones = [], textLabels = 
     scene.remove(existingGridHelper2);
   }
 
-  // 网格尺寸应该与仓库尺寸匹配（已经是cm单位，不需要再除以100）
-  const maxDimension = Math.max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY);
-  const updateGridSize2 = maxDimension * scaleFactor;
-  const newGridHelper = new THREE.GridHelper(updateGridSize2, 20, 0xaaaaaa, 0xdddddd);
+  // 使用固定网格参数：每格1米，总共100×100米
+  const newGridHelper = new THREE.GridHelper(GRID_TOTAL_SIZE, GRID_DIVISIONS, 0xaaaaaa, 0xdddddd);
   newGridHelper.name = 'gridHelper';
   newGridHelper.position.y = baseHeight;
-  newGridHelper.position.x = (bounds.minX + bounds.maxX) / 2 * scaleFactor;
-  newGridHelper.position.z = (bounds.minY + bounds.maxY) / 2 * scaleFactor;
+  newGridHelper.position.x = (bounds.minX + bounds.maxX) / 2 * scaleFactor; // 与仓库中心对齐
+  newGridHelper.position.z = (bounds.minY + bounds.maxY) / 2 * scaleFactor; // 与仓库中心对齐
   scene.add(newGridHelper);
 
   // 调整相机位置以适应仓库大小
@@ -4772,6 +5488,293 @@ function updatePillarHeight(pillar, newHeight) {
   pillar.userData.height = clampedHeight;
   
   console.log('立柱高度更新成功:', { newHeight: clampedHeight });
+  return true;
+}
+
+// 创建外墙标语
+function createWallSign(wallObject, referencePoint, config = {}) {
+  // 直接使用传入的墙体对象
+  const wall = wallObject;
+  if (!wall) {
+    console.error('未提供墙体对象');
+    return null;
+  }
+  
+  // 从墙体对象获取信息
+  const wallIndex = wall.userData.wallIndex;
+  const wallType = wall.userData.wallType;
+  
+  const defaultConfig = {
+    text: '外墙标语',
+    fontSize: 24,
+    textColor: '#FFFFFF',
+    bgColor: '#0066CC',
+    signHeight: 150  // 默认离地高度1.5米
+  };
+  
+  const signConfig = { ...defaultConfig, ...config };
+  const baseHeight = warehouseConfig?.baseHeight || 0;
+  
+  // 使用Canvas创建文字纹理
+  function createSignTexture(text, fontSize, textColor, bgColor) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // 计算文字尺寸
+    ctx.font = `bold ${fontSize}px Arial`;
+    const textMetrics = ctx.measureText(text);
+    const textWidth = textMetrics.width;
+    const textHeight = fontSize * 1.2;
+    
+    // 添加边距
+    const padding = fontSize * 0.5;
+    const width = Math.max(textWidth + padding * 2, 100);
+    const height = textHeight + padding;
+    
+    canvas.width = width;
+    canvas.height = height;
+    
+    // 绘制背景
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, width, height);
+    
+    // 绘制文字
+    ctx.font = `bold ${fontSize}px Arial`;
+    ctx.fillStyle = textColor;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, width / 2, height / 2);
+    
+    return {
+      texture: new THREE.CanvasTexture(canvas),
+      width: width / 10 * 30, // 转换为3D单位，放大30倍
+      height: height / 10 * 30
+    };
+  }
+  
+  const { texture, width, height } = createSignTexture(
+    signConfig.text,
+    signConfig.fontSize,
+    signConfig.textColor,
+    signConfig.bgColor
+  );
+  
+  // 创建标语平面
+  const geometry = new THREE.PlaneGeometry(width, height);
+  const material = new THREE.MeshBasicMaterial({
+    map: texture,
+    transparent: true,
+    side: THREE.DoubleSide,
+    polygonOffset: true,
+    polygonOffsetFactor: -10,  // 确保标语在墙体前方渲染，解决 Z-fighting
+    polygonOffsetUnits: -10
+  });
+  
+  const signMesh = new THREE.Mesh(geometry, material);
+  
+  // 获取墙体信息
+  const wallCenter = wall.position.clone();
+  const wallRotation = wall.rotation.y;
+  const wallLength = wall.userData.length;
+  
+  // 计算墙体方向向量（沿墙体长度方向）
+  const wallDirection = new THREE.Vector3(
+    Math.cos(-wallRotation),
+    0,
+    Math.sin(-wallRotation)
+  );
+  
+  // 计算墙体法向量（垂直于墙体，指向外侧）
+  const wallNormal = new THREE.Vector3(
+    Math.sin(-wallRotation),
+    0,
+    -Math.cos(-wallRotation)
+  );
+  
+  // 计算沿墙体方向的偏移量
+  // 如果提供了有效的偏移配置，使用配置值；否则默认放在墙体中心（偏移为0）
+  let offsetAlongWall = 0;
+  if (config.offsetAlongWall !== undefined) {
+    // 使用配置中的偏移值（用于更新标语位置）
+    offsetAlongWall = config.offsetAlongWall;
+  }
+  // 否则偏移为0，即放在墙体中心
+  
+  // 注意：不限制标语在墙体范围内，允许悬空放置
+  
+  // 标语位置 = 墙体中心 + 沿墙体方向的偏移 + 法向量偏移（向外10cm，确保不被墙体遮挡）
+  const signPosition = wallCenter.clone()
+    .add(wallDirection.clone().multiplyScalar(offsetAlongWall))
+    .add(wallNormal.clone().multiplyScalar(10)); // 向外偏移10cm，避免被墙体遮挡
+  
+  // 设置Y坐标（使用配置的signHeight，不再随字体大小变化）
+  const signHeightConfig = signConfig.signHeight !== undefined ? signConfig.signHeight : 150;
+  signPosition.y = baseHeight + signHeightConfig; // 基础高度 + 配置的离地高度
+  
+  // 设置userData（在添加到墙体之前设置，避免被转换）
+  signMesh.userData.type = 'wallSign';
+  signMesh.userData.modelType = 'wallSign';
+  signMesh.userData.name = '外墙标语';
+  signMesh.userData.text = signConfig.text;
+  signMesh.userData.fontSize = signConfig.fontSize;
+  signMesh.userData.textColor = signConfig.textColor;
+  signMesh.userData.bgColor = signConfig.bgColor;
+  signMesh.userData.wallType = wallType;
+  signMesh.userData.wallIndex = wallIndex;
+  signMesh.userData.offsetAlongWall = offsetAlongWall;
+  signMesh.userData.width = width;
+  signMesh.userData.height = height;
+  signMesh.userData.signHeight = signHeightConfig;  // 保存离地高度配置
+
+  // 将标语添加到场景（而非墙体children），保持世界坐标
+  // 父子级关联会导致坐标转换问题，改为通过wallIndex在保存/加载时重新关联
+  signMesh.position.copy(signPosition);
+  // 标语旋转 = 墙体旋转 + 180度（让标语面向外侧）
+  signMesh.rotation.y = wallRotation + Math.PI;
+  scene.add(signMesh);
+  sceneObjects.push(signMesh);
+
+  console.log('创建外墙标语成功:', {
+    text: signConfig.text,
+    wallType,
+    wallIndex,
+    position: signPosition,
+    offsetAlongWall
+  });
+
+  return signMesh;
+}
+
+// 更新外墙标语
+function updateWallSign(sign, config) {
+  if (!sign || sign.userData.type !== 'wallSign') {
+    console.error('无效的标语对象');
+    return false;
+  }
+  
+  // 获取当前配置，保留原有的 offsetAlongWall 和 signHeight
+  const currentConfig = {
+    text: sign.userData.text,
+    fontSize: sign.userData.fontSize,
+    textColor: sign.userData.textColor,
+    bgColor: sign.userData.bgColor,
+    wallType: sign.userData.wallType,
+    offsetAlongWall: sign.userData.offsetAlongWall, // 保留原有偏移
+    signHeight: sign.userData.signHeight !== undefined ? sign.userData.signHeight : 150, // 保留原有高度
+    ...config
+  };
+  
+  // 从场景中移除旧标语
+  scene.remove(sign);
+  const index = sceneObjects.indexOf(sign);
+  if (index > -1) {
+    sceneObjects.splice(index, 1);
+  }
+  
+  // 释放资源
+  if (sign.material.map) sign.material.map.dispose();
+  if (sign.material) sign.material.dispose();
+  if (sign.geometry) sign.geometry.dispose();
+  
+  // 查找原来的墙体对象
+  const wallIndex = sign.userData.wallIndex;
+  const wall = sceneObjects.find(obj => obj.userData.type === 'wall' && obj.userData.wallIndex === wallIndex);
+  
+  if (!wall) {
+    console.error('更新标语时未找到原墙体:', wallIndex);
+    return false;
+  }
+  
+  // 创建新标语 - 使用墙体对象和配置（包含 offsetAlongWall）
+  const newSign = createWallSign(wall, null, currentConfig);
+  
+  // 选中新标语
+  if (newSign) {
+    selectObject(newSign);
+    console.log('外墙标语更新成功:', currentConfig);
+    return true;
+  }
+  
+  return false;
+}
+
+// 移动外墙标语（限制在墙面）
+function moveWallSign(sign, delta) {
+  if (!sign || sign.userData.type !== 'wallSign') {
+    console.error('无效的标语对象');
+    return false;
+  }
+
+  const wallType = sign.userData.wallType;
+  const wallIndex = sign.userData.wallIndex;
+  
+  // 保存当前Y坐标，确保移动时高度不变
+  const currentY = sign.position.y;
+  
+  // 【调试日志】记录移动前的状态
+  const oldOffset = sign.userData.offsetAlongWall;
+  console.log('【moveWallSign-开始】', {
+    uuid: sign.uuid,
+    oldOffsetAlongWall: oldOffset,
+    position: { x: sign.position.x, y: sign.position.y, z: sign.position.z },
+    delta: { x: delta.x, y: delta.y, z: delta.z }
+  });
+
+  // 查找对应的墙体对象
+  const wall = sceneObjects.find(obj =>
+    obj.userData.type === 'wall' && obj.userData.wallIndex === wallIndex
+  );
+
+  if (!wall) {
+    console.error('未找到墙体对象:', wallIndex);
+    return false;
+  }
+
+  // 计算墙体信息
+  const wallCenter = wall.position.clone();
+  const wallRotation = wall.rotation.y;
+  const wallLength = wall.userData.length;
+  const wallDirection = new THREE.Vector3(
+    Math.cos(-wallRotation), 0, Math.sin(-wallRotation)
+  );
+  const wallNormal = new THREE.Vector3(
+    Math.sin(-wallRotation), 0, -Math.cos(-wallRotation)
+  );
+
+  // 计算当前位置相对于墙体的偏移量
+  const relativePos = sign.position.clone().sub(wallCenter);
+  let offsetAlongWall = relativePos.dot(wallDirection);
+
+  // 将delta投影到墙体方向，计算沿墙体的位移
+  const deltaVector = new THREE.Vector3(delta.x, 0, delta.z);
+  const movementAlongWall = deltaVector.dot(wallDirection);
+  console.log('移动前:', { offsetAlongWall, delta: { x: delta.x, z: delta.z }, movementAlongWall, wallType });
+  offsetAlongWall += movementAlongWall;
+
+  // 注意：不限制标语在墙体范围内，允许悬空放置
+
+  // 更新标语位置（始终贴合墙面）
+  sign.position.copy(wallCenter)
+    .add(wallDirection.clone().multiplyScalar(offsetAlongWall))
+    .add(wallNormal.clone().multiplyScalar(5)); // 向外偏移5cm
+
+  // Y方向保持当前高度（不再随鼠标移动改变，改为通过编辑功能调整）
+  // 保留原有的Y坐标，确保移动时高度不变
+  sign.position.y = currentY;
+
+  // 更新userData中的偏移量
+  sign.userData.offsetAlongWall = offsetAlongWall;
+
+  // 【调试日志】记录移动后的状态
+  console.log('【moveWallSign-完成】', {
+    uuid: sign.uuid,
+    oldOffsetAlongWall: oldOffset,
+    newOffsetAlongWall: offsetAlongWall,
+    deltaOffset: offsetAlongWall - (oldOffset || 0),
+    position: { x: sign.position.x, y: sign.position.y, z: sign.position.z },
+    wallIndex: wallIndex,
+    wallType: wallType
+  });
   return true;
 }
 
@@ -5804,6 +6807,8 @@ function resetView() {
     getSceneObjects,
     getSelectedObjectsCount,
     getObjectsCount,
+    getSelectedObjects,
+    syncSelectedObjects,
     updateShelf,
     updateConveyor,
     startDrawZone,
@@ -5878,7 +6883,18 @@ function resetView() {
     createSnapIndicator,
     updateSnapIndicator,
     hideSnapIndicator,
-    destroySnapIndicator
+    destroySnapIndicator,
+    // 外墙标语相关方法
+    createWallSign,
+    updateWallSign,
+    moveWallSign,
+    // 获取墙体方法（用于导入时查找墙体）
+    getWallByIndex: (index) => sceneObjects.find(obj => obj.userData.type === 'wall' && obj.userData.wallIndex === index),
+    // 距离线相关方法
+    startDistanceLineMode,
+    stopDistanceLineMode,
+    setDistanceLineValue,
+    clearAllDistanceLines
   });
 </script>
 
