@@ -340,6 +340,22 @@
 1. **撤销/重做功能** - 操作历史管理
 2. **框选多对象** - 批量选择功能
 
+### 技术债务（后续版本优化）
+
+#### 中优先级
+1. **THREE dispose 资源释放**
+   - **问题**: ThreeScene.vue 中模型创建函数（createShelfModel, createContainerModel 等）创建的大量几何体和材质没有对应的 dispose 逻辑
+   - **影响**: 当模型从场景中移除时，可能造成内存泄漏
+   - **建议修复**: 添加 disposeModel() 辅助函数，在移除对象时遍历释放 geometry 和 material
+
+#### 低优先级
+2. **Vector3 对象池（性能优化）**
+   - **问题**: 代码中大量 `new THREE.Vector3()` 创建临时对象，增加 GC 压力
+   - **影响**: 频繁创建/销毁 Vector3 对象可能影响性能
+   - **建议修复**: 使用对象池模式，复用 Vector3 实例减少 GC
+
+---
+
 ---
 
 ## 项目进度总结
@@ -1645,7 +1661,47 @@ const isSelectedObjectShelf = computed(() => {
 
 ---
 
-**最后更新**: 2026-03-26 - 距离线功能完成、工具栏按钮优化
+**最后更新**: 2026-03-26 - 代码质量检查与优化完成
+
+### 2026-03-26: 代码质量检查与优化
+
+**功能概述**
+对项目进行全面的代码质量检查，修复安全漏洞、内存泄漏问题，配置代码规范工具。
+
+**检查项目与修复**
+
+1. **安全漏洞检查 (npm audit)**
+   - 发现1个高危漏洞：`picomatch` ReDoS 漏洞
+   - 修复：运行 `npm audit fix` 自动升级依赖
+   - 结果：0 vulnerabilities found
+
+2. **生产环境 console 移除**
+   - 配置 `vite.config.js` 构建时自动移除 console
+   - 安装 `terser` 依赖
+   - 验证：构建后 `dist/assets/` 中无 console 语句
+
+3. **键盘事件泄漏修复**
+   - 问题：`CoreFunction.vue` 中 `window.addEventListener('keydown')` 在全局作用域添加，无对应移除
+   - 修复：将事件监听移至 `onMounted`，在 `onUnmounted` 中添加 `removeEventListener`
+   - 影响文件：`CoreFunction.vue` 第1453行、5396-5404行
+
+4. **ESLint 代码规范配置**
+   - 安装 `eslint` 和 `eslint-plugin-vue`
+   - 创建 `.eslintrc.cjs` 配置文件
+   - 添加 npm 脚本：`npm run lint` / `npm run lint:fix`
+   - 规则：开发时允许 console，允许单字组件名，格式宽松
+
+**技术债务记录**
+- THREE dispose 资源释放（中优先级）- 后续版本处理
+- Vector3 对象池优化（低优先级）- 后续版本处理
+
+**影响文件**
+- `frontend/vite.config.js` - 构建配置
+- `frontend/package.json` - 依赖和脚本
+- `frontend/.eslintrc.cjs` - ESLint 配置（新增）
+- `frontend/src/views/CoreFunction.vue` - 事件监听修复
+
+---
 
 ### 2026-03-26: 工具栏按钮禁用优化
 

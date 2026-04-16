@@ -4,7 +4,8 @@
     <div class="top-project-bar">
       <!-- 左侧：项目操作按钮 -->
       <div class="top-bar-left">
-        <button @click="goToUsage" class="top-bar-btn home-btn" title="返回首页">
+        <img src="/仓酷家Alogo.png" alt="仓酷家" class="top-bar-logo" />
+        <button @click="goToHome" class="top-bar-btn home-btn" title="返回首页">
           <span class="btn-icon">🏠</span>首页
         </button>
         <button @click="importProject" class="top-bar-btn" title="导入项目">
@@ -1450,7 +1451,7 @@
 </template>
 
 <script setup>
-import { ref, computed, nextTick, onMounted, toRaw } from 'vue';
+import { ref, computed, nextTick, onMounted, onUnmounted, toRaw } from 'vue';
 import { useRouter } from 'vue-router';
 import * as THREE from 'three';
 import ThreeScene from '../components/3d/ThreeScene.vue';
@@ -2997,9 +2998,6 @@ function handleKeyDown(event) {
   }
 }
 
-// 添加键盘监听
-window.addEventListener('keydown', handleKeyDown);
-
 // 文字标注功能
 function startAddText() {
   isAddingText.value = !isAddingText.value;
@@ -4507,9 +4505,9 @@ function closeProject() {
   }
 }
 
-// 返回产品使用页
-function goToUsage() {
-  router.push('/usage');
+// 返回首页
+function goToHome() {
+  router.push('/');
 }
 
 // 设置选择模式
@@ -5395,9 +5393,15 @@ function toggleCategory(category) {
   expandedCategories.value[category] = !expandedCategories.value[category];
 }
 
-// 组件挂载时加载我的模型
+// 组件挂载时加载我的模型并添加键盘监听
 onMounted(() => {
   loadMyModels();
+  window.addEventListener('keydown', handleKeyDown);
+});
+
+// 组件卸载时清理键盘监听（防止内存泄漏）
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyDown);
 });
 
 // 暴露给模板使用的变量和函数
@@ -5562,8 +5566,14 @@ defineExpose({
 .top-bar-left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   flex-shrink: 0;
+}
+
+.top-bar-logo {
+  height: 32px;
+  width: auto;
+  object-fit: contain;
 }
 
 .top-bar-center {
