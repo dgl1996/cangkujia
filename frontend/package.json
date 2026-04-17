@@ -11,6 +11,7 @@
     "lint:fix": "eslint src --ext .vue,.js --fix"
   },
   "dependencies": {
+    "@clerk/vue": "^2.0.15",
     "@types/three": "^0.183.1",
     "lucide-vue-next": "^0.577.0",
     "pinia": "^3.0.4",

@@ -2569,8 +2569,16 @@ function loadModel(modelId, fileName) {
 
   // 添加时间戳清除缓存
   const cacheBuster = `?t=${Date.now()}`;
+  
+  // COS配置 - 从腾讯云COS加载模型
+  const COS_URL = 'https://cangkujia-models-1405539235.cos.ap-shanghai.myqcloud.com/standard';
+  const isProduction = window.location.hostname === 'cangkujia666.com';
+  const modelUrl = isProduction 
+    ? `${COS_URL}/${fileName}${cacheBuster}`
+    : `/assets/models/${fileName}${cacheBuster}`;
+  
   loader.load(
-    `/assets/models/${fileName}${cacheBuster}`,
+    modelUrl,
     (gltf) => {
       const model = gltf.scene;
       

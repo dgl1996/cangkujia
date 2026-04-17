@@ -210,7 +210,7 @@ const goHome = () => {
 
 // 登录
 const handleLogin = () => {
-  alert('登录功能开发中...');
+  router.push('/sign-in');
 };
 
 
