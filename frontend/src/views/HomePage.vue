@@ -200,7 +200,8 @@ const router = useRouter();
 
 // 进入应用
 const enterApp = () => {
-  router.push('/editor');
+  // 跳转到注册页面，用户需要先注册才能使用
+  router.push('/sign-up');
 };
 
 // 返回首页

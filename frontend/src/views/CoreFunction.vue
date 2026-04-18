@@ -1455,6 +1455,7 @@ import { ref, computed, nextTick, onMounted, onUnmounted, toRaw } from 'vue';
 import { useRouter } from 'vue-router';
 import * as THREE from 'three';
 import ThreeScene from '../components/3d/ThreeScene.vue';
+import { canSave, showUpgradeDialog } from '../utils/permission.js';
 
 const router = useRouter();
 
@@ -3960,7 +3961,15 @@ function addConveyor() {
 }
 
 // 项目操作
-function saveProject() {
+async function saveProject() {
+  // 检查用户是否有保存权限
+  const hasSavePermission = await canSave();
+  if (!hasSavePermission) {
+    // 免费用户无法保存，显示升级提示
+    showUpgradeDialog(router, '保存项目');
+    return;
+  }
+  
   showSaveDialog.value = true;
   // 如果已有项目名称，保留；否则清空
   if (!projectName.value) {

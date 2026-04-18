@@ -25,10 +25,11 @@ app.add_middleware(
 )
 
 # 导入路由
-from routers import payment
+from routers import payment, users
 
 # 注册路由
 app.include_router(payment.router)
+app.include_router(users.router)
 
 # Clerk回调URL配置
 CLERK_REDIRECT_URL = "https://cangkujia666.com"
