@@ -12,12 +12,8 @@
         <button class="nav-btn primary">定价</button>
       </nav>
       <div class="user-section">
-        <SignedIn>
-          <UserButton />
-        </SignedIn>
-        <SignedOut>
-          <button class="login-btn" @click="goSignIn">登录</button>
-        </SignedOut>
+        <button v-if="isSignedIn" class="nav-btn" @click="goProfile">用户中心</button>
+        <button v-else class="login-btn" @click="goSignIn">登录</button>
       </div>
     </header>
 
@@ -381,10 +377,10 @@
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { SignedIn, SignedOut, UserButton, useAuth } from '@clerk/vue';
+import { useAuth } from '@clerk/vue';
 
 const router = useRouter();
-const { userId } = useAuth();
+const { isSignedIn, userId } = useAuth();
 
 const isYearly = ref(true);
 const showPaymentModal = ref(false);
