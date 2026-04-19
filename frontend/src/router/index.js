@@ -6,6 +6,7 @@ import ModelLibrary from '../views/ModelLibrary.vue';
 import SignIn from '../views/SignIn.vue';
 import SignUp from '../views/SignUp.vue';
 import UserProfile from '../views/UserProfile.vue';
+import PricingPage from '../views/PricingPage.vue';
 
 const routes = [
   {
@@ -44,6 +45,11 @@ const routes = [
     name: 'UserProfile',
     component: UserProfile,
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/pricing',
+    name: 'Pricing',
+    component: PricingPage
   }
 ];
 
