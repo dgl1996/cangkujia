@@ -21,7 +21,7 @@ class Order(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     order_no = Column(String, unique=True, index=True, nullable=False)  # 订单号：CKJ-{timestamp}-{random}
-    user_id = Column(Integer, index=True, nullable=False)
+    user_id = Column(String, index=True, nullable=False)  # Clerk用户ID是字符串
     amount = Column(Float, nullable=False)  # 订单金额（元）
     paid_amount = Column(Float, default=0)  # 实际支付金额（元）
     status = Column(String, default="pending")  # pending, paid, failed, cancelled

@@ -1,41 +1,42 @@
-# Dependencies
+﻿# === 依赖目录 ===
 node_modules/
-.pnp
-.pnp.js
+.venv/
+venv/
+pip-wheel-metadata/
 
-# Build outputs
-dist/
-build/
-*.tsbuildinfo
+# === 构建产物（本地build生成，不进Git）===
+frontend/dist/
+dist-deploy.zip
+dist-prod.zip
 
-# Environment variables
+# === Python缓存 ===
+__pycache__/
+*.pyc
+*.pyo
+
+# === 日志 ===
+*.log
+logs/
+wget-log
+
+# === 环境变量（含敏感密钥，绝对不能进Git）===
 .env
 .env.local
-.env.*.local
+.env.production
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
+# === 临时文件 ===
+temp/
+temp-repo/
+temp-repo.*/
+*.zip
 
-# Logs
-logs/
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# === 开发文档（保留在本地知识库，不进代码仓库）===
+*.md
 
-# OS
+# === 系统文件 ===
 .DS_Store
 Thumbs.db
 
-# Backup folders (we keep them but don't track in git)
-src_backup/
-
-# Testing
-coverage/
-
-# Temporary files
-*.tmp
-*.temp
+# === IDE ===
+.vscode/
+.idea/

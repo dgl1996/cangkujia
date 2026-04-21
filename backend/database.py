@@ -7,11 +7,18 @@ from dotenv import load_dotenv
 # 加载环境变量
 load_dotenv()
 
-# 获取数据库URL
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://admin:password@localhost:5432/example_db")
+# 获取数据库URL，默认使用SQLite
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./cangkujia.db")
 
 # 创建数据库引擎
-engine = create_engine(DATABASE_URL)
+# SQLite需要特殊配置
+if DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(
+        DATABASE_URL, 
+        connect_args={"check_same_thread": False}
+    )
+else:
+    engine = create_engine(DATABASE_URL)
 
 # 创建会话工厂
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

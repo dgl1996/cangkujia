@@ -24,10 +24,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 导入路由
+# 导入并注册路由
 from routers import payment, users
-
-# 注册路由
 app.include_router(payment.router)
 app.include_router(users.router)
 
