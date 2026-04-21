@@ -14,9 +14,7 @@
         <button @click="saveProject" class="top-bar-btn" title="保存项目">
           <span class="btn-icon">💾</span>保存
         </button>
-        <button class="top-bar-btn disabled-btn" disabled title="导出3D效果图（暂不可用，建议直接截屏）">
-          <span class="btn-icon">📷</span>效果图
-        </button>
+        <!-- 效果图按钮已隐藏（用户截屏即可） -->
         <button @click="exportReport" :disabled="warehouseShape.length < 3" class="top-bar-btn" title="导出项目报告">
           <span class="btn-icon">📄</span>报告
         </button>
@@ -99,12 +97,7 @@
           </button>
         </div>
         
-        <div class="top-bar-divider"></div>
-        
-        <!-- 对齐工具按钮（MVP禁用） -->
-        <button class="top-bar-btn disabled-btn" disabled title="对齐工具（待多选功能上线后启用）">
-          <span class="btn-icon">📐</span>对齐工具▼
-        </button>
+        <!-- 对齐工具按钮已隐藏（后续模块重构后再开放） -->
       </div>
     </div>
     
