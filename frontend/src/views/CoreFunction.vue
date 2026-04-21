@@ -1517,7 +1517,7 @@
       <div class="pricing-modal">
         <button class="modal-close-btn" @click="showPricingModal = false" title="关闭">×</button>
         <h2 class="pricing-title">升级仓酷家Pro版</h2>
-        <p class="pricing-subtitle">解锁保存项目、导出高清效果图、无限案例库</p>
+        <p class="pricing-subtitle">解锁保存项目、项目实施清单、以及未来更多功能</p>
         
         <div class="pricing-options">
           <div 
@@ -1542,8 +1542,6 @@
         <button class="pay-btn" :disabled="!selectedPricing" @click="handleUpgrade">
           立即支付
         </button>
-        
-        <p class="pricing-note">安全支付 · 随时取消 · 7天无理由退款</p>
       </div>
     </div>
   </div>
