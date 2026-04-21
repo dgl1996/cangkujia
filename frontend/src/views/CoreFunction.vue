@@ -553,6 +553,29 @@
           </div>
         </div>
         
+        <!-- 案例库区块 -->
+        <div class="panel case-library-panel">
+          <h3 class="panel-title">
+            <span class="panel-icon">🏗️</span>
+            案例库
+          </h3>
+          <div class="case-library-content">
+            <div v-if="cases.length === 0" class="empty-hint">
+              加载案例中...
+            </div>
+            <div v-for="caseItem in cases" :key="caseItem.id" class="case-item">
+              <img :src="caseItem.thumbnail" :alt="caseItem.title" class="case-thumbnail" @error="$event.target.src='/cases/default-thumb.jpg'" />
+              <div class="case-info">
+                <h4 class="case-title">{{ caseItem.title }}</h4>
+                <p class="case-desc">{{ caseItem.desc }}</p>
+                <button @click="loadCase(caseItem.file)" class="case-load-btn">
+                  <span class="btn-icon">📂</span>加载案例
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
       </div>
       
       <!-- 主工作台区域 -->
@@ -1505,6 +1528,9 @@ const isDistanceLineMode = ref(false);
 // 对齐线数据
 const alignLines = ref([]);
 const selectedAlignmentLineId = ref(null); // 当前选中的对齐线ID
+
+// 案例库数据
+const cases = ref([]);
 
 // 精确旋转角度输入对话框状态
 const showRotationDialog = ref(false);
@@ -4803,6 +4829,94 @@ function handleAlignmentLinesUpdated(lines) {
   console.log('对齐线数据已更新:', lines.length, '条');
 }
 
+// 加载案例库数据
+async function loadCases() {
+  try {
+    const response = await fetch('/cases/cases.json');
+    if (response.ok) {
+      const data = await response.json();
+      cases.value = data.cases || [];
+      console.log('案例库加载成功:', cases.value.length, '个案例');
+    } else {
+      console.warn('案例库加载失败，使用默认数据');
+      // 使用默认数据
+      cases.value = [
+        {
+          id: 'ecommerce-standard',
+          title: '电商标准仓',
+          desc: '1000㎡，中型货架+分拣区',
+          thumbnail: '/cases/ecommerce-thumb.jpg',
+          file: '/cases/ecommerce.ckj'
+        },
+        {
+          id: 'cold-chain',
+          title: '冷链仓储',
+          desc: '500㎡，低温货架+月台',
+          thumbnail: '/cases/coldchain-thumb.jpg',
+          file: '/cases/coldchain.ckj'
+        }
+      ];
+    }
+  } catch (error) {
+    console.warn('案例库加载失败:', error);
+    // 使用默认数据
+    cases.value = [
+      {
+        id: 'ecommerce-standard',
+        title: '电商标准仓',
+        desc: '1000㎡，中型货架+分拣区',
+        thumbnail: '/cases/ecommerce-thumb.jpg',
+        file: '/cases/ecommerce.ckj'
+      },
+      {
+        id: 'cold-chain',
+        title: '冷链仓储',
+        desc: '500㎡，低温货架+月台',
+        thumbnail: '/cases/coldchain-thumb.jpg',
+        file: '/cases/coldchain.ckj'
+      }
+    ];
+  }
+}
+
+// 加载案例
+async function loadCase(caseFile) {
+  if (!caseFile) {
+    alert('案例文件路径无效');
+    return;
+  }
+  
+  try {
+    // 确认是否清空当前场景
+    if (confirm('加载案例将清空当前场景，是否继续？')) {
+      console.log('加载案例:', caseFile);
+      
+      // 清空当前场景
+      clearAllZones();
+      if (threeScene.value) {
+        threeScene.value.clearAllObjects();
+        threeScene.value.clearAlignmentLines();
+      }
+      
+      // 尝试加载案例文件
+      const response = await fetch(caseFile);
+      if (response.ok) {
+        const caseData = await response.json();
+        // 导入案例数据
+        await importProject(caseData);
+        console.log('案例加载成功:', caseFile);
+        alert('案例加载成功！');
+      } else {
+        console.warn('案例文件不存在:', caseFile);
+        alert('案例文件暂时不可用，请联系管理员上传案例文件。');
+      }
+    }
+  } catch (error) {
+    console.error('加载案例失败:', error);
+    alert('加载案例失败: ' + error.message);
+  }
+}
+
 // 打开自定义货架页面（P2）
 function openCustomShelf() {
   // 在新标签页打开P2页面
@@ -5448,9 +5562,10 @@ function toggleCategory(category) {
   expandedCategories.value[category] = !expandedCategories.value[category];
 }
 
-// 组件挂载时加载我的模型并添加键盘监听
+// 组件挂载时加载我的模型、案例库并添加键盘监听
 onMounted(() => {
   loadMyModels();
+  loadCases();
   window.addEventListener('keydown', handleKeyDown);
 });
 
@@ -8003,5 +8118,81 @@ defineExpose({
   margin: 4px 0;
   font-size: 12px;
   color: #666;
+}
+
+/* 案例库样式 */
+.case-library-panel {
+  margin-top: 16px;
+}
+
+.case-library-content {
+  padding: 12px;
+}
+
+.case-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: #f9f9f9;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  border: 1px solid #e0e0e0;
+  transition: all 0.2s;
+}
+
+.case-item:hover {
+  border-color: #2196F3;
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.15);
+}
+
+.case-thumbnail {
+  width: 120px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 4px;
+  background: #e0e0e0;
+  flex-shrink: 0;
+}
+
+.case-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.case-title {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.case-desc {
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  color: #666;
+  line-height: 1.4;
+  flex: 1;
+}
+
+.case-load-btn {
+  padding: 6px 12px;
+  background: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  align-self: flex-start;
+}
+
+.case-load-btn:hover {
+  background: #1976D2;
+}
+
+.case-load-btn .btn-icon {
+  margin-right: 4px;
 }
 </style>

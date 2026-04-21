@@ -1,0 +1,18 @@
+{
+  "cases": [
+    {
+      "id": "ecommerce-standard",
+      "title": "电商标准仓",
+      "desc": "1000㎡，中型货架+分拣区",
+      "thumbnail": "/cases/ecommerce-thumb.jpg",
+      "file": "/cases/ecommerce.ckj"
+    },
+    {
+      "id": "cold-chain",
+      "title": "冷链仓储",
+      "desc": "500㎡，低温货架+月台",
+      "thumbnail": "/cases/coldchain-thumb.jpg",
+      "file": "/cases/coldchain.ckj"
+    }
+  ]
+}
