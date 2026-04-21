@@ -1509,32 +1509,63 @@
     <div v-if="showPricingModal" class="pricing-modal-overlay" @click.self="showPricingModal = false">
       <div class="pricing-modal">
         <button class="modal-close-btn" @click="showPricingModal = false" title="关闭">×</button>
-        <h2 class="pricing-title">{{ pricingModalConfig[pricingModalType].title }}</h2>
-        <p class="pricing-subtitle">{{ pricingModalConfig[pricingModalType].subtitle }}</p>
         
-        <div class="pricing-options">
-          <div 
-            v-for="option in pricingOptions" 
-            :key="option.id"
-            class="pricing-card"
-            :class="{ 'selected': selectedPricing === option.id, 'recommended': option.recommended, 'best-value': option.bestValue }"
-            @click="selectedPricing = option.id"
-          >
-            <div v-if="option.recommended" class="badge recommended-badge">🏷️ 推荐</div>
-            <div v-if="option.bestValue" class="badge best-value-badge">🔥 最佳性价比</div>
-            <h3 class="plan-name">{{ option.name }}</h3>
-            <div class="plan-price">
-              <span class="price-symbol">¥</span>
-              <span class="price-number">{{ option.price }}</span>
-              <span class="price-period">/{{ option.period }}</span>
+        <!-- 定价选择页 -->
+        <div v-if="!showMockPaymentPage">
+          <h2 class="pricing-title">{{ pricingModalConfig[pricingModalType].title }}</h2>
+          <p class="pricing-subtitle">{{ pricingModalConfig[pricingModalType].subtitle }}</p>
+          
+          <div class="pricing-options">
+            <div 
+              v-for="option in pricingOptions" 
+              :key="option.id"
+              class="pricing-card"
+              :class="{ 'selected': selectedPricing === option.id, 'recommended': option.recommended, 'best-value': option.bestValue }"
+              @click="selectedPricing = option.id"
+            >
+              <div v-if="option.recommended" class="badge recommended-badge">🏷️ 推荐</div>
+              <div v-if="option.bestValue" class="badge best-value-badge">🔥 最佳性价比</div>
+              <h3 class="plan-name">{{ option.name }}</h3>
+              <div class="plan-price">
+                <span class="price-symbol">¥</span>
+                <span class="price-number">{{ option.price }}</span>
+                <span class="price-period">/{{ option.period }}</span>
+              </div>
+              <p v-if="option.monthlyPrice" class="monthly-price">约¥{{ option.monthlyPrice }}/月</p>
             </div>
-            <p v-if="option.monthlyPrice" class="monthly-price">约¥{{ option.monthlyPrice }}/月</p>
           </div>
+          
+          <button class="pay-btn" :disabled="!selectedPricing" @click="goToMockPayment">
+            立即升级
+          </button>
         </div>
         
-        <button class="pay-btn" :disabled="!selectedPricing" @click="handleUpgrade">
-          立即支付
-        </button>
+        <!-- 模拟支付页 -->
+        <div v-else class="mock-payment-page">
+          <h2 class="pricing-title">微信支付</h2>
+          <p class="pricing-subtitle">模拟支付环境（本地测试专用）</p>
+          
+          <div class="selected-plan-info">
+            <div class="plan-icon">💎</div>
+            <h3 class="selected-plan-name">{{ selectedPlanInfo.name }}</h3>
+            <div class="selected-plan-price">
+              <span class="price-symbol">¥</span>
+              <span class="price-number">{{ selectedPlanInfo.price }}</span>
+              <span class="price-period">/{{ selectedPlanInfo.period }}</span>
+            </div>
+          </div>
+          
+          <div class="mock-payment-actions">
+            <button class="mock-pay-success-btn" @click="handleMockPaymentSuccess">
+              <span class="btn-icon">✓</span>模拟支付成功
+            </button>
+            <button class="mock-pay-cancel-btn" @click="cancelMockPayment">
+              取消支付
+            </button>
+          </div>
+          
+          <p class="mock-payment-note">此页面仅用于本地测试，线上将调起真实微信支付</p>
+        </div>
       </div>
     </div>
   </div>
@@ -1601,6 +1632,12 @@ const projectName = ref('');
 const showPricingModal = ref(false);
 const selectedPricing = ref('yearly'); // 默认选中年付
 const pricingModalType = ref('save'); // 'save' 或 'report'
+const showMockPaymentPage = ref(false); // 是否显示模拟支付页
+
+// 计算选中的方案信息
+const selectedPlanInfo = computed(() => {
+  return pricingOptions.find(o => o.id === selectedPricing.value) || pricingOptions[3];
+});
 
 // 弹窗标题和副标题配置
 const pricingModalConfig = {
@@ -4671,16 +4708,41 @@ function getShortEmail(email) {
   return email.split('@')[0];
 }
 
-// 处理升级（预留接口，模块5对接支付）
-function handleUpgrade() {
+// 跳转到模拟支付页
+function goToMockPayment() {
   if (!selectedPricing.value) {
     alert('请先选择定价方案');
     return;
   }
-  const option = pricingOptions.find(o => o.id === selectedPricing.value);
-  console.log('选择升级方案:', option);
-  alert(`已选择${option.name}方案 ¥${option.price}，支付功能将在模块5对接`);
-  // TODO: 模块5对接微信支付
+  showMockPaymentPage.value = true;
+}
+
+// 取消模拟支付，返回定价选择页
+function cancelMockPayment() {
+  showMockPaymentPage.value = false;
+}
+
+// 模拟支付成功处理
+function handleMockPaymentSuccess() {
+  const option = selectedPlanInfo.value;
+  
+  // 1. 写入Pro状态
+  localStorage.setItem('cangkujia_user_plan', 'pro');
+  
+  // 2. 记录购买信息（便于后续真实支付对接时替换）
+  localStorage.setItem('cangkujia_plan_type', option.id);
+  localStorage.setItem('cangkujia_plan_price', option.price);
+  localStorage.setItem('cangkujia_paid_at', new Date().toISOString());
+  
+  // 3. 关闭弹窗
+  showPricingModal.value = false;
+  showMockPaymentPage.value = false;
+  
+  // 4. 提示成功
+  alert('🎉 支付成功！您已升级为Pro版，页面即将刷新...');
+  
+  // 5. 强制刷新页面，Pro状态生效
+  window.location.reload();
 }
 
 // 设置选择模式
@@ -8521,5 +8583,93 @@ defineExpose({
   color: #9ca3af;
   text-align: center;
   margin: 0;
+}
+
+/* 模拟支付页样式 */
+.mock-payment-page {
+  text-align: center;
+}
+
+.selected-plan-info {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 2px solid #3b82f6;
+  border-radius: 12px;
+  padding: 24px;
+  margin: 20px 0;
+}
+
+.plan-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.selected-plan-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e40af;
+  margin: 0 0 8px 0;
+}
+
+.selected-plan-price {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+}
+
+.mock-payment-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 24px 0;
+}
+
+.mock-pay-success-btn {
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.mock-pay-success-btn:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 16px rgba(34, 197, 94, 0.4);
+}
+
+.mock-pay-success-btn .btn-icon {
+  font-size: 20px;
+}
+
+.mock-pay-cancel-btn {
+  padding: 12px 24px;
+  background: transparent;
+  color: #6b7280;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mock-pay-cancel-btn:hover {
+  color: #374151;
+  text-decoration: underline;
+}
+
+.mock-payment-note {
+  font-size: 11px;
+  color: #9ca3af;
+  text-align: center;
+  margin: 16px 0 0 0;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
 }
 </style>
