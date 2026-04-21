@@ -4,7 +4,7 @@
     <nav class="navbar">
       <div class="nav-container">
         <div class="logo" @click="goHome">
-          <img src="/LOGO.png" alt="仓酷家" class="logo-img" />
+          <img src="/仓酷家Alogo.png" alt="仓酷家" class="logo-img" />
         </div>
         <div class="nav-title">产品使用</div>
         <div class="nav-actions">
