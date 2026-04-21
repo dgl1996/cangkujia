@@ -60,8 +60,8 @@
         </button>
         <!-- 用户信息区域 -->
         <div class="user-info-section" v-if="isSignedIn && user">
-          <!-- 免费版标签 -->
-          <span v-if="!user?.publicMetadata?.license_type" class="version-badge free-badge">
+          <!-- 版本标签（基于localStorage） -->
+          <span v-if="!isProUser()" class="version-badge free-badge">
             免费版
           </span>
           <span v-else class="version-badge pro-badge">
@@ -70,7 +70,7 @@
           
           <!-- 升级Pro按钮（仅免费用户显示） -->
           <button 
-            v-if="!user?.publicMetadata?.license_type" 
+            v-if="!isProUser()" 
             @click="showPricingModal = true" 
             class="upgrade-btn"
             title="升级Pro版，解锁更多功能"
@@ -1509,8 +1509,8 @@
     <div v-if="showPricingModal" class="pricing-modal-overlay" @click.self="showPricingModal = false">
       <div class="pricing-modal">
         <button class="modal-close-btn" @click="showPricingModal = false" title="关闭">×</button>
-        <h2 class="pricing-title">升级仓酷家Pro版</h2>
-        <p class="pricing-subtitle">解锁保存项目、项目实施清单、以及未来更多功能</p>
+        <h2 class="pricing-title">{{ pricingModalConfig[pricingModalType].title }}</h2>
+        <p class="pricing-subtitle">{{ pricingModalConfig[pricingModalType].subtitle }}</p>
         
         <div class="pricing-options">
           <div 
@@ -1546,7 +1546,7 @@ import { useRouter } from 'vue-router';
 import { useUser, useClerk } from '@clerk/vue';
 import * as THREE from 'three';
 import ThreeScene from '../components/3d/ThreeScene.vue';
-import { canSave, showUpgradeDialog } from '../utils/permission.js';
+import { canSave, canExport, isProUser } from '../utils/permission.js';
 
 const router = useRouter();
 const { user, isSignedIn } = useUser();
@@ -1600,6 +1600,19 @@ const projectName = ref('');
 // 定价弹窗状态
 const showPricingModal = ref(false);
 const selectedPricing = ref('yearly'); // 默认选中年付
+const pricingModalType = ref('save'); // 'save' 或 'report'
+
+// 弹窗标题和副标题配置
+const pricingModalConfig = {
+  save: {
+    title: '保存项目需要Pro版',
+    subtitle: '免费版可自由设计，保存项目需升级Pro。支持导出 .ckj 文件随时恢复。'
+  },
+  report: {
+    title: '导出项目报告需要Pro版',
+    subtitle: '免费版可自由设计，导出实施清单需升级Pro。包含设备清单、布局说明、预算参考。'
+  }
+};
 
 // 定价方案选项
 const pricingOptions = [
@@ -4070,11 +4083,11 @@ function addConveyor() {
 
 // 项目操作
 async function saveProject() {
-  // 检查用户是否有保存权限
-  const hasSavePermission = await canSave();
-  if (!hasSavePermission) {
-    // 免费用户无法保存，显示升级提示
-    showUpgradeDialog(router, '保存项目');
+  // 检查用户是否有保存权限（基于localStorage）
+  if (!isProUser()) {
+    // 免费用户无法保存，显示定价弹窗
+    showPricingModal.value = true;
+    pricingModalType.value = 'save';
     return;
   }
   
@@ -4447,6 +4460,14 @@ function exportImage() {
 function exportReport() {
   if (warehouseShape.value.length < 3) {
     alert('请先创建仓库！');
+    return;
+  }
+  
+  // 检查用户是否有导出权限（基于localStorage）
+  if (!isProUser()) {
+    // 免费用户无法导出报告，显示定价弹窗
+    showPricingModal.value = true;
+    pricingModalType.value = 'report';
     return;
   }
   
