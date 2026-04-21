@@ -6,9 +6,9 @@ import router from './router';
 
 const app = createApp(App);
 
-// Clerk 配置
+// Clerk 配置 - 从环境变量读取Key
 const clerkConfig = {
-  publishableKey: 'pk_live_Y2xlcmsuY2FuZ2t1amlhNjY2LmNvbSQ',
+  publishableKey: import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
   signInUrl: '/sign-in',
   signUpUrl: '/sign-up',
   signInForceRedirectUrl: '/editor',
