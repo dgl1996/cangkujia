@@ -62,25 +62,38 @@
         </button>
         <!-- 用户信息区域 -->
         <div class="user-info-section" v-if="isSignedIn && user">
-          <!-- 会员等级标签 -->
-          <span class="user-badge" :class="{ 'paid': user?.publicMetadata?.license_type }">
-            {{ user?.publicMetadata?.license_type ? '专业版' : '免费版' }}
+          <!-- 免费版标签 -->
+          <span v-if="!user?.publicMetadata?.license_type" class="version-badge free-badge">
+            免费版
+          </span>
+          <span v-else class="version-badge pro-badge">
+            Pro版
           </span>
           
-          <!-- 用户邮箱 -->
-          <span class="user-email" :title="user?.primaryEmailAddress?.emailAddress">
-            {{ user?.primaryEmailAddress?.emailAddress }}
+          <!-- 升级Pro按钮（仅免费用户显示） -->
+          <button 
+            v-if="!user?.publicMetadata?.license_type" 
+            @click="showPricingModal = true" 
+            class="upgrade-btn"
+            title="升级Pro版，解锁更多功能"
+          >
+            <span class="btn-icon">🔥</span>升级Pro ¥168/年
+          </button>
+          
+          <!-- 用户邮箱（简化显示，去掉域名） -->
+          <span class="user-email-short" :title="user?.primaryEmailAddress?.emailAddress">
+            {{ getShortEmail(user?.primaryEmailAddress?.emailAddress) }}
           </span>
           
           <!-- 退出登录按钮 -->
-          <button @click="handleSignOut" class="top-bar-btn logout-btn" title="退出登录">
+          <button @click="handleLogout" class="top-bar-btn logout-btn" title="退出登录">
             <span class="btn-icon">🚪</span>退出
           </button>
         </div>
         
         <!-- 未登录提示 -->
         <div class="user-info-section" v-else>
-          <span class="user-badge free">免费版</span>
+          <span class="version-badge free-badge">免费版</span>
           <button @click="goToLogin" class="top-bar-btn login-btn" title="登录/注册">
             <span class="btn-icon">🔑</span>登录
           </button>
@@ -1498,6 +1511,41 @@
         </div>
       </div>
     </div>
+    
+    <!-- 定价方案弹窗 -->
+    <div v-if="showPricingModal" class="pricing-modal-overlay" @click.self="showPricingModal = false">
+      <div class="pricing-modal">
+        <button class="modal-close-btn" @click="showPricingModal = false" title="关闭">×</button>
+        <h2 class="pricing-title">升级仓酷家Pro版</h2>
+        <p class="pricing-subtitle">解锁保存项目、导出高清效果图、无限案例库</p>
+        
+        <div class="pricing-options">
+          <div 
+            v-for="option in pricingOptions" 
+            :key="option.id"
+            class="pricing-card"
+            :class="{ 'selected': selectedPricing === option.id, 'recommended': option.recommended, 'best-value': option.bestValue }"
+            @click="selectedPricing = option.id"
+          >
+            <div v-if="option.recommended" class="badge recommended-badge">🏷️ 推荐</div>
+            <div v-if="option.bestValue" class="badge best-value-badge">🔥 最佳性价比</div>
+            <h3 class="plan-name">{{ option.name }}</h3>
+            <div class="plan-price">
+              <span class="price-symbol">¥</span>
+              <span class="price-number">{{ option.price }}</span>
+              <span class="price-period">/{{ option.period }}</span>
+            </div>
+            <p v-if="option.monthlyPrice" class="monthly-price">约¥{{ option.monthlyPrice }}/月</p>
+          </div>
+        </div>
+        
+        <button class="pay-btn" :disabled="!selectedPricing" @click="handleUpgrade">
+          立即支付
+        </button>
+        
+        <p class="pricing-note">安全支付 · 随时取消 · 7天无理由退款</p>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -1557,6 +1605,18 @@ const isProjectSaved = ref(false);
 const projectReport = ref(null);
 const showSaveDialog = ref(false);
 const projectName = ref('');
+
+// 定价弹窗状态
+const showPricingModal = ref(false);
+const selectedPricing = ref('yearly'); // 默认选中年付
+
+// 定价方案选项
+const pricingOptions = [
+  { id: 'monthly', name: '月付', price: '19.9', period: '月', monthlyPrice: null },
+  { id: 'quarterly', name: '季付', price: '49', period: '季', monthlyPrice: '16.3' },
+  { id: 'halfYear', name: '半年', price: '89', period: '半年', monthlyPrice: '14.8', recommended: true },
+  { id: 'yearly', name: '年付', price: '168', period: '年', monthlyPrice: '14', bestValue: true }
+];
 
 // 视图状态
 const currentView = ref('2d');
@@ -4581,14 +4641,34 @@ function goToLogin() {
   router.push('/sign-in');
 }
 
-// 退出登录
-async function handleSignOut() {
+// 退出登录（修复版：强制硬跳转，绕过routerReplace冲突）
+async function handleLogout() {
   try {
-    await signOut();
-    router.push('/');
-  } catch (error) {
-    console.error('退出登录失败:', error);
+    await signOut(); // Clerk退出
+  } catch (e) {
+    console.error('Clerk signOut error:', e);
   }
+  // 强制清理 + 硬跳转，彻底避开 routerReplace 冲突
+  localStorage.removeItem('cangkujia_project'); // 清理本项目缓存
+  window.location.href = '/';
+}
+
+// 获取简化邮箱（去掉域名后缀）
+function getShortEmail(email) {
+  if (!email) return '';
+  return email.split('@')[0];
+}
+
+// 处理升级（预留接口，模块5对接支付）
+function handleUpgrade() {
+  if (!selectedPricing.value) {
+    alert('请先选择定价方案');
+    return;
+  }
+  const option = pricingOptions.find(o => o.id === selectedPricing.value);
+  console.log('选择升级方案:', option);
+  alert(`已选择${option.name}方案 ¥${option.price}，支付功能将在模块5对接`);
+  // TODO: 模块5对接微信支付
 }
 
 // 设置选择模式
@@ -8194,5 +8274,240 @@ defineExpose({
 
 .case-load-btn .btn-icon {
   margin-right: 4px;
+}
+
+/* 版本标签样式 */
+.version-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.free-badge {
+  background: #6B7280;
+  color: white;
+}
+
+.pro-badge {
+  background: #10B981;
+  color: white;
+}
+
+/* 升级Pro按钮 */
+.upgrade-btn {
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #f97316 0%, #ef4444 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.upgrade-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+.upgrade-btn .btn-icon {
+  font-size: 14px;
+}
+
+/* 简化邮箱显示 */
+.user-email-short {
+  font-size: 13px;
+  color: #6B7280;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 定价弹窗样式 */
+.pricing-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.pricing-modal {
+  background: white;
+  border-radius: 12px;
+  padding: 32px;
+  width: 420px;
+  max-width: 90vw;
+  position: relative;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: #f3f4f6;
+  border-radius: 50%;
+  font-size: 20px;
+  color: #6b7280;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.modal-close-btn:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.pricing-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 8px 0;
+  text-align: center;
+}
+
+.pricing-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0 0 24px 0;
+  text-align: center;
+}
+
+.pricing-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.pricing-card {
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 16px 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  text-align: center;
+}
+
+.pricing-card:hover {
+  border-color: #f97316;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.pricing-card.selected {
+  border-color: #f97316;
+  background: #fff7ed;
+}
+
+.badge {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.recommended-badge {
+  background: #3b82f6;
+  color: white;
+}
+
+.best-value-badge {
+  background: linear-gradient(135deg, #f97316 0%, #ef4444 100%);
+  color: white;
+}
+
+.plan-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #374151;
+  margin: 8px 0 4px 0;
+}
+
+.plan-price {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 2px;
+}
+
+.price-symbol {
+  font-size: 16px;
+  color: #f97316;
+  font-weight: 600;
+}
+
+.price-number {
+  font-size: 28px;
+  color: #f97316;
+  font-weight: 700;
+}
+
+.price-period {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.monthly-price {
+  font-size: 12px;
+  color: #10b981;
+  margin: 4px 0 0 0;
+}
+
+.pay-btn {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #f97316 0%, #ef4444 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 12px;
+}
+
+.pay-btn:hover:not(:disabled) {
+  transform: scale(1.02);
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.4);
+}
+
+.pay-btn:disabled {
+  background: #d1d5db;
+  cursor: not-allowed;
+}
+
+.pricing-note {
+  font-size: 12px;
+  color: #9ca3af;
+  text-align: center;
+  margin: 0;
 }
 </style>
