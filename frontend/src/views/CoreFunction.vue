@@ -1528,10 +1528,10 @@
               <h3 class="plan-name">{{ option.name }}</h3>
               <div class="plan-price">
                 <span class="price-symbol">¥</span>
-                <span class="price-number">{{ option.price }}</span>
+                <span class="price-number">{{ option.price_yuan || option.price }}</span>
                 <span class="price-period">/{{ option.period }}</span>
               </div>
-              <p v-if="option.monthlyPrice" class="monthly-price">约¥{{ option.monthlyPrice }}/月</p>
+              <p v-if="option.monthly_price || option.monthlyPrice" class="monthly-price">约¥{{ option.monthly_price || option.monthlyPrice }}/月</p>
             </div>
           </div>
           
@@ -1665,7 +1665,7 @@ const qrCodeError = ref(false); // 二维码加载错误
 
 // 计算选中的方案信息
 const selectedPlanInfo = computed(() => {
-  return pricingOptions.find(o => o.id === selectedPricing.value) || pricingOptions[3];
+  return pricingOptions.value.find(o => o.id === selectedPricing.value) || pricingOptions.value[3];
 });
 
 // 支付状态文本
@@ -1690,13 +1690,16 @@ const pricingModalConfig = {
   }
 };
 
-// 定价方案选项
-const pricingOptions = [
+// 定价方案选项（从后端动态加载）
+const pricingOptions = ref([
   { id: 'monthly', name: '月付', price: '19.9', period: '月', monthlyPrice: null },
   { id: 'quarterly', name: '季付', price: '49', period: '季', monthlyPrice: '16.3' },
   { id: 'halfYear', name: '半年', price: '89', period: '半年', monthlyPrice: '14.8', recommended: true },
   { id: 'yearly', name: '年付', price: '168', period: '年', monthlyPrice: '14', bestValue: true }
-];
+]);
+
+// 支付状态轮询定时器
+let paymentCheckInterval = null;
 
 // 视图状态
 const currentView = ref('2d');
@@ -4781,6 +4784,9 @@ async function goToMockPayment() {
       currentOrderNo.value = result.data.order_no;
       paymentStatus.value = 'pending';
       console.log('订单创建成功:', result.data.order_no);
+      
+      // 启动自动轮询（每3秒查询一次，最多20次/60秒）
+      startPaymentPolling();
     } else {
       alert('创建订单失败: ' + (result.message || '未知错误'));
       showMockPaymentPage.value = false;
@@ -4792,8 +4798,73 @@ async function goToMockPayment() {
   }
 }
 
+// 启动支付状态轮询
+function startPaymentPolling() {
+  // 清除之前的轮询
+  if (paymentCheckInterval) {
+    clearInterval(paymentCheckInterval);
+  }
+  
+  let pollCount = 0;
+  const maxPolls = 20; // 最多20次
+  
+  paymentCheckInterval = setInterval(async () => {
+    pollCount++;
+    
+    if (pollCount > maxPolls) {
+      // 超过最大轮询次数，停止轮询
+      clearInterval(paymentCheckInterval);
+      paymentCheckInterval = null;
+      console.log('支付轮询超时');
+      return;
+    }
+    
+    if (!currentOrderNo.value || !showMockPaymentPage.value) {
+      // 弹窗已关闭，停止轮询
+      clearInterval(paymentCheckInterval);
+      paymentCheckInterval = null;
+      return;
+    }
+    
+    try {
+      const response = await fetch(`/api/payment/order-status?order_no=${currentOrderNo.value}`);
+      const result = await response.json();
+      
+      if (result.code === 0 && result.data) {
+        paymentStatus.value = result.data.status;
+        
+        if (result.data.status === 'paid') {
+          // 支付成功，停止轮询
+          clearInterval(paymentCheckInterval);
+          paymentCheckInterval = null;
+          
+          // 更新本地状态
+          localStorage.setItem('cangkujia_user_plan', 'pro');
+          localStorage.setItem('cangkujia_plan_type', selectedPricing.value);
+          localStorage.setItem('cangkujia_plan_price', selectedPlanInfo.value.price);
+          localStorage.setItem('cangkujia_paid_at', new Date().toISOString());
+          
+          alert('🎉 支付成功！您已升级为Pro版，页面即将刷新...');
+          
+          showPricingModal.value = false;
+          showMockPaymentPage.value = false;
+          window.location.reload();
+        }
+      }
+    } catch (error) {
+      console.error('轮询支付状态失败:', error);
+    }
+  }, 3000); // 每3秒查询一次
+}
+
 // 取消支付，返回定价选择页或关闭弹窗
 function cancelPayment() {
+  // 清除轮询定时器
+  if (paymentCheckInterval) {
+    clearInterval(paymentCheckInterval);
+    paymentCheckInterval = null;
+  }
+  
   if (paymentQrCode.value) {
     // 如果已显示二维码，返回定价页
     showMockPaymentPage.value = false;
@@ -5820,16 +5891,48 @@ function toggleCategory(category) {
   expandedCategories.value[category] = !expandedCategories.value[category];
 }
 
-// 组件挂载时加载我的模型、案例库并添加键盘监听
+// 加载定价配置
+async function loadPricingConfig() {
+  try {
+    const response = await fetch('/api/payment/config');
+    const result = await response.json();
+    
+    if (result.code === 0 && result.data && result.data.pricing_options) {
+      // 转换后端数据格式为前端格式
+      pricingOptions.value = result.data.pricing_options.map(opt => ({
+        id: opt.id,
+        name: opt.name,
+        price: String(opt.price_yuan),
+        price_yuan: opt.price_yuan,
+        period: opt.period,
+        monthlyPrice: opt.monthly_price ? String(opt.monthly_price) : null,
+        monthly_price: opt.monthly_price,
+        recommended: opt.recommended,
+        bestValue: opt.best_value
+      }));
+      console.log('定价配置加载成功:', pricingOptions.value);
+    }
+  } catch (error) {
+    console.error('加载定价配置失败:', error);
+    // 使用默认配置
+  }
+}
+
+// 组件挂载时加载我的模型、案例库、定价配置并添加键盘监听
 onMounted(() => {
   loadMyModels();
   loadCases();
+  loadPricingConfig();
   window.addEventListener('keydown', handleKeyDown);
 });
 
-// 组件卸载时清理键盘监听（防止内存泄漏）
+// 组件卸载时清理键盘监听和轮询定时器（防止内存泄漏）
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyDown);
+  if (paymentCheckInterval) {
+    clearInterval(paymentCheckInterval);
+    paymentCheckInterval = null;
+  }
 });
 
 // 暴露给模板使用的变量和函数

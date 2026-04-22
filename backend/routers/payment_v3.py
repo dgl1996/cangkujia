@@ -125,6 +125,61 @@ def get_authorization_header(method: str, url: str, body: str = "") -> str:
     return f'WECHATPAY2-SHA256-RSA2048 mchid="{WECHAT_MCHID}",nonce_str="{nonce_str}",signature="{signature}",timestamp="{timestamp}",serial_no="{serial_no}"'
 
 
+@router.get("/config")
+async def get_payment_config():
+    """
+    获取支付配置（4档定价）
+    返回定价配置供前端动态渲染
+    """
+    return {
+        "code": 0,
+        "data": {
+            "pricing_options": [
+                {
+                    "id": "monthly",
+                    "name": "月付",
+                    "price": 1990,  # 单位：分
+                    "price_yuan": 19.9,
+                    "period": "月",
+                    "monthly_price": None,
+                    "recommended": False,
+                    "best_value": False
+                },
+                {
+                    "id": "quarterly",
+                    "name": "季付",
+                    "price": 4900,
+                    "price_yuan": 49,
+                    "period": "季",
+                    "monthly_price": 16.3,
+                    "recommended": False,
+                    "best_value": False
+                },
+                {
+                    "id": "halfyear",
+                    "name": "半年",
+                    "price": 8900,
+                    "price_yuan": 89,
+                    "period": "半年",
+                    "monthly_price": 14.8,
+                    "recommended": True,
+                    "best_value": False
+                },
+                {
+                    "id": "yearly",
+                    "name": "年付",
+                    "price": 16800,
+                    "price_yuan": 168,
+                    "period": "年",
+                    "monthly_price": 14,
+                    "recommended": False,
+                    "best_value": True
+                }
+            ]
+        }
+    }
+
+
 @router.post("/create-order")
 async def create_order(request: CreateOrderRequest, db: Session = Depends(get_db)):
     """
