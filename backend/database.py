@@ -2,11 +2,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
-from dotenv import load_dotenv
 
-# 加载环境变量
-load_dotenv()
-
+# 注意：环境变量由main.py统一加载，避免重复加载干扰
 # 获取数据库URL，默认使用SQLite
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./cangkujia.db")
 

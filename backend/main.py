@@ -3,8 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
 
-# 加载环境变量
-load_dotenv()
+# 加载环境变量 - 使用绝对路径确保生产环境正确加载
+load_dotenv("/var/www/cangkujia/backend/.env")
 
 app = FastAPI(
     title="仓酷家 API",

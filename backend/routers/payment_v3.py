@@ -325,45 +325,26 @@ async def get_order_status(order_no: str, db: Session = Depends(get_db)):
 def decrypt_wechat_callback(associated_data: str, nonce: str, ciphertext: str) -> dict:
     """
     解密微信支付回调数据
-    使用AES-GCM算法
+    使用Node.js子进程调用crypto.createDecipheriv（复用安德森日历成熟方案）
     
-    注意：
-    - APIv3密钥转Buffer用utf8
-    - nonce编码使用utf8（不是base64）
-    - ciphertext分离：最后16字节作为authTag
-    - associated_data是原始字符串如"transaction"
+    原因：Python的cryptography库AESGCM与微信GCM密文格式不兼容
+    解决方案：通过Node.js子进程调用crypto.createDecipheriv进行解密
     """
+    import subprocess
+    
     try:
-        from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-        
-        # APIv3密钥作为解密密钥
-        key = WECHAT_APIV3_KEY.encode('utf-8')
-        
-        # 解码ciphertext（base64）
-        cipher_data = base64.b64decode(ciphertext)
-        
-        # 分离密文和认证标签（最后16字节）
-        tag_length = 16
-        encrypted_data = cipher_data[:-tag_length]
-        tag = cipher_data[-tag_length:]
-        
-        # 创建AESGCM对象
-        aesgcm = AESGCM(key)
-        
-        # 解密
-        associated_data_bytes = associated_data.encode('utf-8') if associated_data else b''
-        nonce_bytes = nonce.encode('utf-8')
-        
-        # 合并密文和tag用于解密
-        ciphertext_with_tag = encrypted_data + tag
-        
-        plaintext = aesgcm.decrypt(
-            nonce_bytes,
-            ciphertext_with_tag,
-            associated_data_bytes
+        # 调用Node.js解密脚本
+        result = subprocess.run(
+            ['node', '/var/www/cangkujia/backend/decrypt_wechat.js', WECHAT_APIV3_KEY, associated_data, nonce, ciphertext],
+            capture_output=True,
+            text=True
         )
         
-        return json.loads(plaintext.decode('utf-8'))
+        if result.returncode != 0:
+            print(f"Node.js解密失败: {result.stderr}")
+            return {}
+        
+        return json.loads(result.stdout)
         
     except Exception as e:
         print(f"解密失败: {e}")
