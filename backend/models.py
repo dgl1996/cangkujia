@@ -46,6 +46,19 @@ class UserLicense(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
+class Subscription(Base):
+    __tablename__ = "subscriptions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String, unique=True, index=True, nullable=False)  # Clerk用户ID
+    plan_type = Column(String, nullable=False)  # monthly, quarterly, halfyear, yearly
+    status = Column(String, default="active")  # active, expired, cancelled
+    started_at = Column(DateTime(timezone=True), server_default=func.now())
+    expire_at = Column(DateTime(timezone=True), nullable=False)
+    order_no = Column(String, nullable=True)  # 关联的订单号
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
 class Layout(Base):
     __tablename__ = "layouts"
     

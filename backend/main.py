@@ -25,8 +25,9 @@ app.add_middleware(
 )
 
 # 导入并注册路由
-from routers import payment, users
-app.include_router(payment.router)
+from routers import payment_v3, users
+app.include_router(payment_v3.router)
+app.include_router(payment_v3.user_router)
 app.include_router(users.router)
 
 # Clerk回调URL配置

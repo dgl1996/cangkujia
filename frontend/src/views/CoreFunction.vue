@@ -1540,31 +1540,53 @@
           </button>
         </div>
         
-        <!-- 模拟支付页 -->
+        <!-- 微信支付页 -->
         <div v-else class="mock-payment-page">
           <h2 class="pricing-title">微信支付</h2>
-          <p class="pricing-subtitle">模拟支付环境（本地测试专用）</p>
+          <p class="pricing-subtitle">请使用微信扫码完成支付</p>
           
-          <div class="selected-plan-info">
-            <div class="plan-icon">💎</div>
-            <h3 class="selected-plan-name">{{ selectedPlanInfo.name }}</h3>
-            <div class="selected-plan-price">
-              <span class="price-symbol">¥</span>
-              <span class="price-number">{{ selectedPlanInfo.price }}</span>
-              <span class="price-period">/{{ selectedPlanInfo.period }}</span>
+          <div v-if="!paymentQrCode" class="payment-loading">
+            <div class="loading-spinner"></div>
+            <p>正在生成支付二维码...</p>
+          </div>
+          
+          <div v-else class="payment-qr-section">
+            <div class="selected-plan-info">
+              <div class="plan-icon">💎</div>
+              <h3 class="selected-plan-name">{{ selectedPlanInfo.name }}</h3>
+              <div class="selected-plan-price">
+                <span class="price-symbol">¥</span>
+                <span class="price-number">{{ selectedPlanInfo.price }}</span>
+                <span class="price-period">/{{ selectedPlanInfo.period }}</span>
+              </div>
+            </div>
+            
+            <div class="qr-code-container">
+              <img :src="`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(paymentQrCode)}`" 
+                   alt="微信支付二维码" 
+                   class="payment-qr-code"
+                   @error="qrCodeError = true" />
+              <p v-if="qrCodeError" class="qr-error">二维码加载失败，请重试</p>
+            </div>
+            
+            <p class="qr-instruction">请使用微信扫一扫完成支付</p>
+            <p class="order-info">订单号：{{ currentOrderNo }}</p>
+            
+            <div class="payment-status" v-if="paymentStatus">
+              <span :class="['status-badge', paymentStatus]">{{ paymentStatusText }}</span>
             </div>
           </div>
           
           <div class="mock-payment-actions">
-            <button class="mock-pay-success-btn" @click="handleMockPaymentSuccess">
-              <span class="btn-icon">✓</span>模拟支付成功
+            <button class="mock-pay-success-btn" @click="checkPaymentStatus" :disabled="!currentOrderNo || checkingPayment">
+              <span class="btn-icon">✓</span>{{ checkingPayment ? '查询中...' : '已完成支付，刷新页面' }}
             </button>
-            <button class="mock-pay-cancel-btn" @click="cancelMockPayment">
-              取消支付
+            <button class="mock-pay-cancel-btn" @click="cancelPayment">
+              {{ paymentQrCode ? '取消支付' : '返回' }}
             </button>
           </div>
           
-          <p class="mock-payment-note">此页面仅用于本地测试，线上将调起真实微信支付</p>
+          <p class="mock-payment-note">支付完成后请点击"已完成支付"按钮刷新页面</p>
         </div>
       </div>
     </div>
@@ -1632,11 +1654,28 @@ const projectName = ref('');
 const showPricingModal = ref(false);
 const selectedPricing = ref('yearly'); // 默认选中年付
 const pricingModalType = ref('save'); // 'save' 或 'report'
-const showMockPaymentPage = ref(false); // 是否显示模拟支付页
+const showMockPaymentPage = ref(false); // 是否显示支付页
+
+// 支付相关状态
+const paymentQrCode = ref(''); // 微信支付二维码链接
+const currentOrderNo = ref(''); // 当前订单号
+const checkingPayment = ref(false); // 是否正在查询支付状态
+const paymentStatus = ref(''); // 支付状态
+const qrCodeError = ref(false); // 二维码加载错误
 
 // 计算选中的方案信息
 const selectedPlanInfo = computed(() => {
   return pricingOptions.find(o => o.id === selectedPricing.value) || pricingOptions[3];
+});
+
+// 支付状态文本
+const paymentStatusText = computed(() => {
+  const statusMap = {
+    'pending': '等待支付',
+    'paid': '支付成功',
+    'failed': '支付失败'
+  };
+  return statusMap[paymentStatus.value] || '';
 });
 
 // 弹窗标题和副标题配置
@@ -4708,41 +4747,106 @@ function getShortEmail(email) {
   return email.split('@')[0];
 }
 
-// 跳转到模拟支付页
-function goToMockPayment() {
+// 跳转到支付页并创建订单
+async function goToMockPayment() {
   if (!selectedPricing.value) {
     alert('请先选择定价方案');
     return;
   }
+  
+  // 重置支付状态
+  paymentQrCode.value = '';
+  currentOrderNo.value = '';
+  paymentStatus.value = '';
+  qrCodeError.value = false;
   showMockPaymentPage.value = true;
+  
+  try {
+    // 调用后端创建订单
+    const response = await fetch('/api/payment/create-order', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        plan_type: selectedPricing.value,
+        user_id: user.value?.id || 'anonymous'
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (result.code === 0 && result.data) {
+      paymentQrCode.value = result.data.code_url;
+      currentOrderNo.value = result.data.order_no;
+      paymentStatus.value = 'pending';
+      console.log('订单创建成功:', result.data.order_no);
+    } else {
+      alert('创建订单失败: ' + (result.message || '未知错误'));
+      showMockPaymentPage.value = false;
+    }
+  } catch (error) {
+    console.error('创建订单失败:', error);
+    alert('创建订单失败，请检查网络连接');
+    showMockPaymentPage.value = false;
+  }
 }
 
-// 取消模拟支付，返回定价选择页
-function cancelMockPayment() {
-  showMockPaymentPage.value = false;
+// 取消支付，返回定价选择页或关闭弹窗
+function cancelPayment() {
+  if (paymentQrCode.value) {
+    // 如果已显示二维码，返回定价页
+    showMockPaymentPage.value = false;
+    paymentQrCode.value = '';
+    currentOrderNo.value = '';
+  } else {
+    // 如果还在加载中，直接返回定价页
+    showMockPaymentPage.value = false;
+  }
 }
 
-// 模拟支付成功处理
-function handleMockPaymentSuccess() {
-  const option = selectedPlanInfo.value;
+// 查询支付状态
+async function checkPaymentStatus() {
+  if (!currentOrderNo.value) {
+    alert('订单号不存在');
+    return;
+  }
   
-  // 1. 写入Pro状态
-  localStorage.setItem('cangkujia_user_plan', 'pro');
+  checkingPayment.value = true;
   
-  // 2. 记录购买信息（便于后续真实支付对接时替换）
-  localStorage.setItem('cangkujia_plan_type', option.id);
-  localStorage.setItem('cangkujia_plan_price', option.price);
-  localStorage.setItem('cangkujia_paid_at', new Date().toISOString());
-  
-  // 3. 关闭弹窗
-  showPricingModal.value = false;
-  showMockPaymentPage.value = false;
-  
-  // 4. 提示成功
-  alert('🎉 支付成功！您已升级为Pro版，页面即将刷新...');
-  
-  // 5. 强制刷新页面，Pro状态生效
-  window.location.reload();
+  try {
+    const response = await fetch(`/api/payment/order-status?order_no=${currentOrderNo.value}`);
+    const result = await response.json();
+    
+    if (result.code === 0 && result.data) {
+      paymentStatus.value = result.data.status;
+      
+      if (result.data.status === 'paid') {
+        // 支付成功
+        localStorage.setItem('cangkujia_user_plan', 'pro');
+        localStorage.setItem('cangkujia_plan_type', selectedPricing.value);
+        localStorage.setItem('cangkujia_plan_price', selectedPlanInfo.value.price);
+        localStorage.setItem('cangkujia_paid_at', new Date().toISOString());
+        
+        alert('🎉 支付成功！您已升级为Pro版，页面即将刷新...');
+        
+        showPricingModal.value = false;
+        showMockPaymentPage.value = false;
+        window.location.reload();
+      } else if (result.data.status === 'pending') {
+        alert('订单尚未支付，请使用微信扫码完成支付');
+      } else {
+        alert('订单状态: ' + result.data.status);
+      }
+    } else {
+      alert('查询订单状态失败: ' + (result.message || '未知错误'));
+    }
+  } catch (error) {
+    console.error('查询订单状态失败:', error);
+    alert('查询订单状态失败，请稍后重试');
+  } finally {
+    checkingPayment.value = false;
+  }
 }
 
 // 设置选择模式
@@ -8671,5 +8775,101 @@ defineExpose({
   margin: 16px 0 0 0;
   padding-top: 16px;
   border-top: 1px solid #e5e7eb;
+}
+
+/* 支付加载状态 */
+.payment-loading {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 16px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 二维码容器 */
+.qr-code-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 20px 0;
+}
+
+.payment-qr-code {
+  width: 200px;
+  height: 200px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px;
+  background: white;
+}
+
+.qr-error {
+  color: #ef4444;
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+.qr-instruction {
+  font-size: 14px;
+  color: #374151;
+  text-align: center;
+  margin: 12px 0 8px;
+}
+
+.order-info {
+  font-size: 12px;
+  color: #6b7280;
+  text-align: center;
+  margin: 0 0 12px;
+}
+
+/* 支付状态 */
+.payment-status {
+  text-align: center;
+  margin: 12px 0;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-badge.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-badge.paid {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-badge.failed {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* 禁用按钮状态 */
+.mock-pay-success-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 </style>
