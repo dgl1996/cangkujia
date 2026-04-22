@@ -115,14 +115,28 @@ h1 {
   border: none;
   box-shadow: none;
   padding: 0;
+  min-height: 300px; /* 确保表单区域有足够高度 */
 }
 
+/* 只隐藏Clerk自带的标题，不隐藏表单元素 */
 :deep(.clerk-header-title) {
   display: none;
 }
 
 :deep(.clerk-header-subtitle) {
   display: none;
+}
+
+/* 确保Clerk表单输入框可见 */
+:deep(.clerk-form-field) {
+  display: block !important;
+  visibility: visible !important;
+}
+
+:deep(.clerk-form-field input) {
+  display: block !important;
+  visibility: visible !important;
+  width: 100%;
 }
 
 /* 升级引导样式 */
