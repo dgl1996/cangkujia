@@ -1,12 +1,11 @@
 /**
  * 用户权限检查工具
  * 用于检查用户是否有权限使用特定功能
+ * 
+ * 注意：此版本已改为从Pinia Store读取权限状态，不再使用localStorage
  */
 
-import { useAuth } from '@clerk/vue';
-
-// 用户计划存储key
-const USER_PLAN_KEY = 'cangkujia_user_plan';
+import { useUserStore } from '../stores/user'
 
 // 会员等级定义
 export const MEMBER_LEVELS = {
@@ -14,22 +13,21 @@ export const MEMBER_LEVELS = {
   PRO: 'pro'             // Pro版（所有付费用户统一为pro）
 };
 
-// 检查用户是否是Pro用户（基于localStorage）
+// 检查用户是否是Pro用户（基于Pinia Store）
 export function isProUser() {
-  if (typeof window === 'undefined') return false;
-  return localStorage.getItem(USER_PLAN_KEY) === 'pro';
+  const store = useUserStore();
+  return store.isPro;
 }
 
-// 设置用户计划（用于测试或支付后升级）
+// 设置用户计划（已废弃，保留函数签名兼容旧代码）
 export function setUserPlan(plan) {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(USER_PLAN_KEY, plan);
+  console.warn('setUserPlan is deprecated, use userStore.checkStatus() instead');
 }
 
-// 获取用户计划
+// 获取用户计划（基于Pinia Store）
 export function getUserPlan() {
-  if (typeof window === 'undefined') return 'free';
-  return localStorage.getItem(USER_PLAN_KEY) || 'free';
+  const store = useUserStore();
+  return store.isPro ? 'pro' : 'free';
 }
 
 // 检查用户是否有保存权限（Pro会员才能保存）

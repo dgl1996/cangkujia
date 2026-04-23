@@ -412,44 +412,55 @@ async def wechat_callback(request: Request, db: Session = Depends(get_db)):
             else:
                 order.paid_at = datetime.now()
             
-            # 计算过期时间
+            # 根据product_name/description映射plan_type和天数
+            plan_map = {
+                'monthly': ('monthly', 30), '月付': ('monthly', 30),
+                'quarterly': ('quarterly', 90), '季付': ('quarterly', 90),
+                'halfyear': ('halfyear', 180), '半年': ('halfyear', 180),
+                'yearly': ('yearly', 365), '年付': ('yearly', 365), '年度': ('yearly', 365)
+            }
+            
             plan_type = None
-            for pt, name in PLAN_NAME_MAP.items():
-                if name in order.product_name:
-                    plan_type = pt
+            days = 365
+            search_text = f"{order.product_name or ''} {order.description or ''}".lower()
+            for key, (ptype, d) in plan_map.items():
+                if key in search_text:
+                    plan_type, days = ptype, d
                     break
+            
+            # 如果没匹配到，从PLAN_NAME_MAP再试一次
+            if not plan_type:
+                for pt, name in PLAN_NAME_MAP.items():
+                    if name in order.product_name:
+                        plan_type = pt
+                        break
             
             if not plan_type:
                 plan_type = "yearly"  # 默认年付
+                days = 365
             
-            duration_days = DURATION_MAP.get(plan_type, 365)
-            expire_at = datetime.now() + timedelta(days=duration_days)
+            now = datetime.now()
+            expire_at = now + timedelta(days=days)
             
-            # 更新或创建订阅记录
-            subscription = db.query(Subscription).filter(
-                Subscription.user_id == order.user_id
-            ).first()
+            # 标记用户旧订阅为replaced
+            old_subs = db.query(Subscription).filter_by(user_id=order.user_id, status='active').all()
+            for sub in old_subs:
+                sub.status = 'replaced'
+                sub.updated_at = now
             
-            if subscription:
-                # 更新现有订阅
-                subscription.plan_type = plan_type
-                subscription.status = "active"
-                subscription.expire_at = expire_at
-                subscription.order_no = out_trade_no
-                subscription.updated_at = datetime.now()
-            else:
-                # 创建新订阅
-                subscription = Subscription(
-                    user_id=order.user_id,
-                    plan_type=plan_type,
-                    status="active",
-                    expire_at=expire_at,
-                    order_no=out_trade_no
-                )
-                db.add(subscription)
+            # 创建新订阅
+            new_sub = Subscription(
+                user_id=order.user_id,
+                plan_type=plan_type,
+                status='active',
+                started_at=now,
+                expire_at=expire_at,
+                order_no=out_trade_no
+            )
+            db.add(new_sub)
             
             db.commit()
-            print(f"支付成功处理完成: {out_trade_no}, 用户: {order.user_id}, 过期时间: {expire_at}")
+            print(f"支付成功处理完成: {out_trade_no}, 用户: {order.user_id}, 套餐: {plan_type}, 过期时间: {expire_at}")
             
         else:
             # 支付失败或其他状态
@@ -471,41 +482,43 @@ async def wechat_callback(request: Request, db: Session = Depends(get_db)):
 async def get_user_subscription(user_id: str, db: Session = Depends(get_db)):
     """
     获取用户订阅状态
+    返回格式：{status: 'active'|'expired'|'free', plan: plan_type|null, expire_at: ISOString|null, started_at: ISOString|null}
     """
     try:
         subscription = db.query(Subscription).filter(
             Subscription.user_id == user_id
-        ).first()
+        ).order_by(Subscription.created_at.desc()).first()
         
         if not subscription:
             return {
-                "code": 0,
-                "data": {
-                    "plan": "free",
-                    "status": "active",
-                    "expire_at": None
-                }
+                "status": "free",
+                "plan": None,
+                "expire_at": None,
+                "started_at": None
             }
         
         # 检查是否过期
         now = datetime.now()
-        if subscription.expire_at < now:
-            subscription.status = "expired"
-            db.commit()
-            plan = "free"
-        else:
-            plan = "pro"
+        if subscription.expire_at and subscription.expire_at < now:
+            if subscription.status != 'expired':
+                subscription.status = 'expired'
+                db.commit()
+            return {
+                "status": "expired",
+                "plan": subscription.plan_type,
+                "expire_at": subscription.expire_at.isoformat() if subscription.expire_at else None,
+                "started_at": subscription.started_at.isoformat() if subscription.started_at else None
+            }
         
         return {
-            "code": 0,
-            "data": {
-                "plan": plan,
-                "status": subscription.status,
-                "expire_at": subscription.expire_at.isoformat() if subscription.expire_at else None,
-                "plan_type": subscription.plan_type
-            }
+            "status": subscription.status,
+            "plan": subscription.plan_type,
+            "expire_at": subscription.expire_at.isoformat() if subscription.expire_at else None,
+            "started_at": subscription.started_at.isoformat() if subscription.started_at else None
         }
         
     except Exception as e:
         print(f"获取订阅状态失败: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))

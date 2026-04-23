@@ -60,17 +60,22 @@
         </button>
         <!-- 用户信息区域 -->
         <div class="user-info-section" v-if="isSignedIn && user">
-          <!-- 版本标签（基于localStorage） -->
-          <span v-if="!isProUser()" class="version-badge free-badge">
+          <!-- 版本标签（基于Pinia Store） -->
+          <span v-if="!userStore.isPro" class="version-badge free-badge">
             免费版
           </span>
           <span v-else class="version-badge pro-badge">
             Pro版
           </span>
           
+          <!-- 到期日显示（仅Pro用户） -->
+          <span v-if="userStore.isPro && userStore.expireAt" class="expire-date" :title="'到期日: ' + formatExpireDate(userStore.expireAt)">
+            {{ formatExpireDate(userStore.expireAt) }}
+          </span>
+          
           <!-- 升级Pro按钮（仅免费用户显示） -->
           <button 
-            v-if="!isProUser()" 
+            v-if="!userStore.isPro" 
             @click="showPricingModal = true" 
             class="upgrade-btn"
             title="升级Pro版，解锁更多功能"
@@ -1600,10 +1605,12 @@ import { useUser, useClerk } from '@clerk/vue';
 import * as THREE from 'three';
 import ThreeScene from '../components/3d/ThreeScene.vue';
 import { canSave, canExport, isProUser } from '../utils/permission.js';
+import { useUserStore } from '../stores/user'
 
 const router = useRouter();
 const { user, isSignedIn } = useUser();
 const { signOut } = useClerk();
+const userStore = useUserStore();
 
 const threeScene = ref(null);
 const selectedObject = ref(null);
@@ -4750,6 +4757,20 @@ function getShortEmail(email) {
   return email.split('@')[0];
 }
 
+// 格式化到期日显示（2026-05-20T19:47:22 → 2026.05.20）
+function formatExpireDate(isoDate) {
+  if (!isoDate) return '';
+  try {
+    const date = new Date(isoDate);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}.${month}.${day}`;
+  } catch (e) {
+    return '';
+  }
+}
+
 // 跳转到支付页并创建订单
 async function goToMockPayment() {
   if (!selectedPricing.value) {
@@ -4838,11 +4859,8 @@ function startPaymentPolling() {
           clearInterval(paymentCheckInterval);
           paymentCheckInterval = null;
           
-          // 更新本地状态
-          localStorage.setItem('cangkujia_user_plan', 'pro');
-          localStorage.setItem('cangkujia_plan_type', selectedPricing.value);
-          localStorage.setItem('cangkujia_plan_price', selectedPlanInfo.value.price);
-          localStorage.setItem('cangkujia_paid_at', new Date().toISOString());
+          // 刷新用户权限状态（从后端获取最新订阅信息）
+          await userStore.checkStatus();
           
           alert('🎉 支付成功！您已升级为Pro版，页面即将刷新...');
           
@@ -4894,10 +4912,8 @@ async function checkPaymentStatus() {
       
       if (result.data.status === 'paid') {
         // 支付成功
-        localStorage.setItem('cangkujia_user_plan', 'pro');
-        localStorage.setItem('cangkujia_plan_type', selectedPricing.value);
-        localStorage.setItem('cangkujia_plan_price', selectedPlanInfo.value.price);
-        localStorage.setItem('cangkujia_paid_at', new Date().toISOString());
+        // 刷新用户权限状态（从后端获取最新订阅信息）
+        await userStore.checkStatus();
         
         alert('🎉 支付成功！您已升级为Pro版，页面即将刷新...');
         
