@@ -1,55 +1,136 @@
 import { defineStore } from 'pinia'
-import { useAuth } from '@clerk/vue'
+
+/**
+ * 用户状态管理
+ * 替代 Clerk，使用自研 JWT 登录
+ */
 
 export const useUserStore = defineStore('user', {
   state: () => ({
+    isLoggedIn: false,
+    user: null as {
+      id: number;
+      email: string;
+      nickname: string | null;
+      avatar_url: string | null;
+    } | null,
     isPro: false,
     planType: null as string | null,
     expireAt: null as string | null,
-    userId: null as string | null,
   }),
+
   actions: {
-    async checkStatus() {
+    /**
+     * 设置用户信息（登录/注册成功后调用）
+     */
+    setUser(userData: { id: number; email: string; nickname?: string | null; avatar_url?: string | null }) {
+      this.user = {
+        id: userData.id,
+        email: userData.email,
+        nickname: userData.nickname || null,
+        avatar_url: userData.avatar_url || null,
+      }
+      this.isLoggedIn = true
+    },
+
+    /**
+     * 检查登录状态（App.vue 启动时调用）
+     * - 检查 localStorage 是否有 token
+     * - 有 token 则调用 /api/auth/me 获取用户信息
+     */
+    async checkAuthStatus() {
+      const token = localStorage.getItem('cangkujia_token')
+      
+      if (!token) {
+        this.clearUser()
+        return false
+      }
+
       try {
-        const { getToken, userId } = useAuth()
-        const token = await getToken.value()
-        const uid = userId.value
+        const response = await fetch('/api/auth/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+
+        if (!response.ok) {
+          // Token 无效，清除登录状态
+          this.clearUser()
+          localStorage.removeItem('cangkujia_token')
+          return false
+        }
+
+        const userData = await response.json()
+        this.setUser(userData)
         
-        if (!token || !uid) {
+        // 同时检查订阅状态
+        await this.checkSubscription()
+        
+        return true
+      } catch (error) {
+        console.error('检查登录状态失败:', error)
+        this.clearUser()
+        return false
+      }
+    },
+
+    /**
+     * 检查订阅状态
+     */
+    async checkSubscription() {
+      if (!this.user) {
+        this.isPro = false
+        return
+      }
+
+      try {
+        const token = localStorage.getItem('cangkujia_token')
+        const response = await fetch(`/api/user/subscription?user_id=${this.user.id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+
+        if (!response.ok) {
           this.isPro = false
-          this.userId = null
           return
         }
+
+        const data = await response.json()
         
-        this.userId = uid
-        
-        const res = await fetch(`/api/user/subscription?user_id=${uid}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-        
-        if (!res.ok) throw new Error('API error')
-        
-        const data = await res.json()
-        
-        // 检查是否active且未过期
+        // 检查是否 active 且未过期
         const isActive = data.status === 'active'
         const notExpired = data.expire_at ? new Date(data.expire_at) > new Date() : false
         
         this.isPro = isActive && notExpired
         this.planType = data.plan
         this.expireAt = data.expire_at
-      } catch (e) {
-        console.error('Pro status check failed:', e)
+      } catch (error) {
+        console.error('检查订阅状态失败:', error)
         this.isPro = false
       }
     },
-    
-    // 清除状态（用于登出）
-    clearStatus() {
+
+    /**
+     * 清除用户状态（登出时调用）
+     */
+    clearUser() {
+      this.isLoggedIn = false
+      this.user = null
       this.isPro = false
       this.planType = null
       this.expireAt = null
-      this.userId = null
+      localStorage.removeItem('cangkujia_token')
+    },
+
+    /**
+     * 登出
+     * 清除 token 后强制跳转首页
+     */
+    logout() {
+      this.clearUser()
+      // 强制跳转首页，确保用户无法继续使用设计工具
+      window.location.href = '/'
     }
   }
 })

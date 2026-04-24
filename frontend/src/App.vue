@@ -5,30 +5,15 @@
 </template>
 
 <script setup>
-import { watch } from 'vue'
-import { useAuth } from '@clerk/vue'
-import { useUserStore } from './stores/user'
+import { onMounted } from 'vue';
+import { useUserStore } from './stores/user';
 
-const { isSignedIn, userId } = useAuth()
-const userStore = useUserStore()
+const userStore = useUserStore();
 
-// 监听用户登录状态，自动检查权限
-watch(isSignedIn, async (signedIn) => {
-  if (signedIn) {
-    // 用户已登录，检查订阅状态
-    await userStore.checkStatus()
-  } else {
-    // 用户已登出，清除状态
-    userStore.clearStatus()
-  }
-}, { immediate: true })
-
-// 也监听userId变化（登录用户切换时）
-watch(userId, async (newUserId) => {
-  if (newUserId) {
-    await userStore.checkStatus()
-  }
-})
+// 应用启动时检查登录状态
+onMounted(async () => {
+  await userStore.checkAuthStatus();
+});
 </script>
 
 <style>

@@ -58,40 +58,65 @@
         <button class="top-bar-btn disabled-btn" disabled title="创建自定义货架（已有40个模型满足需求）">
           <span class="btn-icon">➕📦</span>
         </button>
-        <!-- 用户信息区域 -->
-        <div class="user-info-section" v-if="isSignedIn && user">
-          <!-- 版本标签（基于Pinia Store） -->
-          <span v-if="!userStore.isPro" class="version-badge free-badge">
-            免费版
-          </span>
-          <span v-else class="version-badge pro-badge">
-            Pro版
-          </span>
+        <!-- 用户信息区域 - 下拉菜单 -->
+        <div class="user-dropdown-container" v-if="isSignedIn && user" ref="userDropdownRef">
+          <!-- 触发器：头像 + 用户名 + 箭头 -->
+          <div class="user-dropdown-trigger" @click="toggleUserDropdown">
+            <div class="user-avatar" :class="{ 'pro-avatar': userStore.isPro }">
+              {{ getUserInitials(user?.email) }}
+            </div>
+            <span class="user-name">{{ getShortEmail(user?.email) }}</span>
+            <span class="dropdown-arrow" :class="{ 'arrow-up': isUserDropdownOpen }">▼</span>
+          </div>
           
-          <!-- 到期日显示（仅Pro用户） -->
-          <span v-if="userStore.isPro && userStore.expireAt" class="expire-date" :title="'到期日: ' + formatExpireDate(userStore.expireAt)">
-            {{ formatExpireDate(userStore.expireAt) }}
-          </span>
-          
-          <!-- 升级Pro按钮（仅免费用户显示） -->
-          <button 
-            v-if="!userStore.isPro" 
-            @click="showPricingModal = true" 
-            class="upgrade-btn"
-            title="升级Pro版，解锁更多功能"
-          >
-            <span class="btn-icon">🔥</span>升级Pro ¥168/年
-          </button>
-          
-          <!-- 用户邮箱（简化显示，去掉域名） -->
-          <span class="user-email-short" :title="user?.primaryEmailAddress?.emailAddress">
-            {{ getShortEmail(user?.primaryEmailAddress?.emailAddress) }}
-          </span>
-          
-          <!-- 退出登录按钮 -->
-          <button @click="handleLogout" class="top-bar-btn logout-btn" title="退出登录">
-            <span class="btn-icon">🚪</span>退出
-          </button>
+          <!-- 下拉面板 -->
+          <div v-show="isUserDropdownOpen" class="user-dropdown-panel">
+            <!-- 邮箱 -->
+            <div class="dropdown-item">
+              <span class="item-icon">📧</span>
+              <span class="item-text">{{ user?.email }}</span>
+            </div>
+            
+            <!-- ID -->
+            <div class="dropdown-item">
+              <span class="item-icon">🆔</span>
+              <span class="item-text">ID: {{ user?.id }}</span>
+            </div>
+            
+            <!-- 版本标签 -->
+            <div class="dropdown-item">
+              <span class="item-icon">🏷️</span>
+              <span class="version-tag" :class="userStore.isPro ? 'pro-tag' : 'free-tag'">
+                {{ userStore.isPro ? 'Pro版会员' : '免费版' }}
+              </span>
+            </div>
+            
+            <!-- 到期日（仅Pro版） -->
+            <div v-if="userStore.isPro && userStore.expireAt" class="dropdown-item">
+              <span class="item-icon">📅</span>
+              <span class="item-text">{{ formatDateRange(userStore.expireAt) }}</span>
+            </div>
+            
+            <!-- 升级入口（仅免费版） -->
+            <div v-if="!userStore.isPro" class="dropdown-item upgrade-item" @click="showPricingModal = true; closeUserDropdown()">
+              <span class="item-icon">🔓</span>
+              <span class="upgrade-text">升级 Pro 版</span>
+            </div>
+            
+            <!-- 分隔线 -->
+            <div class="dropdown-divider"></div>
+            
+            <!-- 退出登录 -->
+            <div class="dropdown-item logout-item" @click="handleLogout">
+              <span class="item-icon">🔒</span>
+              <span class="logout-text">退出登录</span>
+            </div>
+            
+            <!-- 提示文字 -->
+            <div class="dropdown-hint">
+              退出后需重新输入密码登录
+            </div>
+          </div>
         </div>
         
         <!-- 未登录提示 -->
@@ -1601,16 +1626,17 @@
 <script setup>
 import { ref, computed, nextTick, onMounted, onUnmounted, toRaw } from 'vue';
 import { useRouter } from 'vue-router';
-import { useUser, useClerk } from '@clerk/vue';
 import * as THREE from 'three';
 import ThreeScene from '../components/3d/ThreeScene.vue';
 import { canSave, canExport, isProUser } from '../utils/permission.js';
 import { useUserStore } from '../stores/user'
 
 const router = useRouter();
-const { user, isSignedIn } = useUser();
-const { signOut } = useClerk();
 const userStore = useUserStore();
+
+// 从 Pinia Store 获取用户状态
+const user = computed(() => userStore.user);
+const isSignedIn = computed(() => userStore.isLoggedIn);
 
 const threeScene = ref(null);
 const selectedObject = ref(null);
@@ -1662,6 +1688,60 @@ const showPricingModal = ref(false);
 const selectedPricing = ref('yearly'); // 默认选中年付
 const pricingModalType = ref('save'); // 'save' 或 'report'
 const showMockPaymentPage = ref(false); // 是否显示支付页
+
+// 用户下拉菜单状态
+const isUserDropdownOpen = ref(false);
+const userDropdownRef = ref(null);
+
+// 切换下拉菜单
+function toggleUserDropdown() {
+  isUserDropdownOpen.value = !isUserDropdownOpen.value;
+}
+
+// 关闭下拉菜单
+function closeUserDropdown() {
+  isUserDropdownOpen.value = false;
+}
+
+// 点击外部关闭下拉菜单
+function handleClickOutside(event) {
+  if (userDropdownRef.value && !userDropdownRef.value.contains(event.target)) {
+    closeUserDropdown();
+  }
+}
+
+// 获取用户首字母
+function getUserInitials(email) {
+  if (!email) return '?';
+  return email.charAt(0).toUpperCase();
+}
+
+// 格式化日期范围（开始日期 - 到期日期）
+function formatDateRange(expireAt) {
+  if (!expireAt) return '';
+  try {
+    const expire = new Date(expireAt);
+    const start = new Date();
+    start.setDate(expire.getDate() - 30); // 假设30天前开始
+    
+    const formatDate = (d) => {
+      return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+    };
+    
+    return `${formatDate(start)} - ${formatDate(expire)}`;
+  } catch (e) {
+    return '';
+  }
+}
+
+// 添加点击外部监听
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside);
+});
 
 // 支付相关状态
 const paymentQrCode = ref(''); // 微信支付二维码链接
@@ -4739,16 +4819,10 @@ function goToLogin() {
   router.push('/sign-in');
 }
 
-// 退出登录（修复版：强制硬跳转，绕过routerReplace冲突）
+// 退出登录
 async function handleLogout() {
-  try {
-    await signOut(); // Clerk退出
-  } catch (e) {
-    console.error('Clerk signOut error:', e);
-  }
-  // 强制清理 + 硬跳转，彻底避开 routerReplace 冲突
-  localStorage.removeItem('cangkujia_project'); // 清理本项目缓存
-  window.location.href = '/';
+  // 使用 Pinia Store 的 logout 方法
+  userStore.logout();
 }
 
 // 获取简化邮箱（去掉域名后缀）
@@ -8626,6 +8700,173 @@ defineExpose({
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* ========== 用户下拉菜单样式 ========== */
+
+.user-dropdown-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* 触发器 */
+.user-dropdown-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 24px;
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.user-dropdown-trigger:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+/* 头像 */
+.user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.user-avatar.pro-avatar {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+/* 用户名 */
+.user-name {
+  font-size: 13px;
+  color: #374151;
+  font-weight: 500;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 下拉箭头 */
+.dropdown-arrow {
+  font-size: 10px;
+  color: #6b7280;
+  transition: transform 0.2s;
+}
+
+.dropdown-arrow.arrow-up {
+  transform: rotate(180deg);
+}
+
+/* 下拉面板 */
+.user-dropdown-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 200px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  padding: 12px 0;
+  z-index: 100;
+}
+
+/* 下拉项 */
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  color: #374151;
+  cursor: default;
+}
+
+.dropdown-item .item-icon {
+  font-size: 14px;
+  width: 20px;
+  text-align: center;
+}
+
+.dropdown-item .item-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 版本标签 */
+.version-tag {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.version-tag.free-tag {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.version-tag.pro-tag {
+  background: #d1fae5;
+  color: #059669;
+}
+
+/* 升级入口 */
+.dropdown-item.upgrade-item {
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.dropdown-item.upgrade-item:hover {
+  background: #fff7ed;
+}
+
+.upgrade-text {
+  color: #f97316;
+  font-weight: 500;
+}
+
+/* 分隔线 */
+.dropdown-divider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 8px 0;
+}
+
+/* 退出登录 */
+.dropdown-item.logout-item {
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.dropdown-item.logout-item:hover {
+  background: #fef2f2;
+}
+
+.logout-text {
+  color: #dc2626;
+  font-weight: 500;
+}
+
+/* 提示文字 */
+.dropdown-hint {
+  padding: 4px 16px 0;
+  font-size: 11px;
+  color: #9ca3af;
+  text-align: center;
 }
 
 /* 定价弹窗样式 */
