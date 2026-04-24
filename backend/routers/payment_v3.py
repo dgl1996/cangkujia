@@ -19,6 +19,26 @@ import httpx
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 import base64
+from jose import jwt, JWTError
+
+# JWT 配置（与 auth.py 保持一致）
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key-here-min-32-characters-long")
+JWT_ALGORITHM = "HS256"
+
+def get_user_id_from_token(authorization: str) -> str:
+    """从 Authorization Header 解析 JWT 获取 user_id"""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="缺少认证信息")
+    
+    token = authorization.replace("Bearer ", "")
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        user_id = payload.get("sub")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="无效的认证信息")
+        return user_id
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Token无效")
 
 router = APIRouter(prefix="/api/payment", tags=["payment"])
 user_router = APIRouter(prefix="/api/user", tags=["user"])
@@ -58,7 +78,7 @@ PLAN_NAME_MAP = {
 class CreateOrderRequest(BaseModel):
     """创建订单请求"""
     plan_type: str  # monthly, quarterly, halfyear, yearly
-    user_id: str    # Clerk用户ID
+    # user_id 不再从请求体获取，改为从 JWT Header 解析
 
 
 class OrderStatusResponse(BaseModel):
@@ -181,12 +201,20 @@ async def get_payment_config():
 
 
 @router.post("/create-order")
-async def create_order(request: CreateOrderRequest, db: Session = Depends(get_db)):
+async def create_order(
+    request: CreateOrderRequest,
+    authorization: str = Header(None, alias="Authorization"),
+    db: Session = Depends(get_db)
+):
     """
     创建支付订单
     调用微信支付v3 Native统一下单API
+    从 Authorization Header 解析 JWT 获取 user_id
     """
     try:
+        # 从 JWT 获取 user_id 并转换为 int
+        user_id = int(get_user_id_from_token(authorization))
+
         # 验证plan_type
         if request.plan_type not in PRICE_MAP:
             raise HTTPException(status_code=400, detail="无效的套餐类型")
@@ -199,11 +227,11 @@ async def create_order(request: CreateOrderRequest, db: Session = Depends(get_db
         # 创建订单记录
         new_order = Order(
             order_no=order_no,
-            user_id=request.user_id,
+            user_id=user_id,
             amount=amount / 100,  # 转换为元存储
             status="pending",
             product_name=description,
-            description=f"用户{request.user_id}购买{description}",
+            description=f"用户{user_id}购买{description}",
             created_at=datetime.now()
         )
         db.add(new_order)
@@ -479,7 +507,7 @@ async def wechat_callback(request: Request, db: Session = Depends(get_db)):
 
 
 @user_router.get("/subscription")
-async def get_user_subscription(user_id: str, db: Session = Depends(get_db)):
+async def get_user_subscription(user_id: int, db: Session = Depends(get_db)):
     """
     获取用户订阅状态
     返回格式：{status: 'active'|'expired'|'free', plan: plan_type|null, expire_at: ISOString|null, started_at: ISOString|null}

@@ -4860,15 +4860,23 @@ async function goToMockPayment() {
   showMockPaymentPage.value = true;
   
   try {
-    // 调用后端创建订单
+    // 从 localStorage 获取 token
+    const token = localStorage.getItem('cangkujia_token');
+    if (!token) {
+      alert('请先登录后再购买');
+      router.push('/sign-in');
+      return;
+    }
+
+    // 调用后端创建订单（JWT 从 Header 传递，不再传 user_id）
     const response = await fetch('/api/payment/create-order', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify({
-        plan_type: selectedPricing.value,
-        user_id: user.value?.id || 'anonymous'
+        plan_type: selectedPricing.value
       })
     });
     

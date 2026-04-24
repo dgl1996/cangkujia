@@ -4,12 +4,11 @@ from database import Base
 
 class User(Base):
     __tablename__ = "users"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
     email = Column(String, unique=True, index=True)
     password_hash = Column(String)
-    clerk_id = Column(String, unique=True, index=True, nullable=True)  # Clerk用户ID
     phone = Column(String, nullable=True)
     nickname = Column(String, nullable=True)
     avatar_url = Column(String, nullable=True)
@@ -18,10 +17,10 @@ class User(Base):
 
 class Order(Base):
     __tablename__ = "orders"
-    
+
     id = Column(Integer, primary_key=True, index=True)
-    order_no = Column(String, unique=True, index=True, nullable=False)  # 订单号：CKJ-{timestamp}-{random}
-    user_id = Column(String, index=True, nullable=False)  # Clerk用户ID是字符串
+    order_no = Column(String, unique=True, index=True, nullable=False)  # 订单号
+    user_id = Column(Integer, index=True, nullable=False)  # 用户ID
     amount = Column(Float, nullable=False)  # 订单金额（元）
     paid_amount = Column(Float, default=0)  # 实际支付金额（元）
     status = Column(String, default="pending")  # pending, paid, failed, cancelled
@@ -48,9 +47,9 @@ class UserLicense(Base):
 
 class Subscription(Base):
     __tablename__ = "subscriptions"
-    
+
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(String, unique=True, index=True, nullable=False)  # Clerk用户ID
+    user_id = Column(Integer, index=True, nullable=False)  # 用户ID
     plan_type = Column(String, nullable=False)  # monthly, quarterly, halfyear, yearly
     status = Column(String, default="active")  # active, expired, cancelled
     started_at = Column(DateTime(timezone=True), server_default=func.now())
