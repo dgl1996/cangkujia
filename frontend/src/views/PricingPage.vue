@@ -375,12 +375,15 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuth } from '@clerk/vue';
+import { useUserStore } from '../stores/user';
 
 const router = useRouter();
-const { isSignedIn, userId } = useAuth();
+const userStore = useUserStore();
+
+const isSignedIn = computed(() => userStore.isAuthenticated);
+const userId = computed(() => userStore.user?.id);
 
 const isYearly = ref(true);
 const showPaymentModal = ref(false);
