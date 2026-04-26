@@ -288,32 +288,11 @@ async def create_order(
                     # 微信返回错误
                     error_msg = result.get("message", "微信下单失败")
                     print(f"微信下单失败: {error_msg}")
-                    
-                    # 开发环境：返回模拟数据
-                    return {
-                        "code": 0,
-                        "message": "订单创建成功（开发模式）",
-                        "data": {
-                            "order_no": order_no,
-                            "code_url": f"weixin://wxpay/bizpayurl?pr=MOCK{random.randint(1000,9999)}",
-                            "amount": amount,
-                            "plan_type": request.plan_type
-                        }
-                    }
-                    
+                    raise HTTPException(status_code=500, detail=f"微信下单失败: {error_msg}")
+
         except Exception as e:
             print(f"调用微信支付API失败: {e}")
-            # 开发环境：返回模拟数据
-            return {
-                "code": 0,
-                "message": "订单创建成功（开发模式）",
-                "data": {
-                    "order_no": order_no,
-                    "code_url": f"weixin://wxpay/bizpayurl?pr=MOCK{random.randint(1000,9999)}",
-                    "amount": amount,
-                    "plan_type": request.plan_type
-                }
-            }
+            raise HTTPException(status_code=500, detail=f"支付服务异常: {str(e)}")
         
     except HTTPException:
         raise
