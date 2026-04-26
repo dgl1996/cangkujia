@@ -47,6 +47,7 @@ user_router = APIRouter(prefix="/api/user", tags=["user"])
 WECHAT_MCHID = os.getenv("WECHAT_MCHID", "1743582175")
 WECHAT_APPID = os.getenv("WECHAT_APPID", "wx3e00623c71d93a65")
 WECHAT_APIV3_KEY = os.getenv("WECHAT_APIV3_KEY", "")
+WECHAT_CALLBACK_KEY = os.getenv("WECHAT_CALLBACK_KEY", WECHAT_APIV3_KEY)
 WECHAT_NOTIFY_URL = os.getenv("WECHAT_NOTIFY_URL", "https://www.cangkujia666.com/api/payment/callback")
 WECHAT_CERT_PATH = os.getenv("WECHAT_CERT_PATH", "/var/www/cangkujia/backend/certs/apiclient_cert.pem")
 WECHAT_KEY_PATH = os.getenv("WECHAT_KEY_PATH", "/var/www/cangkujia/backend/certs/apiclient_key.pem")
@@ -140,7 +141,7 @@ def get_authorization_header(method: str, url: str, body: str = "") -> str:
     signature = get_wechat_pay_signature(method, url, body, nonce_str, timestamp)
     
     # 序列号（从证书中提取，这里简化处理）
-    serial_no = "MOCK_SERIAL_NO"  # 实际应从证书中提取
+    serial_no = "1C2D22BE93130DFE3BF608C38DFFBE7F14A8D7C8"  # 实际应从证书中提取
     
     return f'WECHATPAY2-SHA256-RSA2048 mchid="{WECHAT_MCHID}",nonce_str="{nonce_str}",signature="{signature}",timestamp="{timestamp}",serial_no="{serial_no}"'
 
@@ -342,7 +343,7 @@ def decrypt_wechat_callback(associated_data: str, nonce: str, ciphertext: str) -
     try:
         # 调用Node.js解密脚本
         result = subprocess.run(
-            ['node', '/var/www/cangkujia/backend/decrypt_wechat.js', WECHAT_APIV3_KEY, associated_data, nonce, ciphertext],
+            ['node', '/var/www/cangkujia/backend/decrypt_wechat.js', WECHAT_CALLBACK_KEY, associated_data, nonce, ciphertext],
             capture_output=True,
             text=True
         )
@@ -461,7 +462,7 @@ async def wechat_callback(request: Request, db: Session = Depends(get_db)):
                 plan_type=plan_type,
                 status='active',
                 started_at=now,
-                expire_at=expire_at
+                expire_at=expire_at,
             )
             db.add(new_sub)
             

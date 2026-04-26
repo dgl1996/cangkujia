@@ -4942,7 +4942,7 @@ function startPaymentPolling() {
           paymentCheckInterval = null;
           
           // 刷新用户权限状态（从后端获取最新订阅信息）
-          await userStore.checkStatus();
+          await userStore.checkSubscription();
           
           alert('🎉 支付成功！您已升级为Pro版，页面即将刷新...');
           
