@@ -96,15 +96,18 @@ export const useUserStore = defineStore('user', {
           return
         }
 
-        const data = await response.json()
-        
+        const result = await response.json()
+
+        // 解析后端返回的嵌套数据格式 {code: 0, data: {...}}
+        const subscriptionData = result.data || result
+
         // 检查是否 active 且未过期
-        const isActive = data.status === 'active'
-        const notExpired = data.expire_at ? new Date(data.expire_at) > new Date() : false
-        
+        const isActive = subscriptionData.status === 'active'
+        const notExpired = subscriptionData.expire_at ? new Date(subscriptionData.expire_at) > new Date() : false
+
         this.isPro = isActive && notExpired
-        this.planType = data.plan
-        this.expireAt = data.expire_at
+        this.planType = subscriptionData.plan
+        this.expireAt = subscriptionData.expire_at
       } catch (error) {
         console.error('检查订阅状态失败:', error)
         this.isPro = false
