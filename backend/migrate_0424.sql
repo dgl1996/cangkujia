@@ -32,9 +32,7 @@ CREATE TABLE subscriptions (
     status VARCHAR DEFAULT 'active',
     started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     expire_at DATETIME,
-    order_no VARCHAR,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 清理 users 表残留 clerk_id（如果存在）

@@ -31,12 +31,23 @@ export const useUserStore = defineStore('user', {
         avatar_url: userData.avatar_url || null,
       }
       this.isLoggedIn = true
+      
+      // 持久化用户基本信息到 localStorage（用于页面刷新后快速恢复）
+      const token = localStorage.getItem('cangkujia_token')
+      localStorage.setItem('cangkujia_user', JSON.stringify({
+        id: userData.id,
+        email: userData.email,
+        nickname: userData.nickname || null,
+        avatar_url: userData.avatar_url || null,
+        token: token
+      }))
     },
 
     /**
      * 检查登录状态（App.vue 启动时调用）
      * - 检查 localStorage 是否有 token
      * - 有 token 则调用 /api/auth/me 获取用户信息
+     * - 如果 API 失败但有本地缓存，使用缓存数据
      */
     async checkAuthStatus() {
       const token = localStorage.getItem('cangkujia_token')
@@ -44,6 +55,23 @@ export const useUserStore = defineStore('user', {
       if (!token) {
         this.clearUser()
         return false
+      }
+
+      // 先尝试从 localStorage 恢复用户数据（避免页面刷新后空白）
+      const cachedUser = localStorage.getItem('cangkujia_user')
+      if (cachedUser) {
+        try {
+          const userData = JSON.parse(cachedUser)
+          this.user = {
+            id: userData.id,
+            email: userData.email,
+            nickname: userData.nickname || null,
+            avatar_url: userData.avatar_url || null,
+          }
+          this.isLoggedIn = true
+        } catch (e) {
+          console.error('解析缓存用户数据失败:', e)
+        }
       }
 
       try {
@@ -57,6 +85,7 @@ export const useUserStore = defineStore('user', {
           // Token 无效，清除登录状态
           this.clearUser()
           localStorage.removeItem('cangkujia_token')
+          localStorage.removeItem('cangkujia_user')
           return false
         }
 
@@ -69,6 +98,10 @@ export const useUserStore = defineStore('user', {
         return true
       } catch (error) {
         console.error('检查登录状态失败:', error)
+        // API 失败但本地有缓存，保持登录状态（离线模式）
+        if (this.user) {
+          return true
+        }
         this.clearUser()
         return false
       }
@@ -124,6 +157,7 @@ export const useUserStore = defineStore('user', {
       this.planType = null
       this.expireAt = null
       localStorage.removeItem('cangkujia_token')
+      localStorage.removeItem('cangkujia_user')
     },
 
     /**
