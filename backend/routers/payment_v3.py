@@ -461,8 +461,7 @@ async def wechat_callback(request: Request, db: Session = Depends(get_db)):
                 plan_type=plan_type,
                 status='active',
                 started_at=now,
-                expire_at=expire_at,
-                order_no=out_trade_no
+                expire_at=expire_at
             )
             db.add(new_sub)
             
