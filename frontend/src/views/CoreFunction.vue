@@ -134,12 +134,28 @@
     <div class="main-layout">
       <!-- 左侧导航面板 -->
       <div class="left-panel" :class="{ 'panel-collapsed': !isLeftPanelExpanded }">
+        <!-- 标签页头部 -->
+        <div class="left-panel-tabs">
+          <div 
+            class="tab-item" 
+            :class="{ active: activeLeftTab === 'design' }"
+            @click="activeLeftTab = 'design'"
+          >
+            <span class="tab-icon">📋</span>
+            <span class="tab-text">开始设计</span>
+          </div>
+          <div 
+            class="tab-item" 
+            :class="{ active: activeLeftTab === 'cases' }"
+            @click="activeLeftTab = 'cases'"
+          >
+            <span class="tab-icon">🏗️</span>
+            <span class="tab-text">案例库</span>
+          </div>
+        </div>
+        
         <!-- 流程导航 -->
-        <div class="panel process-panel">
-          <h3 class="panel-title">
-            <span class="panel-icon">📋</span>
-            设计流程
-          </h3>
+        <div v-show="activeLeftTab === 'design'" class="panel process-panel">
           
           <!-- 卡片式步骤导航 -->
           <div class="step-cards">
@@ -590,23 +606,24 @@
         </div>
         
         <!-- 案例库区块 -->
-        <div class="panel case-library-panel">
-          <h3 class="panel-title">
-            <span class="panel-icon">🏗️</span>
-            案例库
-          </h3>
+        <div v-show="activeLeftTab === 'cases'" class="panel case-library-panel">
           <div class="case-library-content">
-            <div v-if="cases.length === 0" class="empty-hint">
-              加载案例中...
-            </div>
-            <div v-for="caseItem in cases" :key="caseItem.id" class="case-item">
-              <img :src="caseItem.thumbnail" :alt="caseItem.title" class="case-thumbnail" @error="$event.target.src='/cases/default-thumb.jpg'" />
-              <div class="case-info">
-                <h4 class="case-title">{{ caseItem.title }}</h4>
-                <p class="case-desc">{{ caseItem.desc }}</p>
-                <button @click="loadCase(caseItem.file)" class="case-load-btn">
-                  <span class="btn-icon">📂</span>加载案例
+            <!-- TB业务案例卡片 -->
+            <div class="case-card">
+              <!-- 第一行：标题 + 加载按钮 -->
+              <div class="case-card-title-row">
+                <h4 class="case-card-title">TB业务</h4>
+                <button @click="loadTBCase" class="case-load-btn-inline">
+                  <span class="btn-icon">📂</span>加载
                 </button>
+              </div>
+              <!-- 第二行：缩略图 -->
+              <div class="case-card-thumb">
+                <img src="/TB业务案例缩图.png" alt="TB业务案例" @error="$event.target.style.display='none'" />
+              </div>
+              <!-- 第三行：说明 -->
+              <div class="case-card-desc">
+                <p>传统B端仓库业务，主要流程是收货、上架、存储、拣货、复核包装、发运等。存储区是重点功能区，采用了高位货架、中型货架和小型货架规划分布。</p>
               </div>
             </div>
           </div>
@@ -1656,6 +1673,9 @@ const selectedAlignmentLineId = ref(null); // 当前选中的对齐线ID
 
 // 案例库数据
 const cases = ref([]);
+
+// 左侧面板标签页状态
+const activeLeftTab = ref('design'); // 'design' | 'cases'
 
 // 精确旋转角度输入对话框状态
 const showRotationDialog = ref(false);
@@ -4369,10 +4389,14 @@ function importProject() {
           
           isProjectSaved.value = true;
           projectName.value = file.name.replace('.json', '');
-          
-          // 导入项目时不标记is3DGenerated，让切换步骤时重新生成3D仓库
-          // 这样可以确保3D仓库正确加载
-          
+
+          // 导入项目后立即生成3D仓库，确保对象被加载到场景中
+          if (project.warehouseShape && project.warehouseShape.length >= 3) {
+            nextTick(() => {
+              generate3DWarehouseInternal();
+            });
+          }
+
           console.log('导入项目:', project);
         } catch (error) {
           console.error('导入项目失败:', error);
@@ -5312,25 +5336,49 @@ async function loadCase(caseFile) {
     alert('案例文件路径无效');
     return;
   }
-  
+
   try {
     // 确认是否清空当前场景
     if (confirm('加载案例将清空当前场景，是否继续？')) {
       console.log('加载案例:', caseFile);
-      
+
       // 清空当前场景
       clearAllZones();
       if (threeScene.value) {
-        threeScene.value.clearAllObjects();
+        threeScene.value.clearScene();
         threeScene.value.clearAlignmentLines();
       }
-      
+
       // 尝试加载案例文件
       const response = await fetch(caseFile);
       if (response.ok) {
-        const caseData = await response.json();
-        // 导入案例数据
-        await importProject(caseData);
+        const project = await response.json();
+
+        // 直接赋值数据（复用 importProject 内部逻辑）
+        if (project.warehouseShape) {
+          warehouseShape.value = project.warehouseShape;
+        }
+        if (project.zones) {
+          zones.value = project.zones;
+        }
+        if (project.warehouseConfig) {
+          warehouseConfig.value = { ...warehouseConfig.value, ...project.warehouseConfig };
+        }
+        if (project.textLabels) {
+          textLabels.value = project.textLabels;
+        }
+        if (project.objects && project.objects.length > 0) {
+          window.pendingObjects = project.objects;
+          console.log('导入对象数据:', project.objects.length, '个对象待加载');
+        }
+        if (project.alignmentLines && project.alignmentLines.length > 0) {
+          window.pendingAlignmentLines = project.alignmentLines;
+          console.log('导入对齐线数据:', project.alignmentLines.length, '条对齐线待加载');
+        }
+
+        isProjectSaved.value = true;
+        projectName.value = project.projectName || '导入项目';
+
         console.log('案例加载成功:', caseFile);
         alert('案例加载成功！');
       } else {
@@ -5341,6 +5389,65 @@ async function loadCase(caseFile) {
   } catch (error) {
     console.error('加载案例失败:', error);
     alert('加载案例失败: ' + error.message);
+  }
+}
+
+// 加载TB业务案例
+async function loadTBCase() {
+  try {
+    // 确认是否清空当前场景
+    if (confirm('加载TB业务案例将清空当前场景，是否继续？')) {
+      console.log('加载TB业务案例');
+
+      // 清空当前场景
+      clearAllZones();
+      if (threeScene.value) {
+        threeScene.value.clearScene();
+        threeScene.value.clearAlignmentLines();
+      }
+
+      // 尝试加载TB案例文件
+      const response = await fetch('/cases/TB业务案例仓库.json');
+      if (response.ok) {
+        const project = await response.json();
+
+        // 直接赋值数据（复用 importProject 内部逻辑）
+        if (project.warehouseShape) {
+          warehouseShape.value = project.warehouseShape;
+        }
+        if (project.zones) {
+          zones.value = project.zones;
+        }
+        if (project.warehouseConfig) {
+          warehouseConfig.value = { ...warehouseConfig.value, ...project.warehouseConfig };
+        }
+        if (project.textLabels) {
+          textLabels.value = project.textLabels;
+        }
+        if (project.objects && project.objects.length > 0) {
+          window.pendingObjects = project.objects;
+          console.log('导入对象数据:', project.objects.length, '个对象待加载');
+        }
+        if (project.alignmentLines && project.alignmentLines.length > 0) {
+          window.pendingAlignmentLines = project.alignmentLines;
+          console.log('导入对齐线数据:', project.alignmentLines.length, '条对齐线待加载');
+        }
+
+        isProjectSaved.value = true;
+        projectName.value = project.projectName || 'TB业务案例仓库';
+
+        console.log('TB业务案例加载成功');
+        alert('TB业务案例加载成功！');
+        // 切换回设计标签页
+        activeLeftTab.value = 'design';
+      } else {
+        console.warn('TB案例文件不存在');
+        alert('TB案例文件暂时不可用，请联系管理员上传案例文件。');
+      }
+    }
+  } catch (error) {
+    console.error('加载TB案例失败:', error);
+    alert('加载TB案例失败: ' + error.message);
   }
 }
 
@@ -8579,15 +8686,157 @@ defineExpose({
   color: #666;
 }
 
+/* 左侧面板标签页样式 */
+.left-panel-tabs {
+  display: flex;
+  border-bottom: 1px solid #e0e0e0;
+  background: #f5f5f5;
+}
+
+.tab-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-bottom: 2px solid transparent;
+  font-size: 14px;
+  color: #666;
+}
+
+.tab-item:hover {
+  background: #e8e8e8;
+  color: #333;
+}
+
+.tab-item.active {
+  background: #fff;
+  color: #2196F3;
+  border-bottom-color: #2196F3;
+  font-weight: 600;
+}
+
+.tab-icon {
+  font-size: 16px;
+}
+
+.tab-text {
+  white-space: nowrap;
+}
+
 /* 案例库样式 */
 .case-library-panel {
-  margin-top: 16px;
+  margin-top: 0;
 }
 
 .case-library-content {
-  padding: 12px;
+  padding: 16px;
 }
 
+/* 案例卡片样式 */
+.case-card {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s;
+  padding: 16px;
+}
+
+.case-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  border-color: #2196F3;
+}
+
+/* 第一行：标题 + 加载按钮 */
+.case-card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.case-card-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #333;
+}
+
+.case-load-btn-inline {
+  padding: 6px 12px;
+  background: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.case-load-btn-inline:hover {
+  background: #1976D2;
+}
+
+/* 第二行：缩略图 */
+.case-card-thumb {
+  width: 100%;
+  height: 140px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f5f5f5;
+  margin-bottom: 12px;
+}
+
+.case-card-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* 第三行：说明 */
+.case-card-desc {
+  padding: 0;
+}
+
+.case-card-desc p {
+  margin: 0;
+  font-size: 13px;
+  color: #666;
+  line-height: 1.6;
+}
+
+/* 旧样式保留兼容 */
+.case-load-btn {
+  padding: 8px 16px;
+  background: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  align-self: flex-start;
+}
+
+.case-load-btn:hover {
+  background: #1976D2;
+}
+
+.case-load-btn .btn-icon {
+  margin-right: 4px;
+}
+
+/* 旧案例库样式（保留兼容） */
 .case-item {
   display: flex;
   gap: 12px;
@@ -8633,26 +8882,6 @@ defineExpose({
   color: #666;
   line-height: 1.4;
   flex: 1;
-}
-
-.case-load-btn {
-  padding: 6px 12px;
-  background: #2196F3;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
-  align-self: flex-start;
-}
-
-.case-load-btn:hover {
-  background: #1976D2;
-}
-
-.case-load-btn .btn-icon {
-  margin-right: 4px;
 }
 
 /* 版本标签样式 */
