@@ -3994,6 +3994,9 @@ function generate3DWarehouseInternal() {
     // 清空场景，防止快速切换项目时残留对象
     threeScene.value.clearScene();
 
+    // 生成新的加载批次ID，用于取消旧项目的异步加载
+    window.currentLoadId = Date.now();
+
     // 转换仓库形状为3D坐标
     const shape3D = warehouseShape.value.map(p => ({
       x: p.x / 10,
@@ -4047,7 +4050,10 @@ function loadImportedObjects(objects) {
   }
 
   console.log('【调试-导入】开始加载导入的对象:', objects.length, '个');
-  
+
+  // 锁定当前加载批次ID，用于检查项目是否已切换
+  const loadId = window.currentLoadId;
+
   // 统计导入数据中的门/窗
   const doorWindowInImport = objects.filter(obj => obj.type === 'door' || obj.type === 'window');
   console.log('【调试-导入】导入数据中的门/窗数量:', doorWindowInImport.length);
@@ -4057,6 +4063,11 @@ function loadImportedObjects(objects) {
 
   objects.forEach((objData, index) => {
     setTimeout(() => {
+      // 检查项目是否已切换，如果已切换则跳过加载
+      if (window.currentLoadId !== loadId) {
+        console.log('【调试-导入】项目已切换，跳过旧对象加载');
+        return;
+      }
       // 处理门/窗对象
       if (objData.type === 'door' || objData.type === 'window') {
         console.log(`【调试-导入】加载${objData.type === 'door' ? '门' : '窗'} ${index + 1}/${objects.length}:`, `墙体${objData.wallIndex}, wallType=${objData.wallType || 'wall'}`);
