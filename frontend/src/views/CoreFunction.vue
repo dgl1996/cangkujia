@@ -3990,7 +3990,10 @@ function generate3DWarehouseInternal() {
       reject(new Error('3D场景未准备好'));
       return;
     }
-    
+
+    // 清空场景，防止快速切换项目时残留对象
+    threeScene.value.clearScene();
+
     // 转换仓库形状为3D坐标
     const shape3D = warehouseShape.value.map(p => ({
       x: p.x / 10,
