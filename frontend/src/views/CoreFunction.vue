@@ -4267,11 +4267,129 @@ function addConveyor() {
   }
 }
 
+// 保存当前项目数据到 sessionStorage（用于支付升级后恢复）
+function saveProjectToSessionStorage() {
+  try {
+    // 从3D场景获取对象数据
+    let sceneObjectsData = [];
+    if (threeScene.value && is3DGenerated.value) {
+      const sceneObjects = threeScene.value.getSceneObjects();
+      const rawObjects = sceneObjects.map(obj => toRaw(obj));
+      sceneObjectsData = rawObjects.filter(obj => {
+        const type = obj.userData?.type;
+        return type === 'door' || type === 'window' || type === 'pillar' || type === 'wallSign' || obj.userData?.modelType || obj.userData?.modelName;
+      }).map(obj => {
+        const objType = obj.userData?.type;
+        const baseData = {
+          modelType: obj.userData?.modelType || obj.userData?.modelName,
+          modelName: obj.userData?.modelName,
+          name: obj.userData?.name,
+          position: { x: obj.position?.x, y: obj.position?.y, z: obj.position?.z },
+          rotation: { x: obj.rotation?.x, y: obj.rotation?.y, z: obj.rotation?.z },
+          scale: { x: obj.scale?.x, y: obj.scale?.y, z: obj.scale?.z }
+        };
+        if (objType === 'door' || objType === 'window') {
+          baseData.type = objType;
+          baseData.businessType = objType;
+          baseData.wallType = obj.userData?.wallType || 'wall';
+          baseData.wallIndex = obj.userData?.wallIndex !== undefined ? Number(obj.userData.wallIndex) : 0;
+          baseData.wallPosition = obj.userData?.position;
+          baseData.width = obj.userData?.width;
+          baseData.height = obj.userData?.height;
+          if (objType === 'window') baseData.sillHeight = obj.userData?.sillHeight;
+        }
+        if (objType === 'wallSign') {
+          baseData.type = 'wallSign';
+          baseData.wallType = obj.userData?.wallType;
+          baseData.wallIndex = obj.userData?.wallIndex;
+          baseData.text = obj.userData?.text;
+          baseData.fontSize = obj.userData?.fontSize;
+          baseData.textColor = obj.userData?.textColor;
+          baseData.bgColor = obj.userData?.bgColor;
+          baseData.offsetAlongWall = obj.userData?.offsetAlongWall || 0;
+          baseData.signHeight = obj.userData?.signHeight !== undefined ? obj.userData.signHeight : 150;
+        }
+        if (objType === 'pillar') {
+          baseData.type = 'pillar';
+          baseData.width = obj.userData?.width;
+          baseData.height = obj.userData?.height;
+          baseData.depth = obj.userData?.depth;
+          baseData.position = { x: obj.position?.x, y: obj.position?.y, z: obj.position?.z };
+        }
+        return baseData;
+      });
+    }
+
+    // 获取对齐线数据
+    let alignmentLinesData = [];
+    if (threeScene.value && is3DGenerated.value) {
+      alignmentLinesData = threeScene.value.getAlignmentLines();
+    }
+
+    const projectData = {
+      version: '1.0',
+      timestamp: new Date().toISOString(),
+      projectName: projectName.value || '未命名项目',
+      warehouseShape: warehouseShape.value,
+      zones: zones.value,
+      warehouseConfig: warehouseConfig.value,
+      textLabels: textLabels.value,
+      objects: sceneObjectsData,
+      alignmentLines: alignmentLinesData
+    };
+
+    sessionStorage.setItem('pendingProject', JSON.stringify(projectData));
+    console.log('项目数据已保存到 sessionStorage:', projectData.objects.length, '个对象');
+    return true;
+  } catch (error) {
+    console.error('保存项目到 sessionStorage 失败:', error);
+    return false;
+  }
+}
+
+// 从 sessionStorage 恢复项目数据
+function restoreProjectFromSessionStorage() {
+  try {
+    const pendingProject = sessionStorage.getItem('pendingProject');
+    if (!pendingProject) return false;
+
+    const project = JSON.parse(pendingProject);
+    console.log('从 sessionStorage 恢复项目:', project.projectName, project.objects.length, '个对象');
+
+    // 恢复项目数据
+    if (project.warehouseShape) warehouseShape.value = project.warehouseShape;
+    if (project.zones) zones.value = project.zones;
+    if (project.warehouseConfig) warehouseConfig.value = { ...warehouseConfig.value, ...project.warehouseConfig };
+    if (project.textLabels) textLabels.value = project.textLabels;
+    if (project.projectName) projectName.value = project.projectName;
+
+    // 保存对象和对齐线数据，等待3D场景生成后加载
+    if (project.objects && project.objects.length > 0) {
+      window.pendingObjects = project.objects;
+      console.log('恢复对象数据:', project.objects.length, '个对象待加载');
+    }
+    if (project.alignmentLines && project.alignmentLines.length > 0) {
+      window.pendingAlignmentLines = project.alignmentLines;
+      console.log('恢复对齐线数据:', project.alignmentLines.length, '条对齐线待加载');
+    }
+
+    // 清除 sessionStorage
+    sessionStorage.removeItem('pendingProject');
+    console.log('sessionStorage 已清除');
+
+    return true;
+  } catch (error) {
+    console.error('从 sessionStorage 恢复项目失败:', error);
+    return false;
+  }
+}
+
 // 项目操作
 async function saveProject() {
   // 检查用户是否有保存权限（基于localStorage）
   if (!isProUser()) {
-    // 免费用户无法保存，显示定价弹窗
+    // 免费用户无法保存，先保存项目数据到 sessionStorage，再显示定价弹窗
+    saveProjectToSessionStorage();
     showPricingModal.value = true;
     pricingModalType.value = 'save';
     return;
@@ -4968,6 +5086,9 @@ function startPaymentPolling() {
           // 刷新用户权限状态（从后端获取最新订阅信息）
           await userStore.checkSubscription();
           
+          // 保存当前项目数据到 sessionStorage，以便刷新后恢复
+          saveProjectToSessionStorage();
+          
           alert('🎉 支付成功！您已升级为Pro版，页面即将刷新...');
           
           showPricingModal.value = false;
@@ -5020,6 +5141,9 @@ async function checkPaymentStatus() {
         // 支付成功
         // 刷新用户权限状态（从后端获取最新订阅信息）
         await userStore.checkSubscription();
+        
+        // 保存当前项目数据到 sessionStorage，以便刷新后恢复
+        saveProjectToSessionStorage();
         
         alert('🎉 支付成功！您已升级为Pro版，页面即将刷新...');
         
@@ -6129,6 +6253,12 @@ onMounted(() => {
   loadCases();
   loadPricingConfig();
   window.addEventListener('keydown', handleKeyDown);
+  
+  // 检查是否有待恢复的项目数据（支付升级后）
+  const hasPendingProject = restoreProjectFromSessionStorage();
+  if (hasPendingProject) {
+    console.log('检测到待恢复的项目数据，将在3D场景准备好后自动加载');
+  }
 });
 
 // 组件卸载时清理键盘监听和轮询定时器（防止内存泄漏）
