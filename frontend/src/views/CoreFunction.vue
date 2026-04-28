@@ -1641,7 +1641,7 @@
 </template>
 
 <script setup>
-import { ref, computed, nextTick, onMounted, onUnmounted, toRaw } from 'vue';
+import { ref, computed, nextTick, onMounted, onUnmounted, toRaw, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import * as THREE from 'three';
 import ThreeScene from '../components/3d/ThreeScene.vue';
@@ -1761,6 +1761,22 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside);
+});
+
+// Bug 1 修复：监听 threeScene 初始化，处理导入项目后的生成
+watch(threeScene, (newVal, oldVal) => {
+  if (newVal && !oldVal && window.needGenerateAfterInit) {
+    console.log('threeScene 初始化完成，检查到生成标志位，开始生成3D仓库');
+    nextTick().then(() => {
+      generate3DWarehouseInternal().then(() => {
+        console.log('导入项目后3D仓库生成完成（延迟初始化）');
+        window.needGenerateAfterInit = false;
+      }).catch(err => {
+        console.error('导入项目后生成3D仓库失败:', err);
+        window.needGenerateAfterInit = false;
+      });
+    });
+  }
 });
 
 // 支付相关状态
@@ -4456,6 +4472,13 @@ function importProject() {
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
+          // Bug 2 修复：清除残留对象
+          if (threeScene.value) {
+            threeScene.value.clearScene();
+          }
+          window.pendingObjects = null;
+          window.pendingAlignmentLines = null;
+          
           const project = JSON.parse(e.target.result);
           // 加载项目数据
           if (project.warehouseShape) {
@@ -4508,15 +4531,22 @@ function importProject() {
           isProjectSaved.value = true;
           projectName.value = file.name.replace('.json', '');
 
-          // 导入项目后立即生成3D仓库，确保对象被加载到场景中
+          // Bug 1 修复：导入项目后生成3D仓库
           if (project.warehouseShape && project.warehouseShape.length >= 3) {
-            nextTick().then(() => {
-              generate3DWarehouseInternal().then(() => {
-                console.log('导入项目后3D仓库生成完成');
-              }).catch(err => {
-                console.error('导入项目后生成3D仓库失败:', err);
+            if (threeScene.value) {
+              // 3D场景已存在，直接生成
+              nextTick().then(() => {
+                generate3DWarehouseInternal().then(() => {
+                  console.log('导入项目后3D仓库生成完成');
+                }).catch(err => {
+                  console.error('导入项目后生成3D仓库失败:', err);
+                });
               });
-            });
+            } else {
+              // 3D场景未初始化（2D视图），设置标志位等待初始化完成
+              window.needGenerateAfterInit = true;
+              console.log('3D场景未准备好，设置标志位等待初始化后生成');
+            }
           }
 
           console.log('导入项目:', project);
