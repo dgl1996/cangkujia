@@ -142,10 +142,13 @@ async function handleSubmit() {
 
     // 保存 token 到 localStorage
     localStorage.setItem('cangkujia_token', data.access_token);
-    
+
     // 更新用户状态
     userStore.setUser(data.user);
-    
+
+    // 检查订阅状态（确保Pro状态正确显示）
+    await userStore.checkSubscription();
+
     // 跳转到工作台
     router.push('/editor');
   } catch (error) {

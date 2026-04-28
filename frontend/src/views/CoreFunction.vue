@@ -4510,8 +4510,12 @@ function importProject() {
 
           // 导入项目后立即生成3D仓库，确保对象被加载到场景中
           if (project.warehouseShape && project.warehouseShape.length >= 3) {
-            nextTick(() => {
-              generate3DWarehouseInternal();
+            nextTick().then(() => {
+              generate3DWarehouseInternal().then(() => {
+                console.log('导入项目后3D仓库生成完成');
+              }).catch(err => {
+                console.error('导入项目后生成3D仓库失败:', err);
+              });
             });
           }
 
