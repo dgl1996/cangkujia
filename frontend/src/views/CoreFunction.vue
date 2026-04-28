@@ -1763,22 +1763,6 @@ onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside);
 });
 
-// Bug 1 修复：监听 threeScene 初始化，处理导入项目后的生成
-watch(threeScene, (newVal, oldVal) => {
-  if (newVal && !oldVal && window.needGenerateAfterInit) {
-    console.log('threeScene 初始化完成，检查到生成标志位，开始生成3D仓库');
-    nextTick().then(() => {
-      generate3DWarehouseInternal().then(() => {
-        console.log('导入项目后3D仓库生成完成（延迟初始化）');
-        window.needGenerateAfterInit = false;
-      }).catch(err => {
-        console.error('导入项目后生成3D仓库失败:', err);
-        window.needGenerateAfterInit = false;
-      });
-    });
-  }
-});
-
 // 支付相关状态
 const paymentQrCode = ref(''); // 微信支付二维码链接
 const currentOrderNo = ref(''); // 当前订单号
@@ -4531,23 +4515,8 @@ function importProject() {
           isProjectSaved.value = true;
           projectName.value = file.name.replace('.json', '');
 
-          // Bug 1 修复：导入项目后生成3D仓库
-          if (project.warehouseShape && project.warehouseShape.length >= 3) {
-            if (threeScene.value) {
-              // 3D场景已存在，直接生成
-              nextTick().then(() => {
-                generate3DWarehouseInternal().then(() => {
-                  console.log('导入项目后3D仓库生成完成');
-                }).catch(err => {
-                  console.error('导入项目后生成3D仓库失败:', err);
-                });
-              });
-            } else {
-              // 3D场景未初始化（2D视图），设置标志位等待初始化完成
-              window.needGenerateAfterInit = true;
-              console.log('3D场景未准备好，设置标志位等待初始化后生成');
-            }
-          }
+          // 导入项目时不标记is3DGenerated，让切换步骤时重新生成3D仓库
+          // 这样可以确保3D仓库正确加载
 
           console.log('导入项目:', project);
         } catch (error) {
