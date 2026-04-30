@@ -17,6 +17,7 @@ export const useUserStore = defineStore('user', {
     isPro: false,
     planType: null as string | null,
     expireAt: null as string | null,
+    startedAt: null as string | null,
   }),
 
   actions: {
@@ -141,6 +142,7 @@ export const useUserStore = defineStore('user', {
         this.isPro = isActive && notExpired
         this.planType = subscriptionData.plan
         this.expireAt = subscriptionData.expire_at
+        this.startedAt = subscriptionData.started_at
       } catch (error) {
         console.error('检查订阅状态失败:', error)
         this.isPro = false
@@ -156,6 +158,7 @@ export const useUserStore = defineStore('user', {
       this.isPro = false
       this.planType = null
       this.expireAt = null
+      this.startedAt = null
       localStorage.removeItem('cangkujia_token')
       localStorage.removeItem('cangkujia_user')
     },

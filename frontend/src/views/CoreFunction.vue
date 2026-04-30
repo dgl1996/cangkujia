@@ -1741,13 +1741,13 @@ function formatDateRange(expireAt) {
   if (!expireAt) return '';
   try {
     const expire = new Date(expireAt);
-    const start = new Date();
-    start.setDate(expire.getDate() - 30); // 假设30天前开始
-    
+    // 使用后端返回的 started_at，如果没有则使用今天
+    const start = userStore.startedAt ? new Date(userStore.startedAt) : new Date();
+
     const formatDate = (d) => {
       return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
     };
-    
+
     return `${formatDate(start)} - ${formatDate(expire)}`;
   } catch (e) {
     return '';
