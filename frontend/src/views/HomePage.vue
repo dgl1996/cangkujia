@@ -183,6 +183,17 @@
           </div>
         </div>
 
+        <!-- 同团队出品 -->
+        <div class="team-product-card">
+          <a href="https://www.anderson2026.top" target="_blank" rel="noopener noreferrer" class="team-product-link">
+            <div class="team-product-content">
+              <span class="team-product-label">同团队出品</span>
+              <span class="team-product-name">安德森极简工作日历</span>
+              <span class="team-product-price">¥48 终身版</span>
+            </div>
+          </a>
+        </div>
+
         <!-- 版权信息 -->
         <div class="footer-bottom">
           <p>© 2026 仓酷家. All rights reserved. | 沪ICP备2026013469号</p>
@@ -758,6 +769,55 @@ const handleLogin = () => {
   border-top: 1px solid #d0d0c6;
   text-align: center;
   color: #6b6b8a;
+}
+
+/* 同团队出品卡片 */
+.team-product-card {
+  max-width: 1200px;
+  margin: 0 auto 2rem;
+  height: 80px;
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.team-product-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  text-decoration: none;
+  color: inherit;
+}
+
+.team-product-content {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.team-product-label {
+  font-size: 0.85rem;
+  color: #888888;
+  padding: 0.25rem 0.75rem;
+  background: #f5f5f5;
+  border-radius: 4px;
+}
+
+.team-product-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.team-product-price {
+  font-size: 0.9rem;
+  color: #4361ee;
+  font-weight: 500;
 }
 
 /* 响应式设计 */

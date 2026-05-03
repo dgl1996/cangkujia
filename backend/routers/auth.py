@@ -3,7 +3,7 @@
 放弃 Clerk，改用后端自研登录，解决大陆网络问题
 """
 
-from fastapi import APIRouter, HTTPException, Depends, Header
+from fastapi import APIRouter, HTTPException, Depends, Header, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
@@ -14,6 +14,32 @@ import os
 
 from database import get_db
 from models import User
+
+# IP限流：同一IP 60秒内最多10次注册
+# 结构: {ip: [timestamp1, timestamp2, ...]}
+register_rate_limit = {}
+REGISTER_LIMIT = 10  # 最多10次
+REGISTER_WINDOW = 60  # 60秒窗口
+
+def check_register_rate_limit(ip: str) -> bool:
+    """检查IP是否超过注册频率限制，返回True表示允许注册"""
+    now = datetime.now()
+    if ip not in register_rate_limit:
+        register_rate_limit[ip] = []
+    
+    # 清理60秒前的记录
+    register_rate_limit[ip] = [
+        ts for ts in register_rate_limit[ip] 
+        if (now - ts).total_seconds() < REGISTER_WINDOW
+    ]
+    
+    # 检查是否超过限制
+    if len(register_rate_limit[ip]) >= REGISTER_LIMIT:
+        return False
+    
+    # 记录本次请求
+    register_rate_limit[ip].append(now)
+    return True
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -109,14 +135,24 @@ def get_current_user(token: str = Header(None, alias="Authorization"), db: Sessi
 # ============ API 路由 ============
 
 @router.post("/register", response_model=TokenResponse)
-async def register(request: RegisterRequest, db: Session = Depends(get_db)):
+async def register(request: RegisterRequest, req: Request, db: Session = Depends(get_db)):
     """
     用户注册
+    - IP限流：同一IP 60秒内最多10次注册
     - 检查邮箱是否已存在
     - bcrypt 加密密码
     - 创建用户记录
     - 返回 JWT Token
     """
+    # 获取客户端IP
+    client_ip = req.headers.get("X-Forwarded-For", req.client.host)
+    if client_ip and "," in client_ip:
+        client_ip = client_ip.split(",")[0].strip()
+    
+    # IP限流检查
+    if not check_register_rate_limit(client_ip):
+        raise HTTPException(status_code=429, detail="注册过于频繁，请60秒后再试")
+    
     # 检查邮箱是否已存在
     existing_user = db.query(User).filter(User.email == request.email).first()
     if existing_user:
